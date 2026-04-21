@@ -1,0 +1,7 @@
+commodity_id,commodity_name,risk_level,deforestation_risk_score
+1,Palm Oil,High,0.8033027123648191
+2,Cocoa,High,0.6136776183238988
+3,Coffee,Medium,0.3971627365681351
+4,Rubber,Medium,0.8693862112073323
+5,Wood,Medium,0.3356694456869115
+6,Soya,High,0.8318996918359476
