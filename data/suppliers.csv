@@ -1,0 +1,241 @@
+supplier_id,supplier_name,country,category,onboarding_date,certification
+1,AgroPure Corporation,India,Food Ingredients,07-09-2022,ISO22000
+2,FlexiWrap Corporation,Germany,Packaging,22-08-2024,FSC Certified
+3,AgroPure Pvt Ltd,China,Food Ingredients,27-11-2022,FSSAI Certified
+4,CleanHome Co.,USA,Household Products,16-08-2023,EcoLabel Certified
+5,PureNest Ltd,India,Household Products,02-01-2026,ISO14001
+6,NutriHarvest Corporation,China,Food Ingredients,08-03-2026,HACCP
+7,PackRight Inc,Germany,Packaging,25-08-2023,FSC Certified
+8,FarmSource Inc,Germany,Food Ingredients,06-10-2025,FSSAI Certified
+9,BioBeauty Pvt Ltd,Vietnam,Personal Care,05-05-2023,ISO9001
+10,ClearDrop Inc,USA,Beverages,22-11-2023,ISO22000
+11,PureCrop Inc,India,Food Ingredients,02-09-2025,ISO22000
+12,CarePlus GmbH,USA,Personal Care,10-05-2024,GMP Certified
+13,PureSip Corporation,Vietnam,Beverages,02-10-2023,FDA Approved
+14,NatureYield Corporation,Germany,Food Ingredients,31-08-2022,FSSAI Certified
+15,GreenSeal GmbH,Vietnam,Packaging,10-02-2025,ISO14001
+16,EcoClean Corporation,China,Household Products,11-10-2025,ISO9001
+17,FarmSource GmbH,USA,Food Ingredients,25-07-2025,ISO22000
+18,BrightLiving Ltd,India,Household Products,08-05-2023,EcoLabel Certified
+19,NatureTouch Inc,India,Personal Care,26-09-2022,ISO9001
+20,SparkClean Inc,China,Household Products,20-03-2023,ISO14001
+21,PureSip Ltd,India,Beverages,22-07-2025,ISO22000
+22,VitalFoods Co.,USA,Food Ingredients,26-11-2024,HACCP
+23,GreenHome Co.,Germany,Household Products,19-09-2024,ISO9001
+24,FreshOrigin Inc,China,Food Ingredients,26-02-2023,HACCP
+25,NatureTouch GmbH,Germany,Personal Care,23-12-2022,ISO9001
+26,BioWrap Pvt Ltd,Germany,Packaging,07-10-2022,ISO14001
+27,EcoClean Ltd,Vietnam,Household Products,10-12-2023,EcoLabel Certified
+28,BrightLiving GmbH,Germany,Household Products,02-12-2021,ISO14001
+29,PureSip Pvt Ltd,Germany,Beverages,19-06-2021,ISO22000
+30,GoldenField Pvt Ltd,USA,Food Ingredients,16-03-2023,FSSAI Certified
+31,BioBeauty Ltd,Vietnam,Personal Care,12-10-2023,ISO9001
+32,DermaWell Co.,USA,Personal Care,23-03-2024,GMP Certified
+33,SkinEssence GmbH,India,Personal Care,14-08-2025,ISO22716
+34,FlexiWrap Inc,Vietnam,Packaging,27-07-2025,ISO14001
+35,ClearPack Ltd,Vietnam,Packaging,22-03-2021,ISO14001
+36,PureCrop Pvt Ltd,China,Food Ingredients,04-06-2021,ISO22000
+37,EcoClean Inc,India,Household Products,29-01-2025,EcoLabel Certified
+38,ClearPack Co.,India,Packaging,23-08-2025,FSC Certified
+39,DermaWell Pvt Ltd,India,Personal Care,16-04-2023,GMP Certified
+40,RefreshCo GmbH,Vietnam,Beverages,09-12-2022,FDA Approved
+41,AgroPure GmbH,China,Food Ingredients,04-04-2022,ISO22000
+42,PackRight Co.,Germany,Packaging,23-02-2026,FSC Certified
+43,SustainPack GmbH,India,Packaging,09-04-2023,FSC Certified
+44,FreshNest Pvt Ltd,Vietnam,Household Products,14-09-2023,ISO9001
+45,SafePack GmbH,Vietnam,Packaging,20-03-2021,FSC Certified
+46,NutriHarvest GmbH,China,Food Ingredients,30-01-2026,HACCP
+47,BioBeauty Corporation,Vietnam,Personal Care,25-03-2025,ISO22716
+48,ClearDrop Corporation,Germany,Beverages,30-10-2025,ISO22000
+49,NatureYield GmbH,India,Food Ingredients,05-09-2025,FSSAI Certified
+50,NutriHarvest Pvt Ltd,Germany,Food Ingredients,14-07-2021,ISO22000
+51,PureSkin Co.,India,Personal Care,26-03-2022,ISO9001
+52,NatureYield Pvt Ltd,USA,Food Ingredients,15-09-2023,FSSAI Certified
+53,SafeHome Ltd,USA,Household Products,18-11-2025,ISO14001
+54,NatureTouch Corporation,China,Personal Care,20-02-2026,GMP Certified
+55,NatureYield Co.,Germany,Food Ingredients,25-11-2025,FSSAI Certified
+56,BioWrap Inc,Vietnam,Packaging,10-05-2024,ISO9001
+57,PrimeWrap Inc,India,Packaging,03-05-2023,ISO14001
+58,VitalSip Pvt Ltd,China,Beverages,23-09-2025,ISO22000
+59,SustainPack Pvt Ltd,China,Packaging,30-05-2023,ISO9001
+60,HydraLife Co.,USA,Beverages,23-04-2021,ISO22000
+61,VitalSip GmbH,Vietnam,Beverages,15-07-2024,ISO22000
+62,CarePlus Pvt Ltd,China,Personal Care,10-06-2025,ISO22716
+63,BlueWave Corporation,Vietnam,Beverages,02-05-2022,FDA Approved
+64,PureSkin Pvt Ltd,USA,Personal Care,07-04-2022,ISO22716
+65,ClearDrop Co.,Germany,Beverages,18-04-2025,ISO22000
+66,HarvestEdge Inc,India,Food Ingredients,18-12-2023,ISO22000
+67,BioWrap GmbH,India,Packaging,19-11-2021,ISO9001
+68,SafePack Pvt Ltd,Vietnam,Packaging,08-04-2021,FSC Certified
+69,SustainPack Ltd,China,Packaging,08-11-2024,ISO9001
+70,DermaWell Ltd,USA,Personal Care,23-01-2024,GMP Certified
+71,PackRight Pvt Ltd,India,Packaging,09-07-2021,FSC Certified
+72,FreshFlow Inc,Germany,Beverages,23-11-2024,FDA Approved
+73,BioBeauty Inc,USA,Personal Care,30-11-2024,GMP Certified
+74,ClearPack Inc,India,Packaging,14-10-2024,ISO14001
+75,SkinEssence Corporation,Vietnam,Personal Care,05-11-2025,ISO9001
+76,FreshNest GmbH,USA,Household Products,30-12-2024,ISO9001
+77,GlowCare Co.,China,Personal Care,06-08-2021,GMP Certified
+78,FarmSource Co.,China,Food Ingredients,11-05-2023,ISO22000
+79,VitalSip Inc,China,Beverages,29-07-2024,HACCP
+80,VitalSip Ltd,Vietnam,Beverages,19-02-2023,FDA Approved
+81,NatureTouch Co.,Vietnam,Personal Care,25-03-2022,ISO9001
+82,PureCrop GmbH,USA,Food Ingredients,22-12-2023,HACCP
+83,TrueCare Corporation,Vietnam,Personal Care,29-01-2022,ISO22716
+84,VitalSip Corporation,China,Beverages,28-03-2024,ISO22000
+85,BlueWave Pvt Ltd,China,Beverages,08-05-2023,HACCP
+86,PureNest Corporation,China,Household Products,18-08-2023,ISO14001
+87,SoftGlow Ltd,USA,Personal Care,11-07-2024,ISO9001
+88,GreenGrain GmbH,India,Food Ingredients,02-09-2021,FSSAI Certified
+89,GreenHome Pvt Ltd,Germany,Household Products,28-04-2021,ISO14001
+90,UltraPack Corporation,India,Packaging,04-04-2024,ISO14001
+91,PureNest Co.,Vietnam,Household Products,06-05-2023,EcoLabel Certified
+92,TrueCare Inc,Vietnam,Personal Care,30-03-2022,GMP Certified
+93,GreenHome Corporation,Vietnam,Household Products,14-11-2021,ISO14001
+94,HarvestEdge Ltd,China,Food Ingredients,12-05-2022,HACCP
+95,FreshNest Ltd,Vietnam,Household Products,23-11-2021,ISO14001
+96,PrimeWrap Co.,Vietnam,Packaging,23-03-2024,ISO9001
+97,ClearPack Corporation,India,Packaging,23-10-2025,FSC Certified
+98,GlowCare Inc,China,Personal Care,12-07-2025,GMP Certified
+99,SparkClean Co.,USA,Household Products,13-06-2024,ISO9001
+100,AquaPure GmbH,Germany,Beverages,29-11-2024,FDA Approved
+101,SoftGlow Co.,Germany,Personal Care,06-10-2025,ISO9001
+102,NatureTouch Pvt Ltd,USA,Personal Care,04-04-2025,GMP Certified
+103,UltraPack Inc,India,Packaging,09-07-2023,FSC Certified
+104,TrueCare Pvt Ltd,China,Personal Care,10-05-2022,ISO22716
+105,PureCrop Ltd,Vietnam,Food Ingredients,15-12-2022,ISO22000
+106,FlexiWrap Co.,China,Packaging,06-12-2022,ISO14001
+107,CrystalSpring Ltd,Vietnam,Beverages,05-08-2023,HACCP
+108,HarvestEdge Co.,Germany,Food Ingredients,18-10-2024,FSSAI Certified
+109,SustainPack Corporation,India,Packaging,11-10-2024,ISO9001
+110,CrystalSpring Pvt Ltd,Vietnam,Beverages,07-05-2022,HACCP
+111,PureSkin GmbH,China,Personal Care,27-05-2021,GMP Certified
+112,SafePack Ltd,Germany,Packaging,30-03-2024,ISO14001
+113,TrueCare GmbH,China,Personal Care,28-06-2021,ISO22716
+114,HarvestEdge GmbH,Vietnam,Food Ingredients,21-11-2022,FSSAI Certified
+115,PureNest Inc,Vietnam,Household Products,22-08-2022,ISO14001
+116,UltraPack Ltd,Germany,Packaging,12-09-2021,FSC Certified
+117,AquaPure Co.,Germany,Beverages,03-01-2026,ISO22000
+118,TrueCare Co.,India,Personal Care,01-04-2021,GMP Certified
+119,PureSkin Inc,China,Personal Care,15-04-2022,ISO9001
+120,UltraPack Co.,USA,Packaging,13-07-2024,ISO14001
+121,BrightLiving Inc,India,Household Products,05-01-2023,ISO14001
+122,PureSip Inc,Germany,Beverages,18-04-2023,FDA Approved
+123,PackRight Ltd,India,Packaging,08-02-2025,ISO14001
+124,SafeHome Pvt Ltd,India,Household Products,18-10-2021,ISO9001
+125,BlueWave Inc,Vietnam,Beverages,06-05-2022,FDA Approved
+126,EcoPack Co.,China,Packaging,17-05-2025,ISO9001
+127,FreshAura Inc,India,Personal Care,20-12-2021,GMP Certified
+128,HydraLife GmbH,Vietnam,Beverages,31-08-2025,HACCP
+129,GlowCare Ltd,Germany,Personal Care,28-07-2023,GMP Certified
+130,FreshOrigin GmbH,USA,Food Ingredients,15-09-2022,HACCP
+131,FreshAura GmbH,China,Personal Care,11-05-2023,ISO9001
+132,GreenGrain Ltd,Vietnam,Food Ingredients,17-07-2025,FSSAI Certified
+133,NutriHarvest Ltd,Vietnam,Food Ingredients,01-05-2021,ISO22000
+134,EcoPack GmbH,USA,Packaging,07-08-2022,ISO14001
+135,DermaWell Inc,Germany,Personal Care,06-09-2023,GMP Certified
+136,GreenGrain Co.,Vietnam,Food Ingredients,25-02-2023,ISO22000
+137,AquaPure Ltd,Germany,Beverages,18-04-2025,FDA Approved
+138,SafeHome GmbH,USA,Household Products,01-05-2025,EcoLabel Certified
+139,RefreshCo Inc,Germany,Beverages,01-03-2026,ISO22000
+140,CleanHome GmbH,India,Household Products,13-05-2025,ISO14001
+141,AgroPure Ltd,Germany,Food Ingredients,02-05-2022,FSSAI Certified
+142,CarePlus Ltd,Vietnam,Personal Care,04-10-2022,GMP Certified
+143,GoldenField Inc,China,Food Ingredients,04-10-2025,HACCP
+144,NutriHarvest Inc,Vietnam,Food Ingredients,12-03-2023,HACCP
+145,RefreshCo Co.,Vietnam,Beverages,11-11-2021,ISO22000
+146,HydraLife Inc,Germany,Beverages,10-01-2022,FDA Approved
+147,VitalFoods Pvt Ltd,Vietnam,Food Ingredients,15-11-2025,HACCP
+148,SparkClean Ltd,China,Household Products,29-10-2023,EcoLabel Certified
+149,FreshAura Ltd,China,Personal Care,19-11-2022,ISO9001
+150,GreenGrain Corporation,Vietnam,Food Ingredients,03-04-2023,FSSAI Certified
+151,CoolStream GmbH,USA,Beverages,28-07-2022,FDA Approved
+152,GreenSeal Pvt Ltd,India,Packaging,24-09-2024,FSC Certified
+153,SafeHome Corporation,Vietnam,Household Products,15-04-2025,EcoLabel Certified
+154,BioBeauty GmbH,USA,Personal Care,04-12-2024,ISO9001
+155,PureNest GmbH,India,Household Products,27-09-2023,EcoLabel Certified
+156,ClearPack GmbH,China,Packaging,11-06-2023,ISO9001
+157,CoolStream Corporation,Germany,Beverages,06-04-2024,FDA Approved
+158,UltraPack Pvt Ltd,China,Packaging,06-09-2024,ISO14001
+159,FreshFlow GmbH,China,Beverages,06-06-2025,HACCP
+160,VitalFoods Corporation,Vietnam,Food Ingredients,12-07-2024,FSSAI Certified
+161,FreshNest Corporation,Germany,Household Products,19-01-2023,ISO9001
+162,AquaPure Pvt Ltd,Vietnam,Beverages,10-08-2025,HACCP
+163,CrystalSpring GmbH,China,Beverages,28-07-2025,FDA Approved
+164,FreshAura Corporation,Germany,Personal Care,23-05-2024,ISO22716
+165,NatureYield Ltd,USA,Food Ingredients,09-02-2023,FSSAI Certified
+166,CoolStream Inc,USA,Beverages,12-12-2022,HACCP
+167,HomeGuard Pvt Ltd,China,Household Products,15-04-2021,EcoLabel Certified
+168,RefreshCo Corporation,Vietnam,Beverages,13-11-2021,HACCP
+169,FlexiWrap Ltd,China,Packaging,05-12-2025,FSC Certified
+170,GreenHome Inc,USA,Household Products,02-09-2023,ISO14001
+171,GreenSeal Corporation,China,Packaging,18-02-2025,ISO14001
+172,AgroPure Co.,China,Food Ingredients,04-02-2022,ISO22000
+173,CrystalSpring Corporation,Vietnam,Beverages,05-09-2022,ISO22000
+174,BioWrap Co.,India,Packaging,14-02-2022,FSC Certified
+175,CarePlus Corporation,Germany,Personal Care,30-01-2023,GMP Certified
+176,FarmSource Pvt Ltd,USA,Food Ingredients,16-12-2025,HACCP
+177,BrightLiving Corporation,India,Household Products,06-12-2023,ISO14001
+178,FreshFlow Corporation,China,Beverages,09-12-2024,ISO22000
+179,UltraHome Ltd,India,Household Products,21-09-2021,ISO14001
+180,RefreshCo Pvt Ltd,Germany,Beverages,20-12-2023,ISO22000
+181,CoolStream Pvt Ltd,Vietnam,Beverages,13-01-2023,FDA Approved
+182,PrimeWrap Corporation,Vietnam,Packaging,29-06-2021,ISO14001
+183,SafePack Corporation,Vietnam,Packaging,18-02-2025,ISO14001
+184,SkinEssence Ltd,Vietnam,Personal Care,14-06-2024,ISO22716
+185,CrystalSpring Co.,Vietnam,Beverages,13-08-2021,HACCP
+186,ClearDrop Pvt Ltd,India,Beverages,21-06-2024,ISO22000
+187,PrimeWrap Ltd,Vietnam,Packaging,16-07-2023,ISO9001
+188,EcoPack Ltd,Vietnam,Packaging,09-04-2022,ISO9001
+189,BrightLiving Pvt Ltd,China,Household Products,17-01-2023,ISO9001
+190,SafePack Co.,USA,Packaging,10-05-2023,FSC Certified
+191,SkinEssence Co.,Germany,Personal Care,13-04-2022,ISO9001
+192,ClearPack Pvt Ltd,Germany,Packaging,29-09-2022,ISO14001
+193,VitalFoods GmbH,USA,Food Ingredients,13-01-2026,FSSAI Certified
+194,FreshAura Co.,Germany,Personal Care,10-10-2025,ISO9001
+195,PureNest Pvt Ltd,Vietnam,Household Products,19-02-2022,EcoLabel Certified
+196,EcoClean GmbH,India,Household Products,06-08-2022,ISO14001
+197,FreshFlow Pvt Ltd,China,Beverages,22-05-2022,ISO22000
+198,BlueWave Co.,India,Beverages,01-05-2025,FDA Approved
+199,CleanHome Inc,Germany,Household Products,22-05-2021,ISO9001
+200,HomeGuard Corporation,Vietnam,Household Products,29-01-2026,ISO9001
+201,Vietnam Supply Co 5038,Vietnam,Packaging,,ISO14001
+202,Vietnam Supply Co 7007,Vietnam,Personal Care,,GMP Certified
+203,China Supply Co 3373,China,Food Ingredients,,ISO22000
+204,Shakti Consumer Goods Ltd,India,Household Products,,FDA Approved
+205,Aarav Ingredients Pvt Ltd,India,Personal Care,,FSC Certified
+206,Vietnam Supply Co 3279,Vietnam,Beverages,,FSSAI Certified
+207,BlueRiver Packaging Co,USA,Beverages,,EcoLabel Certified
+208,Krishna Naturals,India,Personal Care,,GMP Certified
+209,Triveni Agro Pvt Ltd,India,Food Ingredients,,ISO9001
+210,RheinAgro GmbH,Germany,Household Products,,FSC Certified
+211,Vietnam Supply Co 7028,Vietnam,Food Ingredients,,FSSAI Certified
+212,Vietnam Supply Co 2296,Vietnam,Packaging,,FSSAI Certified
+213,Organic India Supplies,India,Food Ingredients,,ISO22716
+214,China Supply Co 5721,China,Household Products,,HACCP
+215,NaturWerk Materials GmbH,Germany,Personal Care,,ISO22716
+216,TrueHarvest Co,USA,Packaging,,FDA Approved
+217,Vietnam Supply Co 2740,Vietnam,Personal Care,,ISO22716
+218,China Supply Co 4315,China,Packaging,,ISO14001
+219,Vietnam Supply Co 6688,Vietnam,Personal Care,,ISO14001
+220,AgriCore USA Inc,USA,Beverages,,FSSAI Certified
+221,Cargill Food Ingredients India Pvt Ltd,India,Beverages,,EcoLabel Certified
+222,DS Smith Packaging Solutions,Germany,Beverages,,ISO22716
+223,Ingredion Incorporated,Vietnam,Beverages,,ISO22716
+224,Amcor Flexibles GmbH,Germany,Food Ingredients,,FSSAI Certified
+225,Tate & Lyle Ingredients Americas LLC,Vietnam,Packaging,,ISO14001
+226,Berry Global Packaging Inc,China,Food Ingredients,,ISO22000
+227,Mondi Consumer Packaging GmbH,China,Household Products,,FDA Approved
+228,Olam Food Ingredients Pvt Ltd,Vietnam,Packaging,,FSC Certified
+229,Wilmar International Trading Ltd,China,Household Products,,ISO9001
+230,International Flavors & Fragrances Inc,China,Personal Care,,FDA Approved
+231,Nestlé Ingredient Solutions Pvt Ltd,Vietnam,Household Products,,FSSAI Certified
+232,PepsiCo Supply Chain Services,Vietnam,Packaging,,ISO14001
+233,Unilever Raw Materials GmbH,China,Personal Care,,ISO9001
+234,Dabur India Procurement Ltd,India,Beverages,,EcoLabel Certified
+235,Britannia Packaging Systems,USA,Household Products,,HACCP
+236,ITC Agro Sourcing Division,Vietnam,Food Ingredients,,HACCP
+237,Mondelez Global Ingredients,China,Packaging,,ISO9001
+238,Parle Products Supply Chain,USA,Personal Care,,ISO9001
+239,Marico Consumer Goods Sourcing,India,Personal Care,,ISO9001
+240,Godrej Food Ingredients Ltd,China,Personal Care,,ISO22000

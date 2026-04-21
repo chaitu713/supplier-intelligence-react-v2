@@ -1,0 +1,13 @@
+pandas
+numpy
+scikit-learn
+requests
+openai
+fastapi
+uvicorn
+azure-storage-blob
+azure-ai-formrecognizer
+python-dotenv
+azure-identity
+azure-core
+google-genai
