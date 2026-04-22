@@ -10,7 +10,7 @@ export function TopRiskSuppliersChart({
   items,
   isLoading,
 }: TopRiskSuppliersChartProps) {
-  const maxValue = Math.max(...items.map((item) => item.riskScore), 1);
+  const maxValue = Math.max(...items.map((item) => item.overallRiskScore), 1);
 
   if (!isLoading) {
     if (items.length === 0) {
@@ -19,7 +19,7 @@ export function TopRiskSuppliersChart({
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-[var(--text)]">Top 10 High-Risk Suppliers</h3>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              Highest-risk suppliers ranked by risk score.
+              Highest-risk suppliers ranked by overall risk score.
             </p>
           </div>
           <div className="empty-state px-6 py-16 text-center text-sm">
@@ -34,7 +34,7 @@ export function TopRiskSuppliersChart({
         <div className="mb-6">
           <h3 className="text-lg font-semibold text-[var(--text)]">Top 10 High-Risk Suppliers</h3>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Highest-risk suppliers ranked by risk score.
+            Highest-risk suppliers ranked by overall risk score.
           </p>
         </div>
         <PlotlyChart
@@ -44,22 +44,27 @@ export function TopRiskSuppliersChart({
               type: "bar",
               orientation: "h",
               y: items.map((item) => item.supplierName).reverse(),
-              x: items.map((item) => item.riskScore).reverse(),
+              x: items.map((item) => item.overallRiskScore).reverse(),
               marker: {
                 color: "#166534",
                 line: { color: "#bbf7d0", width: 1 },
               },
               customdata: items
-                .map((item) => [item.country ?? "Unknown", item.category ?? "Unspecified"])
+                .map((item) => [
+                  item.country ?? "Unknown",
+                  item.tier ?? "Unspecified tier",
+                  item.operationalRiskScore,
+                  item.esgRiskScore,
+                ])
                 .reverse(),
               hovertemplate:
-                "%{y}<br>Risk score %{x:.2f}<br>%{customdata[0]}<br>%{customdata[1]}<extra></extra>",
+                "%{y}<br>Overall risk %{x:.2f}<br>%{customdata[0]}<br>%{customdata[1]}<br>Operational %{customdata[2]:.2f}<br>ESG %{customdata[3]:.2f}<extra></extra>",
             },
           ]}
           layout={{
             margin: { l: 170, r: 24, t: 8, b: 36 },
             xaxis: {
-              title: { text: "Risk score" },
+              title: { text: "Overall risk score" },
               gridcolor: "#dbeafe",
               zerolinecolor: "#dbeafe",
             },
@@ -77,7 +82,7 @@ export function TopRiskSuppliersChart({
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-[var(--text)]">Top 10 High-Risk Suppliers</h3>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Highest-risk suppliers ranked by risk score.
+          Highest-risk suppliers ranked by overall risk score.
         </p>
       </div>
 
@@ -99,13 +104,13 @@ export function TopRiskSuppliersChart({
                   </p>
                 </div>
                 <span className="mono text-sm font-semibold text-[var(--text-secondary)]">
-                  {item.riskScore.toFixed(2)}
+                  {item.overallRiskScore.toFixed(2)}
                 </span>
               </div>
               <div className="h-3 rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--border)]">
                 <div
                   className="h-3 rounded-full bg-gradient-to-r from-[var(--primary)] to-[#4ade80]"
-                  style={{ width: `${(item.riskScore / maxValue) * 100}%` }}
+                  style={{ width: `${(item.overallRiskScore / maxValue) * 100}%` }}
                 />
               </div>
             </div>

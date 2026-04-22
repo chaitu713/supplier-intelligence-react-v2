@@ -70,13 +70,16 @@ def append_suppliers(df):
 
     import pandas as pd
 
-    existing = pd.read_csv(DATA_DIR / "suppliers.csv")
+    existing = pd.read_csv(DATA_DIR / "suppliers_v2.csv")
+    for column in existing.columns:
+        if column not in df.columns:
+            df[column] = None
 
     df = df[~df["supplier_id"].isin(existing["supplier_id"])]
 
-    updated = pd.concat([existing, df], ignore_index=True)
+    updated = pd.concat([existing, df[existing.columns]], ignore_index=True)
 
-    updated.to_csv(DATA_DIR / "suppliers.csv", index=False)
+    updated.to_csv(DATA_DIR / "suppliers_v2.csv", index=False)
 
     return f"{len(df)} New Suppliers Added"
 
@@ -125,13 +128,34 @@ def append_esg(df):
 
     import pandas as pd
 
-    existing = pd.read_csv(DATA_DIR / "esg_metrics.csv")
+    existing = pd.read_csv(DATA_DIR / "esg_social_v2.csv")
+
+    df = df.rename(
+        columns={
+            "labor_violations": "labor",
+        }
+    )
+    if "labor" not in df.columns:
+        df["labor"] = 0
+    for column in [
+        "injury",
+        "turnover",
+        "diversity",
+        "child",
+        "hours",
+        "audit",
+        "complaints",
+        "wage",
+        "satisfaction",
+    ]:
+        if column not in df.columns:
+            df[column] = None
 
     df = df[~df["supplier_id"].isin(existing["supplier_id"])]
 
-    updated = pd.concat([existing, df], ignore_index=True)
+    updated = pd.concat([existing, df[existing.columns]], ignore_index=True)
 
-    updated.to_csv(DATA_DIR / "esg_metrics.csv", index=False)
+    updated.to_csv(DATA_DIR / "esg_social_v2.csv", index=False)
 
     return f"{len(df)} New ESG Records Added"
 
@@ -183,13 +207,14 @@ def append_transactions(df):
 
     import pandas as pd
 
-    existing = pd.read_csv(DATA_DIR / "transactions.csv")
+    existing = pd.read_csv(DATA_DIR / "transactions_v2.csv")
+    df = df.rename(columns={"delivery_delay_days": "delay_days"})
 
     df = df[~df["transaction_id"].isin(existing["transaction_id"])]
 
-    updated = pd.concat([existing, df], ignore_index=True)
+    updated = pd.concat([existing, df[existing.columns]], ignore_index=True)
 
-    updated.to_csv(DATA_DIR / "transactions.csv", index=False)
+    updated.to_csv(DATA_DIR / "transactions_v2.csv", index=False)
 
     return f"{len(df)} New Transactions Added"
 

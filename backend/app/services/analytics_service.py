@@ -79,14 +79,8 @@ class AnalyticsService:
         return histogram
 
     def _load_full_transactions(self) -> pd.DataFrame:
-        transactions_file = self.dataset_service.settings.transactions_file
-        if not transactions_file.exists():
-            raise AppError("transactions dataset not found", status_code=500)
-
         try:
-            transactions = pd.read_csv(transactions_file)
-            transactions = transactions.where(pd.notna(transactions), None)
-            return transactions
+            return self.dataset_service.load_full_transactions()
         except Exception as exc:
             logger.exception("Failed to load full transactions dataset", exc_info=exc)
             raise AppError("Unable to load transactions dataset", status_code=500) from exc

@@ -6,7 +6,13 @@ class SupplierRecord(BaseModel):
     supplier_name: str
     country: str | None = None
     category: str | None = None
+    tier: str | None = None
+    size: str | None = None
+    annual_revenue: float | None = None
+    dependency_score: float | None = None
+    criticality_score: float | None = None
     onboarding_date: str | None = None
+    status: str | None = None
     certification: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

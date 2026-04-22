@@ -26,15 +26,51 @@ class Settings:
 
     @property
     def suppliers_file(self) -> Path:
-        return self.data_dir / "suppliers.csv"
+        return self.data_dir / "suppliers_v2.csv"
 
     @property
-    def esg_file(self) -> Path:
-        return self.data_dir / "esg_metrics.csv"
+    def esg_environmental_file(self) -> Path:
+        return self.data_dir / "esg_environmental_v2.csv"
+
+    @property
+    def esg_social_file(self) -> Path:
+        return self.data_dir / "esg_social_v2.csv"
+
+    @property
+    def esg_governance_file(self) -> Path:
+        return self.data_dir / "esg_governance_v2.csv"
 
     @property
     def transactions_file(self) -> Path:
-        return self.data_dir / "transactions.csv"
+        return self.data_dir / "transactions_v2.csv"
+
+    @property
+    def alerts_file(self) -> Path:
+        return self.data_dir / "alerts_v2.csv"
+
+    @property
+    def audits_file(self) -> Path:
+        return self.data_dir / "audits_v2.csv"
+
+    @property
+    def certifications_file(self) -> Path:
+        return self.data_dir / "certifications_v2.csv"
+
+    @property
+    def supplier_certifications_file(self) -> Path:
+        return self.data_dir / "supplier_certifications_v2.csv"
+
+    @property
+    def commodities_file(self) -> Path:
+        return self.data_dir / "commodities_v2.csv"
+
+    @property
+    def supplier_commodity_map_file(self) -> Path:
+        return self.data_dir / "supplier_commodity_map_v2.csv"
+
+    @property
+    def supplier_features_file(self) -> Path:
+        return self.data_dir / "supplier_features_v2.csv"
 
     @property
     def document_history_file(self) -> Path:

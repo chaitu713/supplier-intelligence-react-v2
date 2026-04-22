@@ -79,14 +79,15 @@ export function DueDiligencePanel({
                 </p>
               </div>
               <div className="rounded-2xl bg-white/15 px-4 py-3 text-sm text-white ring-1 ring-white/15">
-                Overall assessment: <span className="font-semibold">{result.overall}</span>
+                Overall assessment: <span className="font-semibold">{result.overall}</span>{" "}
+                <span className="text-green-100">({result.overallRiskScore.toFixed(1)})</span>
               </div>
             </div>
 
             <div className="mt-6 grid gap-3 md:grid-cols-3">
-              <Metric label="Operational Risk" value={result.opRisk} />
-              <Metric label="ESG Risk" value={result.esgRisk} />
-              <Metric label="Overall Risk" value={result.overall} />
+              <Metric label="Operational Risk" value={`${result.opRisk} (${result.opRiskScore.toFixed(1)})`} />
+              <Metric label="ESG Risk" value={`${result.esgRisk} (${result.esgRiskScore.toFixed(1)})`} />
+              <Metric label="Overall Risk" value={`${result.overall} (${result.overallRiskScore.toFixed(1)})`} />
             </div>
           </div>
 

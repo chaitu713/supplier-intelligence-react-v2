@@ -5,6 +5,9 @@ export interface RiskOverview {
   mediumRiskCount: number;
   lowRiskCount: number;
   avgRiskScore: number;
+  avgOperationalRisk: number;
+  avgEsgRisk: number;
+  avgOverallRisk: number;
 }
 
 export interface RiskHistogramBin {
@@ -24,18 +27,27 @@ export interface RiskSupplierItem {
   supplierName: string;
   country: string | null;
   category: string | null;
+  tier: string | null;
   avgDelay: number;
   avgDefect: number;
   avgCostVariance: number;
+  operationalRiskScore: number;
+  esgRiskScore: number;
+  overallRiskScore: number;
   riskScore: number;
+  operationalRiskLevel: "High" | "Medium" | "Low";
+  esgRiskLevel: "High" | "Medium" | "Low";
   riskLevel: "High" | "Medium" | "Low";
 }
 
 export interface DueDiligenceResponse {
   supplier: string;
   opRisk: string;
+  opRiskScore: number;
   esgRisk: string;
+  esgRiskScore: number;
   overall: string;
+  overallRiskScore: number;
   issues: string[];
   aiSummary: string;
 }

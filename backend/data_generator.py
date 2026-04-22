@@ -71,8 +71,9 @@ transactions_df = pd.DataFrame(transactions)
 # SAVE FILES
 ############################
 
-suppliers_df.to_csv("data/suppliers.csv",index=False)
-esg_df.to_csv("data/esg_metrics.csv",index=False)
-transactions_df.to_csv("data/transactions.csv",index=False)
+suppliers_df.to_csv("data/suppliers_v2.csv",index=False)
+esg_df.to_csv("data/esg_social_v2.csv",index=False)
+transactions_df = transactions_df.rename(columns={"delivery_delay_days": "delay_days"})
+transactions_df.to_csv("data/transactions_v2.csv",index=False)
 
 print("All datasets generated successfully!")

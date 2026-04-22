@@ -47,30 +47,42 @@ export function RiskMonitoringPage() {
           </div>
         ) : null}
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
           <KpiCard
             label="High Risk"
             value={overview ? overview.highRiskCount.toLocaleString() : "-"}
-            subtitle="Score > 8"
+            subtitle="Overall score >= 60"
             accentClassName="bg-amber-500"
           />
           <KpiCard
             label="Medium Risk"
             value={overview ? overview.mediumRiskCount.toLocaleString() : "-"}
-            subtitle="Score 5-8"
+            subtitle="Overall score 40-59"
             accentClassName="bg-yellow-400"
           />
           <KpiCard
             label="Low Risk"
             value={overview ? overview.lowRiskCount.toLocaleString() : "-"}
-            subtitle="Score <= 5"
+            subtitle="Overall score < 40"
             accentClassName="bg-emerald-600"
           />
           <KpiCard
-            label="Avg Risk Score"
-            value={overview ? overview.avgRiskScore.toFixed(2) : "-"}
-            subtitle="Fleet average"
+            label="Avg Overall Risk"
+            value={overview ? overview.avgOverallRisk.toFixed(1) : "-"}
+            subtitle="Combined operational + ESG"
             accentClassName="bg-[var(--primary)]"
+          />
+          <KpiCard
+            label="Avg Operational"
+            value={overview ? overview.avgOperationalRisk.toFixed(1) : "-"}
+            subtitle="Execution and resilience"
+            accentClassName="bg-sky-500"
+          />
+          <KpiCard
+            label="Avg ESG"
+            value={overview ? overview.avgEsgRisk.toFixed(1) : "-"}
+            subtitle="Environmental, social, governance"
+            accentClassName="bg-teal-600"
           />
         </section>
 
