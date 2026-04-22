@@ -9,6 +9,7 @@ from .routers.advisor import router as advisor_router
 from .routers.datasets import router as datasets_router
 from .routers.documents import router as documents_router
 from .routers.health import router as health_router
+from .routers.onboarding_router import router as onboarding_router
 from .routers.risk import router as risk_router
 
 configure_logging()
@@ -45,6 +46,7 @@ def create_app() -> FastAPI:
     application.include_router(analytics_router)
     application.include_router(advisor_router)
     application.include_router(risk_router)
+    application.include_router(onboarding_router)
 
     logger.info("FastAPI application configured")
     return application

@@ -11,6 +11,7 @@ interface AppShellProps {
 
 const navItems = [
   { to: "/", label: "Document Ingestion" },
+  { to: "/onboarding", label: "Supplier Onboarding" },
   { to: "/overview-dashboard", label: "Overview Dashboard" },
   { to: "/risk-monitoring", label: "Risk Monitoring" },
   { to: "/due-diligence", label: "Due Diligence" },
