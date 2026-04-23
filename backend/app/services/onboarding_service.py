@@ -222,6 +222,50 @@ class OnboardingService:
             new_row[column] = None if pd.isna(numeric_mean) else float(numeric_mean)
         return pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
 
+    def _build_starter_audit_row(
+        self,
+        audits_df: pd.DataFrame,
+        supplier_id: int,
+        onboarding_date: str,
+        data: dict,
+    ) -> dict:
+        certifications_count = len(data.get("certifications", []))
+        commodities_count = len(data.get("commodities", []))
+        tier = (data.get("tier") or "").strip().lower()
+        size = (data.get("size") or "").strip().lower()
+
+        # Start from a conservative baseline and adjust slightly from onboarding context.
+        score = 78.0
+        score += min(certifications_count, 3) * 4.0
+        score += min(commodities_count, 2) * 1.5
+        if tier == "tier 1":
+            score -= 4.0
+        elif tier == "tier 3":
+            score += 2.0
+        if size == "large":
+            score -= 2.0
+        elif size == "small":
+            score += 1.0
+        score = max(55.0, min(96.0, round(score, 2)))
+
+        non_compliance = 3
+        if certifications_count >= 2:
+            non_compliance -= 1
+        if certifications_count == 0:
+            non_compliance += 1
+        if tier == "tier 1":
+            non_compliance += 1
+        non_compliance = max(0, min(5, non_compliance))
+
+        return {
+            "audit_id": self._get_next_id(audits_df, "audit_id"),
+            "supplier_id": supplier_id,
+            "audit_date": onboarding_date,
+            "type": "Initial",
+            "score": score,
+            "non_compliance": non_compliance,
+        }
+
     def _generate_ai_assistance(self, data: dict, validation: dict, raw_text: str) -> dict | None:
         issues = validation.get("errors", []) + validation.get("warnings", [])
         if not issues or not self.gemini_client:
@@ -332,6 +376,7 @@ Rules:
             esg_environmental_path = self.data_dir / "esg_environmental_v2.csv"
             esg_social_path = self.data_dir / "esg_social_v2.csv"
             esg_governance_path = self.data_dir / "esg_governance_v2.csv"
+            audits_path = self.data_dir / "audits_v2.csv"
 
             suppliers_df = pd.read_csv(suppliers_path)
             supplier_commodity_map_df = pd.read_csv(supplier_commodity_map_path)
@@ -342,6 +387,7 @@ Rules:
             esg_environmental_df = pd.read_csv(esg_environmental_path)
             esg_social_df = pd.read_csv(esg_social_path)
             esg_governance_df = pd.read_csv(esg_governance_path)
+            audits_df = pd.read_csv(audits_path)
 
             supplier_id = self._get_next_id(suppliers_df, "supplier_id")
             today = date.today()
@@ -435,6 +481,22 @@ Rules:
             esg_environmental_df = self._append_default_row(esg_environmental_df, supplier_id)
             esg_social_df = self._append_default_row(esg_social_df, supplier_id)
             esg_governance_df = self._append_default_row(esg_governance_df, supplier_id)
+            audits_df = pd.concat(
+                [
+                    audits_df,
+                    pd.DataFrame(
+                        [
+                            self._build_starter_audit_row(
+                                audits_df=audits_df,
+                                supplier_id=supplier_id,
+                                onboarding_date=onboarding_date,
+                                data=data,
+                            )
+                        ]
+                    ),
+                ],
+                ignore_index=True,
+            )
 
             suppliers_df.to_csv(suppliers_path, index=False)
             supplier_commodity_map_df.to_csv(supplier_commodity_map_path, index=False)
@@ -443,6 +505,7 @@ Rules:
             esg_environmental_df.to_csv(esg_environmental_path, index=False)
             esg_social_df.to_csv(esg_social_path, index=False)
             esg_governance_df.to_csv(esg_governance_path, index=False)
+            audits_df.to_csv(audits_path, index=False)
 
             return supplier_id
         except Exception as exc:

@@ -12,6 +12,7 @@ This project is an AI-driven Supplier Intelligence application with a FastAPI ba
 
 ## Active Application Modules
 - AI Assisted Supplier Onboarding
+- AI Assisted Auditing
 - Overview Dashboard
 - Risk Monitoring
 - Due Diligence
@@ -22,7 +23,46 @@ The frontend now uses Supplier Onboarding as the default entry flow.
 
 - `/` redirects to `/onboarding`
 - `/onboarding` is the primary intake module
+- `/supplier-engagement` now hosts the shared Supplier Engagement workspace
 - wildcard routes also redirect to `/onboarding`
+
+## AI Assisted Auditing
+Auditing now lives inside the Supplier Engagement workspace as a separate sub-module. The first auditing step is intentionally audit-centric and does not require any new uploads.
+
+### Tab 1: Audit Queue
+Frontend:
+- Supplier Engagement now includes a dedicated `Auditing` module tab
+- The auditing workspace includes 3 internal tabs:
+  - `Audit Queue`
+  - `Audit Review`
+  - `AI Audit Insights`
+- `Audit Queue` is the first implemented step
+- Queue cards/rows show:
+  - supplier name
+  - supplier country
+  - supplier ID
+  - audit type
+  - audit date
+  - audit score
+  - non-compliance count
+  - audit status
+- Queue filter chips currently support:
+  - `All`
+  - `High priority`
+  - `Open review`
+  - `External`
+- The selected audit is tracked in UI and will be reused by the next two auditing tabs
+- No supplier PDF, image, or certification upload is required for this first auditing version
+
+Backend / data basis:
+- This first auditing step is currently read-only and grounded in existing `v2` datasets
+- The queue is built from the existing shape of:
+  - `data/audits_v2.csv`
+  - `data/suppliers_v2.csv`
+  - `data/supplier_certifications_v2.csv`
+- No new tables are introduced
+- No new upload endpoint is required for the first auditing slice
+- This keeps Auditing truthful to the current data model while later tabs add review and AI interpretation layers
 
 ## AI Assisted Supplier Onboarding
 The onboarding experience lives at `/onboarding` and currently supports 4 steps using the existing `v2` data model.
@@ -106,6 +146,7 @@ Backend:
 - Valid submissions append a new supplier record into `data/suppliers_v2.csv`
 - Commodity mappings are appended into `data/supplier_commodity_map_v2.csv`
 - Certification mappings are appended into `data/supplier_certifications_v2.csv`
+- A starter audit row is appended into `data/audits_v2.csv` so newly onboarded suppliers can enter the auditing queue immediately
 - Starter supplier-linked rows are appended into:
   - `data/supplier_features_v2.csv`
   - `data/esg_environmental_v2.csv`
@@ -223,6 +264,7 @@ Persisted now from onboarding:
   - generated `criticality_score`
 - `data/supplier_commodity_map_v2.csv`
 - `data/supplier_certifications_v2.csv`
+- `data/audits_v2.csv`
 - `data/supplier_features_v2.csv`
 - `data/esg_environmental_v2.csv`
 - `data/esg_social_v2.csv`
@@ -235,11 +277,26 @@ Captured in frontend and persisted in backend for certifications:
 - status
 
 Not appended during onboarding by design:
-- `data/audits_v2.csv`
 - `data/alerts_v2.csv`
 - transaction datasets
 
 Those are better produced by later auditing, monitoring, and operations workflows rather than supplier intake itself.
+
+Starter audit behavior for newly onboarded suppliers:
+- Onboarding now creates one `Initial` audit row in `data/audits_v2.csv`
+- The row is not identical for every supplier
+- Shared base fields:
+  - `supplier_id` = newly created supplier ID
+  - `audit_date` = onboarding date
+  - `type` = `Initial`
+- Derived starter values:
+  - `score` is adjusted from a conservative baseline using onboarding context such as:
+    - certification count
+    - commodity count
+    - tier
+    - size
+  - `non_compliance` is also lightly derived from onboarding context instead of being constant for every supplier
+- This starter row is meant to place the supplier into the auditing queue immediately, not to represent a completed audit
 
 ## Project Structure
 ```text

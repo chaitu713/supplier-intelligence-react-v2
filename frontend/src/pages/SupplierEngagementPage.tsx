@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 
+import { AuditingWorkspace } from "./AuditingWorkspace";
 import OnboardingPage from "./OnboardingPage.jsx";
 
 const engagementTabs = [
@@ -63,6 +64,8 @@ export function SupplierEngagementPage() {
 
       {activeTab === "onboarding" ? (
         <OnboardingPage embedded />
+      ) : activeTab === "auditing" ? (
+        <AuditingWorkspace />
       ) : (
         <section style={styles.placeholder}>
           <h2 style={styles.placeholderTitle}>{activeModule.title}</h2>
