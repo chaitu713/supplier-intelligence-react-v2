@@ -40,7 +40,7 @@ const emptyForm = {
   status: "Active",
 };
 
-export default function OnboardingPage() {
+export default function OnboardingPage({ embedded = false } = {}) {
   const [activeTab, setActiveTab] = useState("document");
   const [selectedFile, setSelectedFile] = useState(null);
   const [extractedData, setExtractedData] = useState(null);
@@ -1033,9 +1033,9 @@ export default function OnboardingPage() {
     return renderReviewTab();
   }
 
-  return (
-    <main style={styles.page}>
-      <div style={styles.container}>
+  const shellContent = (
+    <div style={embedded ? styles.embeddedContainer : styles.container}>
+      {!embedded ? (
         <section style={styles.frame}>
           <div style={styles.heading}>
             <span style={styles.eyebrow}>Supplier Engagement & Onboarding</span>
@@ -1068,30 +1068,59 @@ export default function OnboardingPage() {
             })}
           </div>
         </section>
+      ) : (
+        <section style={styles.embeddedFrame}>
+          <div style={styles.tabRail}>
+            {TABS.map((tab) => {
+              const isActive = tab.id === activeTab;
 
-        <section style={styles.flowBanner}>
-          <div style={styles.flowBannerItem}>
-            <span style={styles.flowBannerLabel}>Current phase</span>
-            <strong style={styles.flowBannerValue}>{TABS.find((tab) => tab.id === activeTab)?.label}</strong>
-          </div>
-          <div style={styles.flowBannerItem}>
-            <span style={styles.flowBannerLabel}>Supplier readiness</span>
-            <strong style={styles.flowBannerValue}>{supplierCompletion}%</strong>
-          </div>
-          <div style={styles.flowBannerItem}>
-            <span style={styles.flowBannerLabel}>Commodity mappings</span>
-            <strong style={styles.flowBannerValue}>{selectedCommodityNames.length}</strong>
-          </div>
-          <div style={styles.flowBannerItem}>
-            <span style={styles.flowBannerLabel}>Submission state</span>
-            <strong style={styles.flowBannerValue}>{reviewReady ? "Ready" : "In progress"}</strong>
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    ...styles.tab,
+                    ...(isActive ? styles.tabActive : {}),
+                  }}
+                >
+                  <span style={styles.tabStep}>{tab.step}</span>
+                  <span style={styles.tabLabel}>{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
         </section>
+      )}
 
-        {renderActiveTab()}
-      </div>
-    </main>
+      <section style={styles.flowBanner}>
+        <div style={styles.flowBannerItem}>
+          <span style={styles.flowBannerLabel}>Current phase</span>
+          <strong style={styles.flowBannerValue}>{TABS.find((tab) => tab.id === activeTab)?.label}</strong>
+        </div>
+        <div style={styles.flowBannerItem}>
+          <span style={styles.flowBannerLabel}>Supplier readiness</span>
+          <strong style={styles.flowBannerValue}>{supplierCompletion}%</strong>
+        </div>
+        <div style={styles.flowBannerItem}>
+          <span style={styles.flowBannerLabel}>Commodity mappings</span>
+          <strong style={styles.flowBannerValue}>{selectedCommodityNames.length}</strong>
+        </div>
+        <div style={styles.flowBannerItem}>
+          <span style={styles.flowBannerLabel}>Submission state</span>
+          <strong style={styles.flowBannerValue}>{reviewReady ? "Ready" : "In progress"}</strong>
+        </div>
+      </section>
+
+      {renderActiveTab()}
+    </div>
   );
+
+  if (embedded) {
+    return shellContent;
+  }
+
+  return <main style={styles.page}>{shellContent}</main>;
 }
 
 function Metric({ value, label }) {
@@ -1129,6 +1158,7 @@ const styles = {
       "radial-gradient(circle at top left, rgba(34, 197, 94, 0.12), transparent 28%), linear-gradient(180deg, #f4f6f3 0%, #eef3ed 100%)",
   },
   container: { maxWidth: "1240px", margin: "0 auto", display: "grid", gap: "22px" },
+  embeddedContainer: { display: "grid", gap: "22px" },
   frame: {
     display: "grid",
     gap: "20px",
@@ -1141,6 +1171,11 @@ const styles = {
     top: "16px",
     zIndex: 2,
     backdropFilter: "blur(10px)",
+  },
+  embeddedFrame: {
+    display: "grid",
+    gap: "16px",
+    padding: "0",
   },
   heading: { display: "grid", gap: "10px" },
   eyebrow: { fontSize: "11px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#166534" },

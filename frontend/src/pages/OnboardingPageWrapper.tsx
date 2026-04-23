@@ -1,8 +1,5 @@
-import type { ComponentType } from "react";
-
-import OnboardingPage from "./OnboardingPage.jsx";
+import { SupplierEngagementPage } from "./SupplierEngagementPage";
 
 export function OnboardingPageWrapper() {
-  const OnboardingPageComponent = OnboardingPage as unknown as ComponentType;
-  return <OnboardingPageComponent />;
+  return <SupplierEngagementPage />;
 }

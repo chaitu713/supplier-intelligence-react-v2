@@ -10,12 +10,13 @@ export default function App() {
   return (
     <AppShell>
       <Routes>
-        <Route path="/" element={<Navigate to="/onboarding" replace />} />
+        <Route path="/" element={<Navigate to="/supplier-engagement" replace />} />
+        <Route path="/supplier-engagement" element={<OnboardingPageWrapper />} />
         <Route path="/onboarding" element={<OnboardingPageWrapper />} />
         <Route path="/overview-dashboard" element={<OverviewDashboardPage />} />
         <Route path="/risk-monitoring" element={<RiskMonitoringPage />} />
         <Route path="/due-diligence" element={<DueDiligencePage />} />
-        <Route path="*" element={<Navigate to="/onboarding" replace />} />
+        <Route path="*" element={<Navigate to="/supplier-engagement" replace />} />
       </Routes>
     </AppShell>
   );
