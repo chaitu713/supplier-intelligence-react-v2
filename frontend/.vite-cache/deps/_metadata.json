@@ -1,0 +1,74 @@
+{
+  "hash": "a79332a5",
+  "browserHash": "75c9d578",
+  "optimized": {
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "7f396f86",
+      "needsInterop": true
+    },
+    "react-dom": {
+      "src": "../../node_modules/react-dom/index.js",
+      "file": "react-dom.js",
+      "fileHash": "51b2c1f7",
+      "needsInterop": true
+    },
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "51733dc9",
+      "needsInterop": true
+    },
+    "react/jsx-runtime": {
+      "src": "../../node_modules/react/jsx-runtime.js",
+      "file": "react_jsx-runtime.js",
+      "fileHash": "1669c1d6",
+      "needsInterop": true
+    },
+    "@tanstack/react-query": {
+      "src": "../../node_modules/@tanstack/react-query/build/modern/index.js",
+      "file": "@tanstack_react-query.js",
+      "fileHash": "8e730f96",
+      "needsInterop": false
+    },
+    "plotly.js-basic-dist-min": {
+      "src": "../../node_modules/plotly.js-basic-dist-min/plotly-basic.min.js",
+      "file": "plotly__js-basic-dist-min.js",
+      "fileHash": "66415658",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "916e647c",
+      "needsInterop": true
+    },
+    "react-plotly.js/factory": {
+      "src": "../../node_modules/react-plotly.js/factory.js",
+      "file": "react-plotly__js_factory.js",
+      "fileHash": "3f9b2603",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.js",
+      "file": "react-router-dom.js",
+      "fileHash": "62656de8",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-SCUCBHGV": {
+      "file": "chunk-SCUCBHGV.js"
+    },
+    "chunk-3X5IGD4D": {
+      "file": "chunk-3X5IGD4D.js"
+    },
+    "chunk-YKSIP4M5": {
+      "file": "chunk-YKSIP4M5.js"
+    },
+    "chunk-F3IJBAHG": {
+      "file": "chunk-F3IJBAHG.js"
+    }
+  }
+}

@@ -10,7 +10,6 @@ interface AppShellProps {
 }
 
 const navItems = [
-  { to: "/", label: "Document Ingestion" },
   { to: "/onboarding", label: "Supplier Onboarding" },
   { to: "/overview-dashboard", label: "Overview Dashboard" },
   { to: "/risk-monitoring", label: "Risk Monitoring" },
@@ -59,7 +58,7 @@ export function AppShell({ children }: AppShellProps) {
               <NavLink
                 key={item.to}
                 to={item.to}
-                end={item.to === "/"}
+                end={item.to === "/onboarding"}
                 className={({ isActive }) =>
                   `nav-link ${isActive ? "nav-link-active" : ""}`.trim()
                 }
@@ -89,7 +88,7 @@ export function AppShell({ children }: AppShellProps) {
               <NavLink
                 key={item.to}
                 to={item.to}
-                end={item.to === "/"}
+                end={item.to === "/onboarding"}
                 className={({ isActive }) =>
                   `nav-link whitespace-nowrap ${isActive ? "nav-link-active" : ""}`.trim()
                 }
