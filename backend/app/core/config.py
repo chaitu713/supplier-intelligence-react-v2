@@ -72,11 +72,6 @@ class Settings:
     def supplier_features_file(self) -> Path:
         return self.data_dir / "supplier_features_v2.csv"
 
-    @property
-    def document_history_file(self) -> Path:
-        return self.data_dir / "document_history.csv"
-
-
 @lru_cache
 def get_settings() -> Settings:
     load_dotenv(Path(__file__).resolve().parents[3] / ".env")
