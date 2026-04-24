@@ -64,6 +64,192 @@ Backend / data basis:
 - No new upload endpoint is required for the first auditing slice
 - This keeps Auditing truthful to the current data model while later tabs add review and AI interpretation layers
 
+### Tab 2: Audit Review
+Frontend:
+- `Audit Review` now opens the currently selected audit from the queue
+- The review workspace shows:
+  - selected audit summary
+  - supplier context
+  - certification context
+  - supplier-level audit history
+- Selected audit summary includes:
+  - audit ID
+  - supplier ID
+  - audit type
+  - audit date
+  - score
+  - non-compliance count
+  - country
+  - priority
+- Supplier context is intentionally lightweight and includes:
+  - supplier name
+  - tier
+  - size
+  - annual revenue
+  - supplier status
+  - latest audit type
+- Certification context is shown as audit support context only and includes:
+  - certification name
+  - certification status
+  - expiry date
+  - derived expiry state
+- Supplier audit history is shown as a chronological list so the current audit can be compared with prior records
+
+Backend / data basis:
+- This step remains read-only and uses existing `v2` data structure
+- The review experience is grounded in:
+  - `data/audits_v2.csv`
+  - `data/suppliers_v2.csv`
+  - `data/supplier_certifications_v2.csv`
+  - `data/certifications_v2.csv`
+- No upload flow is introduced
+- No new persistence layer is introduced
+- This keeps Audit Review focused on human review of current audit records before the AI insights layer is added
+
+Derived certification expiry state:
+- The auditing module now derives certificate health against the current runtime date
+- Derivation rules:
+  - `expiry_date` before today => `Expired`
+  - `expiry_date` within 30 days from today => `Expiring soon`
+  - `expiry_date` after that with raw status `Pending` => `Pending`
+  - `expiry_date` after that with non-pending status => `Valid`
+- This derived state is shown in Audit Review and is also passed into AI Audit Insights
+
+### Tab 3: AI Audit Insights
+Frontend:
+- `AI Audit Insights` now interprets the currently selected audit from the queue/review flow
+- When the tab opens, the frontend calls `POST /auditing/insights` for the selected audit ID
+- The tab presents:
+  - audit health
+  - history trend
+  - certification health
+  - suggested decision
+- The summary layer includes:
+  - AI-style audit summary
+  - key concerns
+  - reviewer focus areas
+  - suggested next actions
+  - decision support
+- The current implementation is intentionally grounded and explainable rather than pretending to be autonomous auditing
+
+Backend / data basis:
+- This step is now backed by a dedicated auditing endpoint:
+  - `POST /auditing/insights`
+- The insight layer is derived from:
+  - selected row from `data/audits_v2.csv`
+  - supplier-level audit history from `data/audits_v2.csv`
+  - supplier context from `data/suppliers_v2.csv`
+  - certification context from `data/supplier_certifications_v2.csv`
+  - certification names from `data/certifications_v2.csv`
+- Gemini using `gemini-3.1-flash-lite-preview` is used to generate structured audit insights
+- The backend asks Gemini for:
+  - summary
+  - key concerns
+  - reviewer focus
+  - next actions
+  - suggested decision
+  - confidence
+- If Gemini is unavailable or returns unusable output, the backend falls back to grounded deterministic audit insights so the tab still works
+- No upload flow is introduced
+- No new tables are introduced
+- This gives the auditing module a truthful AI-assisted review layer without over-claiming autonomous auditing
+
+## AI Assisted Traceability
+Traceability now lives inside the Supplier Engagement workspace as a separate sub-module. The current implementation is intentionally focused on supplier-to-commodity-to-country visibility and certification-backed trace confidence using the existing `v2` mappings.
+
+### Tab 1: Trace Overview
+Frontend:
+- The traceability workspace includes 3 internal tabs:
+  - `Trace Overview`
+  - `Supplier / Commodity Trace`
+  - `AI Trace Insights`
+- `Trace Overview` is built as a supplier and commodity coverage workspace
+- Overview cards show:
+  - suppliers mapped
+  - commodity families
+  - high-risk suppliers
+  - trace gaps
+- Filter chips currently support:
+  - `All suppliers`
+  - `High-risk commodities`
+  - `Gaps to review`
+- Supplier cards summarize:
+  - supplier name
+  - country
+  - mapped commodity count
+  - certification count
+  - commodity names
+- A commodity coverage section shows supplier spread, country spread, and commodity risk level
+
+Backend / data basis:
+- This step is currently read-only and grounded in:
+  - `data/suppliers_v2.csv`
+  - `data/supplier_commodity_map_v2.csv`
+  - `data/commodities_v2.csv`
+  - `data/supplier_certifications_v2.csv`
+- Traceability is now backed by:
+  - `GET /traceability/workspace`
+- The frontend uses this endpoint to load the broader mapped supplier set instead of staying limited to the initial small sample
+- In Traceability, `risk_level` is now derived from `deforestation_risk_score` instead of trusting the raw commodity label directly:
+  - `>= 0.66` => `High`
+  - `0.33 to < 0.66` => `Medium`
+  - `< 0.33` => `Low`
+- No upload flow is introduced
+- No new persistence layer is introduced
+
+### Tab 2: Supplier / Commodity Trace
+Frontend:
+- `Supplier / Commodity Trace` shows a selected supplier trace view
+- The review workspace includes:
+  - selected supplier summary
+  - country anchor
+  - commodity footprint
+  - certification-backed trace context
+  - trace confidence summary
+- Commodity footprint includes:
+  - commodity name
+  - volume
+  - deforestation risk score
+  - commodity risk level
+- Certification-backed trace shows whether trace support is:
+  - `Expired`
+  - `Pending`
+  - `Valid`
+
+Backend / data basis:
+- This step remains read-only and is grounded in:
+  - `data/suppliers_v2.csv`
+  - `data/supplier_commodity_map_v2.csv`
+  - `data/commodities_v2.csv`
+  - `data/supplier_certifications_v2.csv`
+  - `data/certifications_v2.csv`
+- The current trace view is intentionally supplier-level and commodity-level; it does not claim batch-level or site-level lineage
+
+### Tab 3: AI Trace Insights
+Frontend:
+- `AI Trace Insights` interprets the selected supplier trace picture
+- The tab presents:
+  - trace confidence
+  - expired support count
+  - pending support count
+  - suggested decision
+- The insight layer includes:
+  - trace summary
+  - key trace concerns
+  - practical next actions
+  - decision support
+
+Backend / data basis:
+- This first version is a grounded traceability interpretation layer built from current mappings already available in the frontend
+- The insight layer is based on:
+  - supplier-country context
+  - supplier-to-commodity mappings
+  - commodity risk levels
+  - certification-backed trace support
+- No upload flow is introduced
+- No new tables are introduced
+- This keeps the module truthful as supplier traceability intelligence rather than over-claiming deep chain-of-custody verification
+
 ## AI Assisted Supplier Onboarding
 The onboarding experience lives at `/onboarding` and currently supports 4 steps using the existing `v2` data model.
 

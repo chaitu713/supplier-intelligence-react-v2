@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 
 import { AuditingWorkspace } from "./AuditingWorkspace";
+import { TraceabilityWorkspace } from "./TraceabilityWorkspace";
 import OnboardingPage from "./OnboardingPage.jsx";
 
 const engagementTabs = [
@@ -66,6 +67,8 @@ export function SupplierEngagementPage() {
         <OnboardingPage embedded />
       ) : activeTab === "auditing" ? (
         <AuditingWorkspace />
+      ) : activeTab === "traceability" ? (
+        <TraceabilityWorkspace />
       ) : (
         <section style={styles.placeholder}>
           <h2 style={styles.placeholderTitle}>{activeModule.title}</h2>
