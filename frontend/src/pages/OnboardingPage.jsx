@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const TABS = [
   { id: "document", step: "01", label: "Document Upload" },
@@ -34,6 +34,7 @@ const emptyForm = {
   commodities: "",
   certifications: "",
   tier: "Tier 2",
+  parent_supplier_id: "",
   size: "Medium",
   annual_revenue: "",
   onboarding_date: new Date().toISOString().slice(0, 10),
@@ -54,6 +55,45 @@ export default function OnboardingPage({ embedded = false } = {}) {
   const [showRawText, setShowRawText] = useState(false);
   const [certificationRows, setCertificationRows] = useState([]);
   const [aiAssistance, setAiAssistance] = useState(null);
+  const [supplierOptions, setSupplierOptions] = useState([]);
+  const [traceabilitySuppliers, setTraceabilitySuppliers] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSuppliers() {
+      const [supplierResult, traceabilityResult] = await Promise.allSettled([
+        fetch("http://localhost:8000/suppliers"),
+        fetch("http://localhost:8000/traceability/workspace"),
+      ]);
+
+      if (cancelled) {
+        return;
+      }
+
+      if (supplierResult.status === "fulfilled" && supplierResult.value.ok) {
+        const supplierPayload = await supplierResult.value.json();
+        setSupplierOptions(Array.isArray(supplierPayload) ? supplierPayload : []);
+      } else {
+        setSupplierOptions([]);
+      }
+
+      if (traceabilityResult.status === "fulfilled" && traceabilityResult.value.ok) {
+        const traceabilityPayload = await traceabilityResult.value.json();
+        setTraceabilitySuppliers(
+          Array.isArray(traceabilityPayload?.suppliers) ? traceabilityPayload.suppliers : [],
+        );
+      } else {
+        setTraceabilitySuppliers([]);
+      }
+    }
+
+    loadSuppliers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const supplierRequiredFields = [
     ["Supplier name", formData.supplier_name],
@@ -63,10 +103,15 @@ export default function OnboardingPage({ embedded = false } = {}) {
     ["Onboarding date", formData.onboarding_date],
     ["Status", formData.status],
   ];
+  const needsLinkedSupplier = formData.tier === "Tier 2" || formData.tier === "Tier 3";
+  const linkedSupplierTier =
+    formData.tier === "Tier 2" ? "Tier 1" : formData.tier === "Tier 3" ? "Tier 2" : null;
 
   const supplierCompletionCount = supplierRequiredFields.filter(([, value]) => Boolean(value)).length;
   const supplierCompletion = Math.round(
-    (supplierCompletionCount / supplierRequiredFields.length) * 100,
+    ((supplierCompletionCount + (needsLinkedSupplier ? (formData.parent_supplier_id ? 1 : 0) : 0)) /
+      (supplierRequiredFields.length + (needsLinkedSupplier ? 1 : 0))) *
+      100,
   );
 
   const extractedFields = [
@@ -84,6 +129,69 @@ export default function OnboardingPage({ embedded = false } = {}) {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+  const currentCommoditySet = new Set(selectedCommodityNames.map((item) => item.toLowerCase()));
+  const supplierDirectory = useMemo(() => {
+    const traceabilityFallback = traceabilitySuppliers.map((supplier) => ({
+      supplier_id: supplier.supplierId,
+      supplier_name: supplier.supplierName,
+      country: supplier.country,
+      tier: supplier.tier,
+    }));
+
+    const combined = [...supplierOptions, ...traceabilityFallback];
+    const seen = new Set();
+
+    return combined.filter((supplier) => {
+      const key = String(supplier.supplier_id ?? supplier.supplierId ?? "");
+      if (!key || seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }, [supplierOptions, traceabilitySuppliers]);
+  const linkedSupplierOptions = useMemo(
+    () => {
+      if (!linkedSupplierTier) {
+        return [];
+      }
+
+      const rankedSuppliers = supplierDirectory
+        .filter((supplier) => supplier.tier === linkedSupplierTier)
+        .map((supplier) => {
+          const traceSupplier = traceabilitySuppliers.find(
+            (item) => Number(item.supplierId) === Number(supplier.supplier_id),
+          );
+          const supplierCommodityNames = Array.isArray(traceSupplier?.commodities)
+            ? traceSupplier.commodities.map((commodity) => String(commodity.name).toLowerCase())
+            : [];
+          const overlapCount =
+            currentCommoditySet.size === 0
+              ? 0
+              : supplierCommodityNames.filter((name) => currentCommoditySet.has(name)).length;
+
+          return {
+            supplier,
+            overlapCount,
+          };
+        })
+        .sort((left, right) => right.overlapCount - left.overlapCount);
+
+      const overlappingSuppliers = rankedSuppliers
+        .filter((entry) => entry.overlapCount > 0)
+        .map((entry) => entry.supplier);
+
+      if (overlappingSuppliers.length > 0) {
+        return overlappingSuppliers;
+      }
+
+      return rankedSuppliers.map((entry) => entry.supplier);
+    },
+    [currentCommoditySet, linkedSupplierTier, supplierDirectory, traceabilitySuppliers],
+  );
+  const linkedSupplierName =
+    supplierDirectory.find((supplier) => String(supplier.supplier_id) === formData.parent_supplier_id)
+      ?.supplier_name ?? "";
   const selectedCommodities = COMMODITY_OPTIONS.filter((item) =>
     selectedCommodityNames.includes(item.name),
   );
@@ -169,6 +277,7 @@ export default function OnboardingPage({ embedded = false } = {}) {
       payload.append("annual_revenue", formData.annual_revenue);
       payload.append("onboarding_date", formData.onboarding_date);
       payload.append("status", formData.status);
+      payload.append("parent_supplier_id", formData.parent_supplier_id);
       payload.append("commodities", JSON.stringify(selectedCommodityNames));
       payload.append("certifications", JSON.stringify(selectedCertificationNames));
       payload.append("certification_rows", JSON.stringify(certificationRows));
@@ -205,6 +314,7 @@ export default function OnboardingPage({ embedded = false } = {}) {
     const { name, value } = event.target;
     setFormData((current) => ({
       ...current,
+      ...(name === "tier" && value === "Tier 1" ? { parent_supplier_id: "" } : {}),
       [name]: value,
     }));
   }
@@ -490,6 +600,9 @@ export default function OnboardingPage({ embedded = false } = {}) {
 
   function renderSupplierTab() {
     const missingFields = supplierRequiredFields.filter(([, value]) => !value).map(([label]) => label);
+    if (needsLinkedSupplier && !formData.parent_supplier_id) {
+      missingFields.push(`Linked ${linkedSupplierTier} supplier`);
+    }
 
     return (
       <div style={styles.stack}>
@@ -578,6 +691,35 @@ export default function OnboardingPage({ embedded = false } = {}) {
                 </select>
               </div>
 
+              {needsLinkedSupplier ? (
+                <div style={styles.field}>
+                  <label htmlFor="parent_supplier_id" style={styles.label}>
+                    Linked {linkedSupplierTier} supplier
+                  </label>
+                  <select
+                    id="parent_supplier_id"
+                    name="parent_supplier_id"
+                    value={formData.parent_supplier_id}
+                    onChange={handleFieldChange}
+                    style={styles.textInput}
+                  >
+                    <option value="">Select linked supplier</option>
+                    {linkedSupplierOptions.map((supplier) => (
+                      <option key={supplier.supplier_id} value={supplier.supplier_id}>
+                        {supplier.supplier_name} ({supplier.country})
+                      </option>
+                    ))}
+                  </select>
+                  <p style={styles.hint}>
+                    {selectedCommodityNames.length === 0
+                      ? "Tier-matching suppliers are shown. Add commodities to bring the closest upstream matches to the top."
+                      : formData.tier === "Tier 2"
+                        ? "Matching Tier 1 suppliers are shown first. If no commodity overlap exists yet, all Tier 1 suppliers are available."
+                        : "Matching Tier 2 suppliers are shown first. If no commodity overlap exists yet, all Tier 2 suppliers are available."}
+                  </p>
+                </div>
+              ) : null}
+
               <div style={styles.field}>
                 <label htmlFor="annual_revenue" style={styles.label}>Annual revenue</label>
                 <input
@@ -660,6 +802,12 @@ export default function OnboardingPage({ embedded = false } = {}) {
                 <span style={styles.previewLabel}>Extracted certifications</span>
                 <strong style={styles.previewValue}>{formData.certifications || "Not extracted yet"}</strong>
               </div>
+              {needsLinkedSupplier ? (
+                <div style={styles.previewCard}>
+                  <span style={styles.previewLabel}>Linked supplier</span>
+                  <strong style={styles.previewValue}>{linkedSupplierName || "Not linked yet"}</strong>
+                </div>
+              ) : null}
             </div>
 
             <div style={styles.actions}>
@@ -899,6 +1047,10 @@ export default function OnboardingPage({ embedded = false } = {}) {
               <ReviewItem label="Supplier name" value={formData.supplier_name || "Missing"} />
               <ReviewItem label="Country" value={formData.country || "Missing"} />
               <ReviewItem label="Tier" value={formData.tier || "Missing"} />
+              <ReviewItem
+                label="Linked supplier"
+                value={needsLinkedSupplier ? linkedSupplierName || "Missing" : "Not required"}
+              />
               <ReviewItem label="Size" value={formData.size || "Missing"} />
               <ReviewItem label="Annual revenue" value={formData.annual_revenue || "Not provided"} />
               <ReviewItem label="Status" value={formData.status || "Missing"} />
@@ -1200,7 +1352,7 @@ const styles = {
   metric: { display: "grid", gap: "4px", padding: "16px", borderRadius: "18px", background: "rgba(255, 255, 255, 0.08)", border: "1px solid rgba(255, 255, 255, 0.08)" },
   metricValue: { fontSize: "1.7rem", fontWeight: 700, color: "#fff" },
   metricLabel: { color: "rgba(235, 245, 235, 0.76)" },
-  panel: { display: "grid", gap: "18px", width: "100%", minWidth: 0, padding: "24px 36px 24px 24px", borderRadius: "28px", background: "rgba(255,255,255,0.92)", border: "1px solid rgba(17, 22, 18, 0.08)", boxShadow: "0 10px 28px rgba(17, 22, 18, 0.06)" },
+  panel: { display: "grid", gap: "18px", alignContent: "start", width: "100%", minWidth: 0, padding: "24px 36px 24px 24px", borderRadius: "28px", background: "rgba(255,255,255,0.92)", border: "1px solid rgba(17, 22, 18, 0.08)", boxShadow: "0 10px 28px rgba(17, 22, 18, 0.06)" },
   sectionHead: { display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" },
   sectionTitle: { margin: 0, fontSize: "1.3rem", color: "#101913" },
   sectionText: { marginTop: "6px", maxWidth: "720px", color: "#566753" },
@@ -1222,7 +1374,7 @@ const styles = {
   disabledButton: { opacity: 0.45, cursor: "not-allowed" },
   linkButton: { border: "none", background: "transparent", color: "#166534", fontWeight: 700, cursor: "pointer", padding: 0 },
   error: { color: "#dc2626", fontWeight: 600 },
-  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "22px" },
+  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "22px", alignItems: "start" },
   previewGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px" },
   previewCard: { display: "grid", gap: "6px", padding: "16px", borderRadius: "18px", background: "linear-gradient(180deg, #ffffff, #f7faf7)", border: "1px solid rgba(17, 22, 18, 0.08)" },
   previewLabel: { fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.12em", color: "#758571" },

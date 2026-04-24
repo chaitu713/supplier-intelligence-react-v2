@@ -11,7 +11,7 @@ const AUDIT_ROWS = [
   {
     auditId: 1,
     supplierId: 2001,
-    supplierName: "Supplier_2001",
+    supplierName: "BlueRiver Commodities Ltd",
     country: "Indonesia",
     type: "External",
     auditDate: "2024-06-06",
@@ -23,7 +23,7 @@ const AUDIT_ROWS = [
   {
     auditId: 6,
     supplierId: 2002,
-    supplierName: "Supplier_2002",
+    supplierName: "Summit Leaf Trading Pte Ltd",
     country: "USA",
     type: "Internal",
     auditDate: "2024-12-04",
@@ -35,7 +35,7 @@ const AUDIT_ROWS = [
   {
     auditId: 11,
     supplierId: 2003,
-    supplierName: "Supplier_2003",
+    supplierName: "TerraSource Foods Co",
     country: "Brazil",
     type: "External",
     auditDate: "2024-02-10",
@@ -47,7 +47,7 @@ const AUDIT_ROWS = [
   {
     auditId: 14,
     supplierId: 2004,
-    supplierName: "Supplier_2004",
+    supplierName: "Cedar Grove Exports",
     country: "India",
     type: "External",
     auditDate: "2024-04-18",
@@ -59,7 +59,7 @@ const AUDIT_ROWS = [
   {
     auditId: 18,
     supplierId: 2005,
-    supplierName: "Supplier_2005",
+    supplierName: "Golden Acre Ingredients",
     country: "Vietnam",
     type: "Internal",
     auditDate: "2024-03-03",
@@ -71,7 +71,7 @@ const AUDIT_ROWS = [
   {
     auditId: 23,
     supplierId: 2007,
-    supplierName: "Supplier_2007",
+    supplierName: "Pacific Harvest Partners",
     country: "Indonesia",
     type: "External",
     auditDate: "2023-11-21",

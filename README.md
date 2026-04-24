@@ -1,4 +1,4 @@
-﻿# Supplier AI System
+# Supplier AI System
 
 This project is an AI-driven Supplier Intelligence application with a FastAPI backend and a React frontend. The current implementation is centered around a multi-step AI Assisted Supplier Onboarding module built on top of the existing `v2` CSV datasets, with supporting dashboard, risk, and advisor views.
 
@@ -202,10 +202,16 @@ Frontend:
 - `Supplier / Commodity Trace` shows a selected supplier trace view
 - The review workspace includes:
   - selected supplier summary
+  - lightweight traceability chain
   - country anchor
   - commodity footprint
   - certification-backed trace context
   - trace confidence summary
+- The traceability chain is currently shown as:
+  - supplier
+  - country
+  - mapped commodities
+  - certification support
 - Commodity footprint includes:
   - commodity name
   - volume
@@ -296,14 +302,19 @@ Backend:
 ### Step 2: Supplier Details
 Frontend:
 - Editable supplier fields for `supplier_name`, `country`, `tier`, `size`, `annual_revenue`, `onboarding_date`, and `status`
+- Tier-aware linked supplier selection:
+  - `Tier 1` does not require a linked supplier
+  - `Tier 2` requires selecting an existing `Tier 1` supplier
+  - `Tier 3` requires selecting an existing `Tier 2` supplier
 - Defaults seeded from extracted document values where available
 - Readiness card showing required-field completion
 - Navigation into the commodity and certification mapping step
 
 Backend:
-- The onboarding API accepts `tier`, `size`, `annual_revenue`, `onboarding_date`, and `status`
+- The onboarding API accepts `tier`, `parent_supplier_id`, `size`, `annual_revenue`, `onboarding_date`, and `status`
 - These values are appended into `data/suppliers_v2.csv` together with the new supplier record
 - The backend also generates starter `dependency_score` and `criticality_score` values using dataset averages so downstream modules have complete supplier rows
+- `parent_supplier_id` is now persisted on the supplier master row so tier-based traceability can later build upstream supplier relationships instead of treating tier as a passive label only
 
 ### Step 3: Commodities and Certifications
 Frontend:
@@ -442,6 +453,7 @@ Persisted now from onboarding:
   - `supplier_name`
   - `country`
   - `tier`
+  - `parent_supplier_id`
   - `size`
   - `annual_revenue`
   - `onboarding_date`
@@ -547,3 +559,4 @@ Open:
 - AI Assisted Onboarding appends new suppliers across the relevant existing `v2` supplier, mapping, features, and ESG tables
 - The onboarding service supports both Azure extraction and local PDF fallback for testing
 - Full frontend production build verification is currently blocked in this environment by a Vite/esbuild `spawn EPERM` error
+

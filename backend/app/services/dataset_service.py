@@ -124,10 +124,14 @@ class DatasetService:
         return esg.where(pd.notna(esg), None)
 
     def _normalize_suppliers(self, suppliers: pd.DataFrame) -> pd.DataFrame:
-        for column in ["category", "certification"]:
+        for column in ["parent_supplier_id", "category", "certification"]:
             if column not in suppliers.columns:
                 suppliers[column] = None
-        return suppliers
+        suppliers = suppliers.astype(object)
+        suppliers["parent_supplier_id"] = pd.to_numeric(
+            suppliers["parent_supplier_id"], errors="coerce"
+        ).apply(lambda value: None if pd.isna(value) else int(value))
+        return suppliers.where(pd.notna(suppliers), None)
 
     def _normalize_transactions(self, transactions: pd.DataFrame) -> pd.DataFrame:
         rename_map = {"delay_days": "delivery_delay_days"}

@@ -132,6 +132,8 @@ class OnboardingService:
 
         supplier_name = data.get("supplier_name")
         country = data.get("country")
+        tier = data.get("tier")
+        parent_supplier_id = data.get("parent_supplier_id")
         commodities = data.get("commodities", [])
         certifications = data.get("certifications", [])
 
@@ -146,6 +148,9 @@ class OnboardingService:
 
         if not certifications:
             warnings.append("no certifications detected")
+
+        if tier in {"Tier 2", "Tier 3"} and parent_supplier_id is None:
+            errors.append("linked supplier is required for Tier 2 and Tier 3 suppliers")
 
         return {
             "is_valid": len(errors) == 0,
@@ -168,6 +173,17 @@ class OnboardingService:
         if math.isnan(number):
             return None
         return number
+
+    def _parse_int(self, value: str | int | None) -> int | None:
+        if value is None:
+            return None
+        text = str(value).strip()
+        if not text:
+            return None
+        try:
+            return int(text)
+        except ValueError:
+            return None
 
     def _parse_date(self, value: str | None, fallback: date) -> str:
         if not value:
@@ -400,6 +416,8 @@ Rules:
             new_supplier_row["country"] = data["country"]
             if "tier" in new_supplier_row:
                 new_supplier_row["tier"] = data.get("tier")
+            if "parent_supplier_id" in new_supplier_row:
+                new_supplier_row["parent_supplier_id"] = data.get("parent_supplier_id")
             if "size" in new_supplier_row:
                 new_supplier_row["size"] = data.get("size")
             if "annual_revenue" in new_supplier_row:
@@ -539,6 +557,7 @@ Rules:
         annual_revenue: str | None,
         onboarding_date: str | None,
         status: str | None,
+        parent_supplier_id: str | None,
         commodities: str | list[str] | None,
         certifications: str | list[str] | None,
         certification_rows: str | None,
@@ -551,6 +570,7 @@ Rules:
             "annual_revenue": self._parse_float(annual_revenue),
             "onboarding_date": onboarding_date.strip() if onboarding_date else None,
             "status": status.strip() if status else None,
+            "parent_supplier_id": self._parse_int(parent_supplier_id),
             "commodities": self._normalize_list_input(commodities),
             "certifications": self._normalize_list_input(certifications),
             "certification_rows": self._normalize_certification_rows(certification_rows),
@@ -580,6 +600,7 @@ Rules:
             "annual_revenue": mapped_data["annual_revenue"],
             "onboarding_date": mapped_data["onboarding_date"],
             "status": mapped_data["status"],
+            "parent_supplier_id": mapped_data["parent_supplier_id"],
             "commodities": mapped_data["commodities"],
             "certifications": mapped_data["certifications"],
             "certification_rows": mapped_data["certification_rows"],

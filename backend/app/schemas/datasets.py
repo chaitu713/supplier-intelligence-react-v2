@@ -5,6 +5,7 @@ class SupplierRecord(BaseModel):
     supplier_id: int
     supplier_name: str
     country: str | None = None
+    parent_supplier_id: int | None = None
     category: str | None = None
     tier: str | None = None
     size: str | None = None
