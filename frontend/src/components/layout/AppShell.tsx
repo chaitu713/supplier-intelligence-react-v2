@@ -14,6 +14,7 @@ const navItems = [
   { to: "/simulator", label: "Simulator", icon: "simulator" },
   { to: "/analytics", label: "Analytics", icon: "analytics" },
   { to: "/supplier-engagement", label: "Supplier Engagement", icon: "engagement" },
+  { to: "/esg-monitoring", label: "ESG Monitoring", icon: "leaf" },
   { to: "/due-diligence-agent", label: "Due Diligence Agent", icon: "shield" },
 ] as const;
 
@@ -126,7 +127,7 @@ export function AppShell({ children }: AppShellProps) {
 function NavIcon({
   kind,
 }: {
-  kind: "gauge" | "simulator" | "analytics" | "engagement" | "shield";
+  kind: "gauge" | "simulator" | "analytics" | "engagement" | "leaf" | "shield";
 }) {
   const className = "h-4 w-4 shrink-0";
 
@@ -167,6 +168,15 @@ function NavIcon({
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
         <path d="M8 12l3 3 5-5" />
         <path d="M3 12c2-4 4-6 7-6 2.2 0 3.7 1.1 5 3 1.3-1.9 2.8-3 5-3 3 0 5 2 7 6-2 4-4 6-7 6-2.2 0-3.7-1.1-5-3-1.3 1.9-2.8 3-5 3-3 0-5-2-7-6Z" />
+      </svg>
+    );
+  }
+
+  if (kind === "leaf") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
+        <path d="M19 4c-6.2.4-10.8 3-13.3 7.2-1.2 2-1.8 4.2-1.7 6.8 2.5.1 4.8-.4 6.8-1.6C15 13.9 17.6 9.3 18 3Z" />
+        <path d="M8 16c1.6-2.5 4-4.8 7.2-6.9" />
       </svg>
     );
   }
