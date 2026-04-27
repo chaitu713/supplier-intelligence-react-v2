@@ -12,7 +12,7 @@ export function KpiCard({
   accentClassName,
 }: KpiCardProps) {
   return (
-    <div className="surface-card p-6">
+    <div className="visual-card p-6">
       <div className={`h-1.5 w-14 rounded-full ${accentClassName}`} />
       <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
         {label}

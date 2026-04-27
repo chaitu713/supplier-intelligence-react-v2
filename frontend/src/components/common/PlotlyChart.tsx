@@ -36,6 +36,15 @@ export function PlotlyChart({
             family: "Outfit, system-ui, sans-serif",
             color: "#384534",
           },
+          hoverlabel: {
+            bgcolor: "#ffffff",
+            bordercolor: "rgba(17,22,18,0.08)",
+            font: {
+              family: "Outfit, system-ui, sans-serif",
+              size: 12,
+              color: "#243126",
+            },
+          },
           margin: { l: 32, r: 16, t: 12, b: 36 },
           ...layout,
         }}

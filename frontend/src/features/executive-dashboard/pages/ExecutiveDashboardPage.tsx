@@ -114,10 +114,10 @@ export function ExecutiveDashboardPage() {
             />
           </div>
 
-          <div className="surface-card p-6">
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-[var(--text)]">Supplier Footprint</h2>
-              <p className="mt-1 text-sm text-[var(--muted)]">
+          <div className="visual-card p-6">
+            <div className="visual-header">
+              <h2 className="visual-title">Supplier Footprint</h2>
+              <p className="visual-description">
                 Country-level supplier presence across the full network.
               </p>
             </div>
@@ -126,10 +126,10 @@ export function ExecutiveDashboardPage() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[0.8fr_1fr_1.1fr]">
-          <div className="surface-card p-6">
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-[var(--text)]">Certification Status</h2>
-              <p className="mt-1 text-sm text-[var(--muted)]">
+          <div className="visual-card p-6">
+            <div className="visual-header">
+              <h2 className="visual-title">Certification Status</h2>
+              <p className="visual-description">
                 Compliance readiness across valid, expiring-soon, and expired certificates.
               </p>
             </div>
@@ -194,31 +194,37 @@ export function ExecutiveDashboardPage() {
             )}
           </div>
 
-          <div className="surface-card p-6">
-            <h2 className="text-lg font-semibold text-[var(--text)]">Commodity Exposure</h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">
+          <div className="visual-card p-6">
+            <div className="visual-header">
+            <h2 className="visual-title">Commodity Exposure</h2>
+            <p className="visual-description">
               Supplier concentration across the most represented commodity groups.
             </p>
+            </div>
             <CommodityExposureChart items={executive?.attention.commodityExposure ?? []} />
           </div>
 
-          <div className="surface-card p-6">
-            <h2 className="text-lg font-semibold text-[var(--text)]">Country Exposure</h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">
+          <div className="visual-card p-6">
+            <div className="visual-header">
+            <h2 className="visual-title">Country Exposure</h2>
+            <p className="visual-description">
               Top supplier concentration countries across the current network.
             </p>
+            </div>
             <CountryExposureBarChart items={executive?.attention.geographicExposure ?? []} />
           </div>
         </section>
 
-        <section className="surface-card p-6">
-          <h2 className="text-lg font-semibold text-[var(--text)]">Suppliers under Review</h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">
+        <section className="visual-card p-6">
+          <div className="visual-header">
+          <h2 className="visual-title">Suppliers under Review</h2>
+          <p className="visual-description">
             Executive watchlist of suppliers that merit deeper follow-up in Due Diligence.
           </p>
+          </div>
           <div className="mt-5 grid gap-4 xl:grid-cols-5">
             {(executive?.attention.suppliersRequiringReview ?? []).map((supplier) => (
-              <div key={supplier.supplierId} className="surface-soft rounded-[1.75rem] p-4 shadow-sm">
+              <div key={supplier.supplierId} className="visual-card-soft rounded-[1.75rem] p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold leading-6 text-[var(--text)]">
@@ -267,10 +273,10 @@ function RiskDonutCard({
   const total = mix ? mix.high + mix.medium + mix.low : 0;
 
   return (
-    <div className="surface-card p-6">
-      <div className="mb-5">
-        <h2 className="text-lg font-semibold text-[var(--text)]">{title}</h2>
-        <p className="mt-1 text-sm text-[var(--muted)]">{description}</p>
+    <div className="visual-card p-6">
+      <div className="visual-header">
+        <h2 className="visual-title">{title}</h2>
+        <p className="visual-description">{description}</p>
       </div>
       {mix ? (
         <>
@@ -513,7 +519,7 @@ function GeographyMap({
         className="relative h-[560px] overflow-hidden rounded-[1.75rem] border"
         style={{
           borderColor: "var(--border)",
-          background: "linear-gradient(180deg, #eef7f1 0%, #e3efe6 100%)",
+          background: "linear-gradient(180deg, #f2f7f3 0%, #e7f0ea 100%)",
         }}
       >
         <div className="absolute inset-0">

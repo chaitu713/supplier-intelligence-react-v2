@@ -9,7 +9,7 @@ function readArg(flag, fallback) {
   return fallback;
 }
 
-const host = readArg("--host", "127.0.0.1");
+const host = readArg("--host", "localhost");
 const port = Number(readArg("--port", "5173"));
 
 const server = await createServer({
