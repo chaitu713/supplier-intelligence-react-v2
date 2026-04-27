@@ -128,9 +128,11 @@ class DatasetService:
             if column not in suppliers.columns:
                 suppliers[column] = None
         suppliers = suppliers.astype(object)
-        suppliers["parent_supplier_id"] = pd.to_numeric(
-            suppliers["parent_supplier_id"], errors="coerce"
-        ).apply(lambda value: None if pd.isna(value) else int(value))
+        normalized_parent_ids = []
+        for value in suppliers["parent_supplier_id"].tolist():
+            numeric_value = pd.to_numeric(value, errors="coerce")
+            normalized_parent_ids.append(None if pd.isna(numeric_value) else int(numeric_value))
+        suppliers["parent_supplier_id"] = pd.Series(normalized_parent_ids, dtype=object)
         return suppliers.where(pd.notna(suppliers), None)
 
     def _normalize_transactions(self, transactions: pd.DataFrame) -> pd.DataFrame:

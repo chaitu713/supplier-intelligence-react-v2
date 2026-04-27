@@ -36,6 +36,7 @@ The app is now organized into these primary pages:
 - `Simulator`
 - `Analytics`
 - `Supplier Engagement`
+- `ESG Monitoring`
 - `Due Diligence Agent`
 
 There is also an AI assistant surface:
@@ -57,10 +58,13 @@ There is also an AI assistant surface:
   - onboarding
   - auditing
   - traceability
+- `ESG Monitoring`
+  - dedicated ESG indicator monitoring workspace
+  - future BWS / HRR / Land Use health tracking
 - `Due Diligence Agent`
   - focused supplier investigation
 - `Simulator`
-  - reserved for scenario and what-if workflows
+  - scenario and what-if workflows
 
 ## Page-By-Page Implementation
 
@@ -216,17 +220,96 @@ Current implementation:
 ### 5. Simulator
 
 Purpose:
-- future what-if and scenario modeling page
+- what-if and scenario modeling page
 
-Current status:
-- page scaffold exists
-- functional simulator logic is not yet implemented
+Current frontend implementation:
+- `Supplier Disruption` scenario builder
+- supplier selector backed by `GET /api/v1/suppliers`
+- severity selection:
+  - `Moderate`
+  - `Severe`
+  - `Unavailable`
+- supplier list loading and error states
+- `How This Simulation Works` explainer section
+- before vs after KPI comparison cards
+- `Risk Band Movement` chart
+- `Most Affected Suppliers` chart
+- `Affected Supplier Detail` table
+
+Current backend implementation:
+- simulator endpoint:
+  - `POST /api/v1/simulator/run`
+- simulator service built on the live supplier risk frame
+- phase 1 scenario type:
+  - `supplier_disruption`
+
+Current simulation behavior:
+- the selected supplier receives direct disruption pressure
+- the page compares:
+  - before network state
+  - after network state
+- the simulation returns:
+  - scenario metadata
+  - before KPIs
+  - after KPIs
+  - KPI deltas
+  - risk band movement
+  - affected suppliers
+
+What `spillover` means in the current simulator:
+- the disruption does not affect only the selected supplier
+- it also adds smaller pressure to:
+  - suppliers in the same country
+  - suppliers linked to the same commodities
+
+This means the simulator is modeling a ripple effect, not just a direct supplier shock.
+
+Current severity behavior:
+- `Moderate`
+  - smaller direct operational disruption
+  - light same-country spillover
+  - light same-commodity spillover
+- `Severe`
+  - stronger direct disruption
+  - larger ripple across related suppliers
+- `Unavailable`
+  - near-outage scenario
+  - strongest direct pressure
+  - strongest spillover
+
+Important note:
+- this is currently a deterministic scenario engine
+- it is not an ML forecast yet
+- it uses controlled rule-based shock logic on top of the current live risk model
+
+Planned next simulator directions:
+- country disruption
+- certification failure
+- commodity shock
+- supplier substitution scenarios
+- richer before/after network comparison
+
+### 6. ESG Monitoring
+
+Purpose:
+- dedicated ESG indicator monitoring workspace
+- separate from executive reporting and from general analytics
+
+Current frontend implementation:
+- dedicated page shell exists
+- placed before `Due Diligence Agent` in navigation
+- placeholder scope cards already frame the intended functionality:
+  - indicator view
+  - watchlists
+  - trend signals
+  - ML layer
 
 Planned direction:
-- disruption scenarios
-- supplier substitution scenarios
-- geography impact analysis
-- before/after network comparison
+- BWS monitoring
+- HRR monitoring
+- Land Use monitoring
+- supplier ESG deterioration watchlists
+- anomaly detection and deterioration prediction later
 
 ## Supplier Advisor AI
 
