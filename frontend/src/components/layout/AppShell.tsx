@@ -40,9 +40,20 @@ export function AppShell({ children }: AppShellProps) {
                 borderColor: "var(--primary-muted)",
               }}
             >
-              <span className="text-sm font-semibold" style={{ color: "var(--primary)" }}>
-                EZ
-              </span>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                className="h-[18px] w-[18px]"
+                style={{ color: "var(--primary)" }}
+              >
+                <path d="M12 3.5 19 6.4v5c0 5-3.1 8.6-7 10.1-3.9-1.5-7-5.1-7-10.1v-5L12 3.5Z" />
+                <path d="M12 8.1c-2.2 0-3.8 1.5-3.8 3.4 0 2.8 2.5 4.8 3.8 5.6 1.3-.8 3.8-2.8 3.8-5.6 0-1.9-1.6-3.4-3.8-3.4Z" />
+                <path d="M12 9.4v5.2" />
+                <path d="M12 11.4c-.9-.8-1.8-1.2-3-1.3" />
+                <path d="M12 12.2c.9-.7 1.8-1.1 3-1.2" />
+              </svg>
             </div>
             <div className="leading-tight">
               <div className="flex items-start gap-2 text-sm font-bold tracking-[-0.025em] text-[var(--text)]">
@@ -52,13 +63,12 @@ export function AppShell({ children }: AppShellProps) {
                     AI
                   </sup>
                 </span>
-                <span className="pt-[1px] text-[11px] font-semibold tracking-[0.06em] text-[var(--text-secondary)]">
+                <span className="pt-[1px] text-[13px] font-bold tracking-[0.06em] text-[var(--text-secondary)]">
                   4.0
                 </span>
               </div>
               <div className="text-[9.5px] font-semibold uppercase tracking-[0.09em] text-[var(--muted)]">
-                <div>Responsible Sourcing</div>
-                <div>&amp; Supplier Intelligence</div>
+                Responsible Sourcing &amp; Supplier Intelligence
               </div>
             </div>
           </div>
