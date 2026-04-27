@@ -1,6 +1,6 @@
 import {
   __commonJS
-} from "./chunk-F3IJBAHG.js";
+} from "./chunk-WS6WXAIR.js";
 
 // node_modules/plotly.js-basic-dist-min/plotly-basic.min.js
 var require_plotly_basic_min = __commonJS({

@@ -56,4 +56,3 @@ function getErrorMessage(error: unknown): string | null {
 
   return "Something went wrong while running due diligence.";
 }
-

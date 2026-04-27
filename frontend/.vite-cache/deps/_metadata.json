@@ -1,74 +1,83 @@
 {
-  "hash": "a79332a5",
-  "browserHash": "75c9d578",
+  "hash": "2a7194df",
+  "browserHash": "c7f42c09",
   "optimized": {
     "react": {
       "src": "../../node_modules/react/index.js",
       "file": "react.js",
-      "fileHash": "7f396f86",
+      "fileHash": "d205bc6f",
       "needsInterop": true
     },
     "react-dom": {
       "src": "../../node_modules/react-dom/index.js",
       "file": "react-dom.js",
-      "fileHash": "51b2c1f7",
+      "fileHash": "22e529ff",
       "needsInterop": true
     },
     "react/jsx-dev-runtime": {
       "src": "../../node_modules/react/jsx-dev-runtime.js",
       "file": "react_jsx-dev-runtime.js",
-      "fileHash": "51733dc9",
+      "fileHash": "dfec007a",
       "needsInterop": true
     },
     "react/jsx-runtime": {
       "src": "../../node_modules/react/jsx-runtime.js",
       "file": "react_jsx-runtime.js",
-      "fileHash": "1669c1d6",
+      "fileHash": "13e4357d",
       "needsInterop": true
     },
     "@tanstack/react-query": {
       "src": "../../node_modules/@tanstack/react-query/build/modern/index.js",
       "file": "@tanstack_react-query.js",
-      "fileHash": "8e730f96",
+      "fileHash": "bb862628",
       "needsInterop": false
     },
     "plotly.js-basic-dist-min": {
       "src": "../../node_modules/plotly.js-basic-dist-min/plotly-basic.min.js",
       "file": "plotly__js-basic-dist-min.js",
-      "fileHash": "66415658",
+      "fileHash": "29f934d4",
       "needsInterop": true
     },
     "react-dom/client": {
       "src": "../../node_modules/react-dom/client.js",
       "file": "react-dom_client.js",
-      "fileHash": "916e647c",
+      "fileHash": "f1e8ad6d",
       "needsInterop": true
     },
     "react-plotly.js/factory": {
       "src": "../../node_modules/react-plotly.js/factory.js",
       "file": "react-plotly__js_factory.js",
-      "fileHash": "3f9b2603",
+      "fileHash": "70380cd8",
       "needsInterop": true
     },
     "react-router-dom": {
       "src": "../../node_modules/react-router-dom/dist/index.js",
       "file": "react-router-dom.js",
-      "fileHash": "62656de8",
+      "fileHash": "92e92dce",
+      "needsInterop": false
+    },
+    "react-simple-maps": {
+      "src": "../../node_modules/react-simple-maps/dist/index.es.js",
+      "file": "react-simple-maps.js",
+      "fileHash": "364faecf",
       "needsInterop": false
     }
   },
   "chunks": {
-    "chunk-SCUCBHGV": {
-      "file": "chunk-SCUCBHGV.js"
+    "chunk-VU5D2WJC": {
+      "file": "chunk-VU5D2WJC.js"
     },
-    "chunk-3X5IGD4D": {
-      "file": "chunk-3X5IGD4D.js"
+    "chunk-DWI44AE7": {
+      "file": "chunk-DWI44AE7.js"
     },
-    "chunk-YKSIP4M5": {
-      "file": "chunk-YKSIP4M5.js"
+    "chunk-U5ZAPKHE": {
+      "file": "chunk-U5ZAPKHE.js"
     },
-    "chunk-F3IJBAHG": {
-      "file": "chunk-F3IJBAHG.js"
+    "chunk-LNWGNN6H": {
+      "file": "chunk-LNWGNN6H.js"
+    },
+    "chunk-WS6WXAIR": {
+      "file": "chunk-WS6WXAIR.js"
     }
   }
 }

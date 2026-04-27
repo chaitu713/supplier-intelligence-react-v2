@@ -1,9 +1,9 @@
 import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 
-import { AuditingWorkspace } from "./AuditingWorkspace";
+import { AuditingWorkspace } from "./AuditingWorkspaceV2";
+import OnboardingPage from "./OnboardingPageComponent";
 import { TraceabilityWorkspace } from "./TraceabilityWorkspace";
-import OnboardingPage from "./OnboardingPage.jsx";
 
 const engagementTabs = [
   {

@@ -1,6 +1,11 @@
 from fastapi import APIRouter, Query
 
-from ..schemas.analytics import CountryDistributionItem, HistogramBin, OverviewMetrics
+from ..schemas.analytics import (
+    CountryDistributionItem,
+    ExecutiveDashboardResponse,
+    HistogramBin,
+    OverviewMetrics,
+)
 from ..services.analytics_service import AnalyticsService
 
 router = APIRouter(prefix="/api/v1/analytics", tags=["analytics"])
@@ -10,6 +15,11 @@ analytics_service = AnalyticsService()
 @router.get("/overview", response_model=OverviewMetrics)
 def get_overview_metrics() -> OverviewMetrics:
     return analytics_service.get_overview_metrics()
+
+
+@router.get("/executive-dashboard", response_model=ExecutiveDashboardResponse)
+def get_executive_dashboard() -> ExecutiveDashboardResponse:
+    return analytics_service.get_executive_dashboard()
 
 
 @router.get("/country-distribution", response_model=list[CountryDistributionItem])

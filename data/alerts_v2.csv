@@ -4,7 +4,7 @@ alert_id,supplier_id,type,severity,description,status
 3,2007,Certification,Medium,Certification expired,OPEN
 4,2010,Certification,Medium,Certification expired,OPEN
 5,2013,Certification,Medium,Certification expired,OPEN
-6,2019,Certification,Medium,Certification expired,OPEN
+6,2019,Certification,Medium,Certification expired,CLOSED
 7,2020,Certification,Medium,Certification expired,OPEN
 8,2022,Certification,Medium,Certification expired,OPEN
 9,2027,Certification,Medium,Certification expired,OPEN
@@ -42,7 +42,7 @@ alert_id,supplier_id,type,severity,description,status
 41,2072,Certification,Medium,Certification expired,OPEN
 42,2074,Certification,Medium,Certification expired,OPEN
 43,2074,Certification,Medium,Certification expired,OPEN
-44,2078,Certification,Medium,Certification expired,OPEN
+44,2078,Certification,Medium,Certification expired,CLOSED
 45,2080,Certification,Medium,Certification expired,OPEN
 46,2085,Certification,Medium,Certification expired,OPEN
 47,2086,Certification,Medium,Certification expired,OPEN

@@ -1,6 +1,6 @@
 # Supplier AI System
 
-This project is an AI-driven Supplier Intelligence application with a FastAPI backend and a React frontend. The current implementation is centered around a multi-step AI Assisted Supplier Onboarding module built on top of the existing `v2` CSV datasets, with supporting dashboard, risk, and advisor views.
+This project is an AI-driven Supplier Intelligence application with a FastAPI backend and a React frontend. It is now structured as a broader supplier intelligence workspace built on top of the existing `v2` CSV datasets, with executive reporting, supplier engagement workflows, due diligence support, risk scoring, and advisor capabilities.
 
 ## Current Stack
 - Backend: FastAPI
@@ -11,20 +11,271 @@ This project is an AI-driven Supplier Intelligence application with a FastAPI ba
   - Gemini using `gemini-3.1-flash-lite-preview` for onboarding assist and advisor flows
 
 ## Active Application Modules
-- AI Assisted Supplier Onboarding
-- AI Assisted Auditing
-- Overview Dashboard
-- Risk Monitoring
-- Due Diligence
+- Executive Dashboard
+- Simulator
+- Analytics
+- Supplier Engagement
+- Due Diligence Agent
 - Supplier Advisor AI
+
+## Current Product Architecture
+
+### Frontend page structure
+The frontend navigation is now organized into 5 primary pages:
+- `Executive Dashboard`
+- `Simulator`
+- `Analytics`
+- `Supplier Engagement`
+- `Due Diligence Agent`
+
+This structure separates leadership summary views from workflow-heavy operational modules:
+- `Executive Dashboard`
+  - high-level KPIs
+  - high-level visual risk summaries
+  - supplier geography view
+  - supplier watchlist
+- `Simulator`
+  - reserved for scenario and what-if modeling
+  - currently scaffolded as the next planning surface
+- `Analytics`
+  - reserved for deeper breakdowns and detailed chart analysis
+  - intended home for richer country, segmentation, and trend analysis
+- `Supplier Engagement`
+  - operational workspace
+  - currently houses onboarding, auditing, and traceability flows
+- `Due Diligence Agent`
+  - focused supplier-level AI review surface
+
+### Backend architecture
+The backend is currently organized around service-layer aggregation and workflow routers:
+- `analytics`
+  - overview metrics
+  - executive dashboard aggregation
+- `risk`
+  - supplier risk scoring
+  - risk overview and supplier-level monitoring outputs
+  - due diligence support
+- `onboarding`
+  - supplier intake and persistence
+- `auditing`
+  - audit queue, review, and AI audit insights
+- `traceability`
+  - commodity/country/certification trace workspace
+- `advisor`
+  - conversational supplier copilot support
+
+## Executive Dashboard
+The Executive Dashboard is the new high-level leadership view. It intentionally combines the most important parts of the older overview and risk pages while avoiding detailed analyst breakdowns.
+
+### Frontend
+The Executive Dashboard currently includes:
+- headline KPI cards
+  - total suppliers
+  - high risk suppliers
+  - average overall risk
+  - average operational risk
+  - average ESG risk
+  - expiring or expired certifications
+- 3 separate risk donuts
+  - operational risk donut
+  - ESG risk donut
+  - overall risk donut
+- supplier geography map
+  - rendered using `react-simple-maps`
+  - shows supplier spread by country
+  - marker size reflects supplier concentration
+  - map tooltip shows:
+    - country name
+    - count of suppliers
+- certification health visual
+  - valid
+  - expiring soon
+  - expired
+- commodity exposure chart
+  - supplier concentration across key commodity groups
+- country exposure bar chart
+  - top countries by supplier concentration
+  - darker-to-lighter bar gradient by ranking
+- suppliers requiring review
+
+### Backend
+The Executive Dashboard is backed by a dedicated aggregated endpoint:
+- `GET /analytics/executive-dashboard`
+
+The aggregation currently prepares:
+- executive KPIs
+- overall risk mix
+- operational risk mix
+- ESG risk mix
+- certification health counts
+- country-level geographic exposure
+- commodity-level supplier exposure
+- top suppliers requiring review
+- chart inputs for executive country and commodity exposure views
+
+### Design intent
+The Executive Dashboard is designed to be:
+- summary-first
+- visual
+- leadership-friendly
+- non-analytical
+
+Detailed distributions, breakdowns, and deeper exploratory analysis are intended for the future `Analytics` page rather than this page.
+
+## Risk Monitoring And Due Diligence
+The risk module is now backed by an enhanced `v2` weighted scoring engine in `backend/app/services/risk_service.py`. The active backend does not use the older standalone `backend/risk_model.py` prototype for UI/API scoring.
+
+### Current live risk model
+The live risk model now combines the following feature groups at supplier level:
+- transaction performance
+  - average delivery delay
+  - delay volatility
+  - average defect rate
+  - defect volatility
+  - average absolute cost variance
+- recent operational pressure
+  - recent delay risk using the latest 180-day transaction window
+  - recent defect risk using the latest 180-day transaction window
+- worsening trend detection
+  - delay trend risk when recent delays are worse than long-run average
+  - defect trend risk when recent defects are worse than long-run average
+  - audit trend risk when the latest audit deteriorates against the previous audit
+- repeat incident pressure
+  - repeated delay incidents
+  - repeated defect incidents
+  - repeated audit issue counts
+- audit signals
+  - mean non-compliance
+  - inverse audit score
+  - recent audit non-compliance using the latest 365-day audit window
+  - recent audit score inversion using the latest 365-day audit window
+- alert signals
+  - open alert count
+  - open alert weighted severity
+  - unresolved critical open alert pressure
+- certification signals
+  - verified ratio
+  - pending ratio
+  - expiry ratio
+  - certification recency risk using expiring-soon and staleness signals
+- supplier attributes
+  - dependency score
+  - criticality score
+  - country risk score
+- commodity exposure
+  - commodity risk level
+  - deforestation risk
+  - supplier volume-weighted commodity exposure
+- ESG risk
+  - environmental risk score
+  - social risk score
+  - governance risk score
+
+### Risk scoring structure
+- `operational_risk_score`
+  - combines long-run operational metrics, recent pressure, worsening trend, repeat incidents, audit signals, alert pressure, certification pressure, commodity exposure, dependency/criticality, and country risk
+- `esg_risk_score`
+  - combines environmental, social, and governance feature groups
+- `overall_risk_score`
+  - blends `operational_risk_score` and `esg_risk_score`
+  - includes a small dual-pressure uplift when both dimensions are elevated
+  - now also includes an imbalance uplift so suppliers with mixed risk profiles are not understated
+
+### Risk level thresholds
+- `High` when score is `>= 60`
+- `Medium` when score is `>= 40` and `< 60`
+- `Low` when score is `< 40`
+
+### Current enhancement scope
+This enhancement intentionally improves the existing weighted model rather than replacing it with an opaque ML model.
+
+What was added in this iteration:
+- recency-aware transaction scoring
+- recency-aware audit scoring
+- trend-aware transaction scoring
+- trend-aware audit deterioration scoring
+- repeated incident penalties
+- unresolved critical alert escalation
+- certification freshness pressure
+- country-level risk input
+- imbalance-aware overall scoring for mixed operational and ESG profiles
+
+What is not yet added:
+- external geopolitical or logistics feeds
+- real spend concentration from ERP/procurement systems
+- time-series ML prediction model trained on historical outcome labels
+- alternate supplier recommendation engine
 
 ## Routing
 The frontend now uses Supplier Onboarding as the default entry flow.
 
-- `/` redirects to `/onboarding`
-- `/onboarding` is the primary intake module
+- `/` redirects to `/executive-dashboard`
+- `/executive-dashboard` is the primary leadership landing page
+- `/simulator` is reserved for scenario modeling
+- `/analytics` is reserved for detailed breakdowns
 - `/supplier-engagement` now hosts the shared Supplier Engagement workspace
-- wildcard routes also redirect to `/onboarding`
+- `/due-diligence-agent` hosts the focused supplier review page
+- legacy routes are redirected into the new structure
+
+## Simulator
+The Simulator page is now part of the app structure as a dedicated placeholder for future scenario planning.
+
+Planned purpose:
+- network what-if analysis
+- supplier substitution impact
+- geography disruption modeling
+- risk movement before/after comparison
+
+Current status:
+- frontend scaffolded
+- not yet functionally implemented
+
+## Analytics
+The Analytics page is now part of the app structure as the future home for detailed breakdowns.
+
+Planned purpose:
+- country-level breakdowns
+- detailed risk segmentation
+- trend analysis
+- deeper ESG and operational analysis
+- richer charting beyond executive summary visuals
+
+Current status:
+- frontend scaffolded
+- detailed migrations from older overview/risk pages still pending
+
+## Supplier Engagement
+Supplier Engagement is the operational workspace that now groups together the workflow-heavy supplier modules.
+
+Current active areas:
+- AI Assisted Supplier Onboarding
+- AI Assisted Auditing
+- AI Assisted Traceability
+
+Its purpose is different from the Executive Dashboard:
+- Executive Dashboard = leadership summary
+- Supplier Engagement = operational execution
+
+## Due Diligence Agent
+Due Diligence Agent is the focused supplier investigation surface.
+
+Purpose:
+- investigate one supplier at a time
+- review supplier risk context
+- support deeper follow-up beyond executive watchlists
+- act as the workflow destination for suppliers flagged on the Executive Dashboard
+
+## Supplier Advisor AI
+The Advisor AI remains the conversational assistant layer.
+
+Current role:
+- answer supplier and risk questions conversationally
+- support exploratory analysis
+- provide AI summaries and guided interpretation
+
+Important limitation:
+- it should not yet be treated as a deterministic alternate supplier recommendation engine
+- reliable alternate supplier recommendation still requires a structured retrieval and ranking layer beneath the LLM
 
 ## AI Assisted Auditing
 Auditing now lives inside the Supplier Engagement workspace as a separate sub-module. The first auditing step is intentionally audit-centric and does not require any new uploads.
@@ -93,17 +344,44 @@ Frontend:
   - certification status
   - expiry date
   - derived expiry state
+- Expired and pending certifications now support a follow-up action:
+  - `Update certificate`
+- When selected, Audit Review now opens a slide-over upload panel where the user:
+  - uploads a replacement certificate PDF
+  - sees extracted certificate fields before saving
+  - confirms the update
+- The upload panel now shows:
+  - extracted certificate name
+  - extracted issue date
+  - extracted expiry date
+  - derived expiry state
+  - extracted text preview
+- After submit, the certification state refreshes immediately in the page without leaving Audit Review
 - Supplier audit history is shown as a chronological list so the current audit can be compared with prior records
 
 Backend / data basis:
 - This step remains read-only and uses existing `v2` data structure
 - The review experience is grounded in:
   - `data/audits_v2.csv`
-  - `data/suppliers_v2.csv`
+- `data/suppliers_v2.csv`
+- `data/supplier_certifications_v2.csv`
+- `data/certifications_v2.csv`
+- Audit Review now also supports an in-place certification update endpoint:
+  - `POST /auditing/certification-update`
+- Audit Review now also supports certificate extraction from uploaded PDFs:
+  - `POST /auditing/certification-extract`
+- The extraction flow uses the existing onboarding document extraction capability and maps:
+  - certificate name
+  - issue date
+  - expiry date
+  - derived expiry state
+- The endpoint updates the existing row in:
   - `data/supplier_certifications_v2.csv`
-  - `data/certifications_v2.csv`
-- No upload flow is introduced
-- No new persistence layer is introduced
+- Fields updated:
+  - `issue_date`
+  - `expiry_date`
+  - `status`
+- No new tables are introduced
 - This keeps Audit Review focused on human review of current audit records before the AI insights layer is added
 
 Derived certification expiry state:
@@ -408,6 +686,25 @@ Gemini assist:
 - can return a ranked list of possible countries when the exact country is uncertain
 - explains how the user can resolve warnings/errors
 - improves the remediation UX without replacing the deterministic base extraction layer
+
+## Current dataset enrichment for risk behavior
+The current `v2` CSV data has also been enriched so the risk distributions are more realistic across the dashboard visuals and scoring outputs.
+
+What was adjusted:
+- more genuine low-risk suppliers were introduced
+- mixed-profile suppliers were introduced
+  - low operational + medium ESG
+  - medium operational + low ESG
+
+Why this was done:
+- to make the operational, ESG, and overall donut visuals more meaningful
+- to ensure the overall risk logic is tested against non-uniform supplier profiles
+- to avoid a flat or unrealistic dataset where nearly all suppliers cluster in one or two bands
+
+Current logic impact:
+- overall risk is not a simple average of operational and ESG labels
+- overall risk is calculated numerically from the underlying scores
+- mixed-profile suppliers now receive an imbalance-aware uplift so one strong dimension does not hide a meaningful weakness in the other
 
 ## Data Flow
 ```mermaid

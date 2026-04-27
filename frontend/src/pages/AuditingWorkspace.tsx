@@ -157,6 +157,23 @@ export function AuditingWorkspace() {
   const [activeTab, setActiveTab] = useState<(typeof AUDIT_TABS)[number]["id"]>("queue");
   const [activeFilter, setActiveFilter] = useState<(typeof FILTERS)[number]>("All");
   const [selectedAuditId, setSelectedAuditId] = useState<number>(AUDIT_ROWS[0].auditId);
+  const [certificationContext, setCertificationContext] = useState(() =>
+    Object.fromEntries(
+      Object.entries(CERTIFICATION_CONTEXT).map(([supplierId, certs]) => [
+        Number(supplierId),
+        certs.map((cert) => ({ ...cert })),
+      ]),
+    ) as Record<number, Array<{ name: string; status: string; expiryDate: string; issueDate?: string }>>,
+  );
+  const [editingCertName, setEditingCertName] = useState<string | null>(null);
+  const [certUpdateForm, setCertUpdateForm] = useState({
+    issueDate: "",
+    expiryDate: "",
+    status: "Verified",
+  });
+  const [certUpdateLoading, setCertUpdateLoading] = useState(false);
+  const [certUpdateMessage, setCertUpdateMessage] = useState("");
+  const [certUpdateError, setCertUpdateError] = useState("");
   const [auditInsights, setAuditInsights] = useState<{
     summary: string;
     key_concerns: string[];
@@ -195,13 +212,10 @@ export function AuditingWorkspace() {
   );
   const profile =
     SUPPLIER_PROFILES[selectedAudit.supplierId as keyof typeof SUPPLIER_PROFILES] ?? null;
-  const certifications =
-    (CERTIFICATION_CONTEXT[selectedAudit.supplierId as keyof typeof CERTIFICATION_CONTEXT] ?? []).map(
-      (cert) => ({
-        ...cert,
-        expiryState: deriveExpiryState(cert.status, cert.expiryDate),
-      }),
-    );
+  const certifications = (certificationContext[selectedAudit.supplierId] ?? []).map((cert) => ({
+    ...cert,
+    expiryState: deriveExpiryState(cert.status, cert.expiryDate),
+  }));
   const averageScore = supplierHistory.length
     ? (
         supplierHistory.reduce((sum, row) => sum + row.score, 0) / supplierHistory.length
@@ -268,6 +282,81 @@ export function AuditingWorkspace() {
         ? "Monitor"
         : "Pass with conditions";
 
+  function startCertificateUpdate(cert: {
+    name: string;
+    status: string;
+    expiryDate: string;
+    issueDate?: string;
+  }) {
+    setEditingCertName(cert.name);
+    setCertUpdateForm({
+      issueDate: cert.issueDate ?? "",
+      expiryDate: cert.expiryDate ?? "",
+      status: cert.status || "Verified",
+    });
+    setCertUpdateMessage("");
+    setCertUpdateError("");
+  }
+
+  function cancelCertificateUpdate() {
+    setEditingCertName(null);
+    setCertUpdateMessage("");
+    setCertUpdateError("");
+  }
+
+  async function submitCertificateUpdate() {
+    if (!editingCertName) {
+      return;
+    }
+
+    setCertUpdateLoading(true);
+    setCertUpdateMessage("");
+    setCertUpdateError("");
+
+    try {
+      const response = await fetch("http://localhost:8000/auditing/certification-update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          supplier_id: selectedAudit.supplierId,
+          cert_name: editingCertName,
+          issue_date: certUpdateForm.issueDate,
+          expiry_date: certUpdateForm.expiryDate,
+          status: certUpdateForm.status,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update supplier certification.");
+      }
+
+      const result = await response.json();
+      setCertificationContext((current) => ({
+        ...current,
+        [selectedAudit.supplierId]: (current[selectedAudit.supplierId] ?? []).map((cert) =>
+          cert.name === editingCertName
+            ? {
+                ...cert,
+                issueDate: result.issue_date,
+                expiryDate: result.expiry_date,
+                status: result.status,
+              }
+            : cert,
+        ),
+      }));
+      setEditingCertName(null);
+      setCertUpdateMessage(result.message ?? "Supplier certification updated successfully.");
+    } catch (error) {
+      setCertUpdateError(
+        error instanceof Error ? error.message : "Unable to update supplier certification.",
+      );
+    } finally {
+      setCertUpdateLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (activeTab !== "insights") {
       return;
@@ -316,6 +405,12 @@ export function AuditingWorkspace() {
       cancelled = true;
     };
   }, [activeTab, selectedAudit.auditId]);
+
+  useEffect(() => {
+    setEditingCertName(null);
+    setCertUpdateMessage("");
+    setCertUpdateError("");
+  }, [selectedAudit.auditId]);
 
   function renderQueue() {
     return (

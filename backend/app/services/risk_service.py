@@ -5,6 +5,7 @@ from ..core.logging import get_logger
 from .dataset_service import DatasetService
 
 logger = get_logger(__name__)
+RISK_REFERENCE_DATE = pd.Timestamp("2026-04-27")
 
 
 class RiskService:
@@ -194,14 +195,27 @@ class RiskService:
             "avg_cost_variance",
             "delay_volatility",
             "defect_volatility",
+            "recent_delay_risk",
+            "recent_defect_risk",
+            "trend_delay_risk",
+            "trend_defect_risk",
+            "repeat_delay_risk",
+            "repeat_defect_risk",
             "dependency_score",
             "criticality_score",
             "audit_non_compliance_mean",
             "audit_score_inverse",
+            "recent_audit_non_compliance",
+            "recent_audit_score_inverse",
+            "audit_trend_risk",
+            "repeat_audit_issue_risk",
             "open_alert_severity",
             "open_alert_count",
+            "critical_open_alert_risk",
             "certification_gap_score",
+            "certification_recency_risk",
             "commodity_exposure_risk",
+            "country_risk_score",
             "environmental_risk_score",
             "social_risk_score",
             "governance_risk_score",
@@ -215,14 +229,27 @@ class RiskService:
             "avg_cost_variance": 50.0,
             "delay_volatility": 50.0,
             "defect_volatility": 50.0,
+            "recent_delay_risk": 50.0,
+            "recent_defect_risk": 50.0,
+            "trend_delay_risk": 50.0,
+            "trend_defect_risk": 50.0,
+            "repeat_delay_risk": 50.0,
+            "repeat_defect_risk": 50.0,
             "dependency_score": 50.0,
             "criticality_score": 50.0,
             "audit_non_compliance_mean": 50.0,
             "audit_score_inverse": 50.0,
+            "recent_audit_non_compliance": 50.0,
+            "recent_audit_score_inverse": 50.0,
+            "audit_trend_risk": 50.0,
+            "repeat_audit_issue_risk": 50.0,
             "open_alert_count": 0.0,
             "open_alert_severity": 0.0,
+            "critical_open_alert_risk": 0.0,
             "certification_gap_score": 70.0,
+            "certification_recency_risk": 50.0,
             "commodity_exposure_risk": 50.0,
+            "country_risk_score": 50.0,
             "environmental_risk_score": 50.0,
             "social_risk_score": 50.0,
             "governance_risk_score": 50.0,
@@ -231,19 +258,32 @@ class RiskService:
             risk_frame[column] = pd.to_numeric(risk_frame[column], errors="coerce").fillna(default_value)
 
         risk_frame["operational_risk_score"] = (
-            0.16 * risk_frame["avg_delay"]
-            + 0.12 * risk_frame["delay_volatility"]
-            + 0.14 * risk_frame["avg_defect"]
-            + 0.08 * risk_frame["defect_volatility"]
-            + 0.08 * risk_frame["avg_cost_variance"]
-            + 0.10 * risk_frame["dependency_score"]
-            + 0.10 * risk_frame["criticality_score"]
-            + 0.10 * risk_frame["audit_non_compliance_mean"]
-            + 0.05 * risk_frame["audit_score_inverse"]
-            + 0.04 * risk_frame["open_alert_count"]
-            + 0.08 * risk_frame["open_alert_severity"]
-            + 0.08 * risk_frame["certification_gap_score"]
-            + 0.07 * risk_frame["commodity_exposure_risk"]
+            0.09 * risk_frame["avg_delay"]
+            + 0.07 * risk_frame["delay_volatility"]
+            + 0.08 * risk_frame["avg_defect"]
+            + 0.05 * risk_frame["defect_volatility"]
+            + 0.05 * risk_frame["avg_cost_variance"]
+            + 0.07 * risk_frame["recent_delay_risk"]
+            + 0.06 * risk_frame["recent_defect_risk"]
+            + 0.05 * risk_frame["trend_delay_risk"]
+            + 0.04 * risk_frame["trend_defect_risk"]
+            + 0.03 * risk_frame["repeat_delay_risk"]
+            + 0.03 * risk_frame["repeat_defect_risk"]
+            + 0.08 * risk_frame["dependency_score"]
+            + 0.08 * risk_frame["criticality_score"]
+            + 0.08 * risk_frame["audit_non_compliance_mean"]
+            + 0.04 * risk_frame["audit_score_inverse"]
+            + 0.06 * risk_frame["recent_audit_non_compliance"]
+            + 0.04 * risk_frame["recent_audit_score_inverse"]
+            + 0.04 * risk_frame["audit_trend_risk"]
+            + 0.03 * risk_frame["repeat_audit_issue_risk"]
+            + 0.03 * risk_frame["open_alert_count"]
+            + 0.05 * risk_frame["open_alert_severity"]
+            + 0.04 * risk_frame["critical_open_alert_risk"]
+            + 0.05 * risk_frame["certification_gap_score"]
+            + 0.03 * risk_frame["certification_recency_risk"]
+            + 0.05 * risk_frame["commodity_exposure_risk"]
+            + 0.04 * risk_frame["country_risk_score"]
         ).round(2)
 
         risk_frame["esg_risk_score"] = (
@@ -255,10 +295,18 @@ class RiskService:
         dual_pressure = (
             ((risk_frame["operational_risk_score"] + risk_frame["esg_risk_score"]) / 2) * 0.05
         ).round(2)
+        imbalance_pressure = (
+            (
+                (risk_frame["operational_risk_score"] - risk_frame["esg_risk_score"]).abs() / 100
+            )
+            * risk_frame[["operational_risk_score", "esg_risk_score"]].max(axis=1)
+            * 0.30
+        ).round(2)
         risk_frame["overall_risk_score"] = (
-            0.6 * risk_frame["operational_risk_score"]
-            + 0.4 * risk_frame["esg_risk_score"]
+            0.58 * risk_frame["operational_risk_score"]
+            + 0.37 * risk_frame["esg_risk_score"]
             + dual_pressure
+            + imbalance_pressure
         ).clip(0, 100).round(2)
         risk_frame["risk_score"] = risk_frame["overall_risk_score"]
 
@@ -276,6 +324,13 @@ class RiskService:
         if transactions.empty or "supplier_id" not in transactions.columns:
             return pd.DataFrame(columns=["supplier_id"])
 
+        working = transactions.copy()
+        working["date"] = pd.to_datetime(working.get("date"), errors="coerce")
+        recent_cutoff = RISK_REFERENCE_DATE - pd.Timedelta(days=180)
+        recent_transactions = working[working["date"].ge(recent_cutoff)].copy()
+        if recent_transactions.empty:
+            recent_transactions = working.copy()
+
         transaction_metrics = transactions.groupby("supplier_id").agg(
             avg_delay=("delivery_delay_days", "mean"),
             delay_volatility=("delivery_delay_days", "std"),
@@ -283,6 +338,21 @@ class RiskService:
             defect_volatility=("defect_rate", "std"),
             avg_cost_variance=("cost_variance", lambda values: values.abs().mean()),
         ).reset_index()
+
+        recent_metrics = recent_transactions.groupby("supplier_id").agg(
+            recent_avg_delay=("delivery_delay_days", "mean"),
+            recent_avg_defect=("defect_rate", "mean"),
+            repeat_delay_incidents=("delivery_delay_days", lambda values: (values > 7).sum()),
+            repeat_defect_incidents=("defect_rate", lambda values: (values > 0.05).sum()),
+        ).reset_index()
+        transaction_metrics = transaction_metrics.merge(recent_metrics, on="supplier_id", how="left")
+
+        transaction_metrics["delay_trend_raw"] = (
+            transaction_metrics["recent_avg_delay"] - transaction_metrics["avg_delay"]
+        )
+        transaction_metrics["defect_trend_raw"] = (
+            transaction_metrics["recent_avg_defect"] - transaction_metrics["avg_defect"]
+        )
 
         for column in [
             "avg_delay",
@@ -293,22 +363,93 @@ class RiskService:
         ]:
             transaction_metrics[column] = self._relative_risk_score(transaction_metrics[column])
 
+        transaction_metrics["recent_delay_risk"] = self._relative_risk_score(
+            transaction_metrics["recent_avg_delay"]
+        )
+        transaction_metrics["recent_defect_risk"] = self._relative_risk_score(
+            transaction_metrics["recent_avg_defect"]
+        )
+        transaction_metrics["trend_delay_risk"] = self._relative_risk_score(
+            transaction_metrics["delay_trend_raw"].clip(lower=0)
+        )
+        transaction_metrics["trend_defect_risk"] = self._relative_risk_score(
+            transaction_metrics["defect_trend_raw"].clip(lower=0)
+        )
+        transaction_metrics["repeat_delay_risk"] = self._relative_risk_score(
+            transaction_metrics["repeat_delay_incidents"]
+        )
+        transaction_metrics["repeat_defect_risk"] = self._relative_risk_score(
+            transaction_metrics["repeat_defect_incidents"]
+        )
+
         return transaction_metrics
 
     def _build_audit_metrics(self, audits: pd.DataFrame) -> pd.DataFrame:
         if audits.empty or "supplier_id" not in audits.columns:
             return pd.DataFrame(columns=["supplier_id"])
 
-        audit_metrics = audits.groupby("supplier_id").agg(
+        working = audits.copy()
+        working["audit_date"] = pd.to_datetime(working.get("audit_date"), errors="coerce")
+        recent_cutoff = RISK_REFERENCE_DATE - pd.Timedelta(days=365)
+        recent_audits = working[working["audit_date"].ge(recent_cutoff)].copy()
+        if recent_audits.empty:
+            recent_audits = working.copy()
+
+        audit_metrics = working.groupby("supplier_id").agg(
             audit_non_compliance_mean=("non_compliance", "mean"),
             audit_score_inverse=("score", "mean"),
         ).reset_index()
+        recent_metrics = recent_audits.groupby("supplier_id").agg(
+            recent_audit_non_compliance=("non_compliance", "mean"),
+            recent_audit_score=("score", "mean"),
+            repeat_audit_issues=("non_compliance", lambda values: (values >= 3).sum()),
+        ).reset_index()
+
+        latest_audits = (
+            working.sort_values("audit_date")
+            .groupby("supplier_id")
+            .tail(2)
+            .sort_values(["supplier_id", "audit_date"])
+        )
+        trend_rows: list[dict] = []
+        for supplier_id, group in latest_audits.groupby("supplier_id"):
+            if len(group) < 2:
+                trend_rows.append({"supplier_id": supplier_id, "audit_trend_raw": 0.0})
+                continue
+            previous = group.iloc[-2]
+            latest = group.iloc[-1]
+            trend_rows.append(
+                {
+                    "supplier_id": supplier_id,
+                    "audit_trend_raw": max(
+                        float(latest["non_compliance"]) - float(previous["non_compliance"]),
+                        float(previous["score"]) - float(latest["score"]),
+                        0.0,
+                    ),
+                }
+            )
+        audit_metrics = audit_metrics.merge(recent_metrics, on="supplier_id", how="left")
+        audit_metrics = audit_metrics.merge(pd.DataFrame(trend_rows), on="supplier_id", how="left")
+
         audit_metrics["audit_non_compliance_mean"] = self._relative_risk_score(
             audit_metrics["audit_non_compliance_mean"]
         )
         audit_metrics["audit_score_inverse"] = self._relative_risk_score(
             audit_metrics["audit_score_inverse"],
             higher_is_better=True,
+        )
+        audit_metrics["recent_audit_non_compliance"] = self._relative_risk_score(
+            audit_metrics["recent_audit_non_compliance"]
+        )
+        audit_metrics["recent_audit_score_inverse"] = self._relative_risk_score(
+            audit_metrics["recent_audit_score"],
+            higher_is_better=True,
+        )
+        audit_metrics["audit_trend_risk"] = self._relative_risk_score(
+            audit_metrics["audit_trend_raw"]
+        )
+        audit_metrics["repeat_audit_issue_risk"] = self._relative_risk_score(
+            audit_metrics["repeat_audit_issues"]
         )
         return audit_metrics
 
@@ -321,16 +462,23 @@ class RiskService:
         alerts["severity_weight"] = alerts["severity"].map(severity_weights).fillna(1.0)
         alerts["is_open"] = alerts["status"].astype(str).str.upper().eq("OPEN").astype(int)
         alerts["open_weighted_severity"] = alerts["severity_weight"] * alerts["is_open"]
+        alerts["is_critical_open"] = (
+            alerts["severity"].astype(str).str.upper().eq("CRITICAL") & alerts["is_open"].eq(1)
+        ).astype(int)
 
         alert_metrics = alerts.groupby("supplier_id").agg(
             open_alert_count=("is_open", "sum"),
             open_alert_severity=("open_weighted_severity", "sum"),
+            critical_open_alert_risk=("is_critical_open", "sum"),
         ).reset_index()
         alert_metrics["open_alert_count"] = self._relative_risk_score(
             alert_metrics["open_alert_count"]
         )
         alert_metrics["open_alert_severity"] = self._relative_risk_score(
             alert_metrics["open_alert_severity"]
+        )
+        alert_metrics["critical_open_alert_risk"] = self._relative_risk_score(
+            alert_metrics["critical_open_alert_risk"]
         )
         return alert_metrics
 
@@ -342,13 +490,25 @@ class RiskService:
         certs["status_normalized"] = certs["status"].astype(str).str.strip().str.lower()
         certs["verified_flag"] = certs["status_normalized"].eq("verified").astype(int)
         certs["pending_flag"] = certs["status_normalized"].eq("pending").astype(int)
-        certs["expired_flag"] = certs["expiry_date"].astype(str).lt("2026-04-22").astype(int)
+        certs["expiry_date_parsed"] = pd.to_datetime(certs.get("expiry_date"), errors="coerce")
+        certs["issue_date_parsed"] = pd.to_datetime(certs.get("issue_date"), errors="coerce")
+        certs["expired_flag"] = certs["expiry_date_parsed"].lt(RISK_REFERENCE_DATE).astype(int)
+        certs["days_to_expiry"] = (
+            certs["expiry_date_parsed"] - RISK_REFERENCE_DATE
+        ).dt.days
+        certs["days_since_issue"] = (
+            RISK_REFERENCE_DATE - certs["issue_date_parsed"]
+        ).dt.days
+        certs["expiring_soon_flag"] = certs["days_to_expiry"].between(0, 60, inclusive="both").astype(int)
+        certs["certification_staleness"] = certs["days_since_issue"].clip(lower=0).fillna(0)
 
         cert_metrics = certs.groupby("supplier_id").agg(
             certification_count=("id", "count"),
             verified_ratio=("verified_flag", "mean"),
             pending_ratio=("pending_flag", "mean"),
             expiry_ratio=("expired_flag", "mean"),
+            expiring_soon_ratio=("expiring_soon_flag", "mean"),
+            certification_staleness=("certification_staleness", "mean"),
         ).reset_index()
 
         cert_metrics["certification_gap_score"] = (
@@ -357,8 +517,12 @@ class RiskService:
             + 0.25 * self._relative_risk_score(cert_metrics["pending_ratio"])
             + 0.30 * self._relative_risk_score(cert_metrics["expiry_ratio"])
         ).round(2)
+        cert_metrics["certification_recency_risk"] = (
+            0.65 * self._relative_risk_score(cert_metrics["expiring_soon_ratio"])
+            + 0.35 * self._relative_risk_score(cert_metrics["certification_staleness"])
+        ).round(2)
 
-        return cert_metrics[["supplier_id", "certification_gap_score"]]
+        return cert_metrics[["supplier_id", "certification_gap_score", "certification_recency_risk"]]
 
     def _build_commodity_metrics(
         self,
@@ -403,7 +567,12 @@ class RiskService:
         supplier_metrics["criticality_score"] = self._relative_risk_score(
             supplier_metrics.get("criticality_score", pd.Series(dtype=float))
         )
-        return supplier_metrics[["supplier_id", "dependency_score", "criticality_score"]]
+        supplier_metrics["country_risk_score"] = supplier_metrics.get("country").apply(
+            self._country_risk_score
+        )
+        return supplier_metrics[
+            ["supplier_id", "dependency_score", "criticality_score", "country_risk_score"]
+        ]
 
     def _build_esg_metrics(self, esg: pd.DataFrame) -> pd.DataFrame:
         if esg.empty or "supplier_id" not in esg.columns:
@@ -504,3 +673,26 @@ class RiskService:
         if score >= 40:
             return "Medium"
         return "Low"
+
+    def _country_risk_score(self, country: str | None) -> float:
+        if not country:
+            return 50.0
+
+        risk_map = {
+            "brazil": 78.0,
+            "indonesia": 82.0,
+            "india": 66.0,
+            "vietnam": 62.0,
+            "china": 64.0,
+            "thailand": 58.0,
+            "malaysia": 61.0,
+            "mexico": 57.0,
+            "philippines": 59.0,
+            "usa": 28.0,
+            "germany": 24.0,
+            "france": 26.0,
+            "netherlands": 22.0,
+            "singapore": 18.0,
+            "uk": 25.0,
+        }
+        return risk_map.get(str(country).strip().lower(), 50.0)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from datetime import date
 from pathlib import Path
 
@@ -9,6 +10,7 @@ import pandas as pd
 from google import genai
 
 from ..core.exceptions import AppError
+from .onboarding_service import onboarding_service
 
 
 class AuditingService:
@@ -66,6 +68,100 @@ Rules:
             }
         except Exception:
             return fallback
+
+    def update_supplier_certification(
+        self,
+        supplier_id: int,
+        cert_name: str,
+        issue_date: str,
+        expiry_date: str,
+        status: str,
+    ) -> dict:
+        supplier_certs_path = self.data_dir / "supplier_certifications_v2.csv"
+        certs_path = self.data_dir / "certifications_v2.csv"
+
+        supplier_certs_df = pd.read_csv(supplier_certs_path)
+        certs_df = pd.read_csv(certs_path)
+
+        cert_match = certs_df[certs_df["cert_name"].astype(str).str.casefold() == cert_name.casefold()]
+        if cert_match.empty:
+            raise AppError("Certification not found", status_code=404)
+
+        cert_id = int(cert_match.iloc[0]["cert_id"])
+        row_match = supplier_certs_df[
+            (supplier_certs_df["supplier_id"] == supplier_id) & (supplier_certs_df["cert_id"] == cert_id)
+        ]
+        if row_match.empty:
+            raise AppError("Supplier certification mapping not found", status_code=404)
+
+        row_index = row_match.index[0]
+        supplier_certs_df.at[row_index, "issue_date"] = issue_date
+        supplier_certs_df.at[row_index, "expiry_date"] = expiry_date
+        supplier_certs_df.at[row_index, "status"] = status
+        supplier_certs_df.to_csv(supplier_certs_path, index=False)
+
+        return {
+            "supplier_id": supplier_id,
+            "cert_name": cert_match.iloc[0]["cert_name"],
+            "issue_date": issue_date,
+            "expiry_date": expiry_date,
+            "status": status,
+            "expiry_state": self._derive_expiry_state(status, expiry_date),
+            "message": "Supplier certification updated successfully.",
+        }
+
+    def extract_supplier_certification(
+        self,
+        supplier_id: int,
+        file_bytes: bytes,
+        expected_cert_name: str | None = None,
+    ) -> dict:
+        certs_df = pd.read_csv(self.data_dir / "certifications_v2.csv")
+        text = onboarding_service.extract_text(file_bytes)
+        lowered_text = text.casefold()
+
+        cert_name = None
+        for _, row in certs_df.iterrows():
+            candidate = str(row.get("cert_name", "")).strip()
+            if candidate and candidate.casefold() in lowered_text:
+                cert_name = candidate
+                break
+
+        if not cert_name and expected_cert_name:
+            cert_name = expected_cert_name
+        if not cert_name:
+            raise AppError("Unable to detect certification name from uploaded document", status_code=422)
+
+        issue_date = self._extract_date_by_keywords(
+            text,
+            ["issue date", "issued on", "issued date", "valid from"],
+        )
+        expiry_date = self._extract_date_by_keywords(
+            text,
+            ["expiry date", "expires on", "expiration date", "valid until", "valid to"],
+        )
+
+        fallback_dates = self._extract_all_dates(text)
+        if not issue_date and fallback_dates:
+            issue_date = fallback_dates[0]
+        if not expiry_date and len(fallback_dates) > 1:
+            expiry_date = fallback_dates[-1]
+
+        if not issue_date or not expiry_date:
+            raise AppError("Unable to extract certificate dates from uploaded document", status_code=422)
+
+        expiry_state = self._derive_expiry_state("Verified", expiry_date)
+        status = "Expired" if expiry_state == "Expired" else "Verified"
+
+        return {
+            "supplier_id": supplier_id,
+            "cert_name": cert_name,
+            "issue_date": issue_date,
+            "expiry_date": expiry_date,
+            "status": status,
+            "expiry_state": expiry_state,
+            "extracted_text_preview": text[:700],
+        }
 
     def _load_audit_context(self, audit_id: int) -> dict:
         audits_df = pd.read_csv(self.data_dir / "audits_v2.csv")
@@ -194,6 +290,50 @@ Rules:
         if start != -1 and end != -1 and end > start:
             return cleaned[start : end + 1]
         return cleaned
+
+    def _extract_date_by_keywords(self, text: str, keywords: list[str]) -> str | None:
+        lowered_text = text.casefold()
+        for keyword in keywords:
+            position = lowered_text.find(keyword.casefold())
+            if position == -1:
+                continue
+            window = text[position : position + 120]
+            dates = self._extract_all_dates(window)
+            if dates:
+                return dates[0]
+        return None
+
+    def _extract_all_dates(self, text: str) -> list[str]:
+        patterns = [
+            r"\b(\d{4}-\d{2}-\d{2})\b",
+            r"\b(\d{2}/\d{2}/\d{4})\b",
+            r"\b(\d{2}-\d{2}-\d{4})\b",
+        ]
+        found: list[str] = []
+        for pattern in patterns:
+            for match in re.findall(pattern, text):
+                normalized = self._normalize_date(match)
+                if normalized and normalized not in found:
+                    found.append(normalized)
+        return found
+
+    def _normalize_date(self, value: str) -> str | None:
+        text = value.strip()
+        for parser in (
+            lambda v: date.fromisoformat(v),
+            lambda v: date(int(v[6:10]), int(v[3:5]), int(v[0:2])),
+        ):
+            try:
+                return parser(text).isoformat()
+            except Exception:
+                continue
+        if "/" in text:
+            try:
+                day, month, year = text.split("/")
+                return date(int(year), int(month), int(day)).isoformat()
+            except Exception:
+                return None
+        return None
 
 
 auditing_service = AuditingService()
