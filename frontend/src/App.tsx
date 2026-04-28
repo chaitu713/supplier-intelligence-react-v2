@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "./components/layout/AppShell";
+import { SupplierAdvisorAIPage } from "./features/advisor-ai/pages/SupplierAdvisorAIPage";
 import { ExecutiveDashboardPage } from "./features/executive-dashboard/pages/ExecutiveDashboardPage";
 import { DueDiligencePage } from "./features/risk-monitoring/pages/DueDiligencePage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/supplier-engagement" element={<SupplierEngagementPage />} />
         <Route path="/esg-monitoring" element={<EsgMonitoringPage />} />
         <Route path="/due-diligence-agent" element={<DueDiligencePage />} />
+        <Route path="/advisor-ai" element={<SupplierAdvisorAIPage />} />
         <Route path="/onboarding" element={<Navigate to="/supplier-engagement" replace />} />
         <Route path="/overview-dashboard" element={<Navigate to="/executive-dashboard" replace />} />
         <Route path="/risk-monitoring" element={<Navigate to="/analytics" replace />} />

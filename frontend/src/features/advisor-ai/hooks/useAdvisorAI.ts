@@ -4,6 +4,7 @@ import {
   createAdvisorSession,
   getAdvisorSession,
   sendAdvisorMessage,
+  type SendAdvisorMessagePayload,
 } from "../../../api/advisor";
 
 export function useAdvisorSession(sessionId: string | null) {
@@ -24,7 +25,8 @@ export function useSendAdvisorMessage(sessionId: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (message: string) => sendAdvisorMessage(sessionId as string, message),
+    mutationFn: (payload: SendAdvisorMessagePayload) =>
+      sendAdvisorMessage(sessionId as string, payload),
     onSuccess: async () => {
       if (sessionId) {
         await queryClient.invalidateQueries({

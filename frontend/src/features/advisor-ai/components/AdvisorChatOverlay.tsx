@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 
+import type { AdvisorLens } from "../../../api/advisor";
 import { ApiError } from "../../../api/client";
+import { AdvisorCompassIcon } from "../../../components/common/FloatingChatButton";
 import { ChatComposer } from "./ChatComposer";
 import { ChatMessage } from "./ChatMessage";
 import { PromptSuggestions } from "./PromptSuggestions";
@@ -16,8 +19,10 @@ interface AdvisorChatOverlayProps {
 }
 
 export function AdvisorChatOverlay({ isOpen, onClose }: AdvisorChatOverlayProps) {
+  const location = useLocation();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const scrollAnchorRef = useRef<HTMLDivElement | null>(null);
+  const lens = useMemo(() => inferLensFromPath(location.pathname), [location.pathname]);
 
   const createSessionMutation = useCreateAdvisorSession();
   const sessionQuery = useAdvisorSession(isOpen ? sessionId : null);
@@ -65,7 +70,10 @@ export function AdvisorChatOverlay({ isOpen, onClose }: AdvisorChatOverlayProps)
       return;
     }
 
-    await sendMessageMutation.mutateAsync(message);
+    await sendMessageMutation.mutateAsync({
+      message,
+      lens,
+    });
   };
 
   const errorMessage = getErrorMessage(
@@ -108,7 +116,7 @@ export function AdvisorChatOverlay({ isOpen, onClose }: AdvisorChatOverlayProps)
                   color: "white",
                 }}
               >
-                <span className="text-xs font-semibold">AI</span>
+                <AdvisorCompassIcon className="h-5 w-5" />
               </div>
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-[var(--text)]">
@@ -147,7 +155,10 @@ export function AdvisorChatOverlay({ isOpen, onClose }: AdvisorChatOverlayProps)
         </header>
 
         {errorMessage ? (
-          <div className="border-b bg-rose-50 px-5 py-3 text-xs text-rose-700" style={{ borderColor: "var(--border)" }}>
+          <div
+            className="border-b bg-rose-50 px-5 py-3 text-xs text-rose-700"
+            style={{ borderColor: "var(--border)" }}
+          >
             {errorMessage}
           </div>
         ) : null}
@@ -164,15 +175,22 @@ export function AdvisorChatOverlay({ isOpen, onClose }: AdvisorChatOverlayProps)
                       "linear-gradient(135deg, rgba(255,255,255,0.92), rgba(240,253,244,0.65))",
                   }}
                 >
-                  Ask about supplier risk, ESG, delays, concentration risk, or safer
-                  alternatives. I’ll reference your latest dashboard context where possible.
+                  Ask about supplier risk, ESG, delays, concentration risk, simulator results, or
+                  safer sourcing alternatives. Prompt suggestions automatically follow the page you are currently on.
                 </div>
-                <div className="rounded-2xl border bg-white px-4 py-3" style={{ borderColor: "var(--border)" }}>
+                <div
+                  className="rounded-2xl border bg-white px-4 py-3"
+                  style={{ borderColor: "var(--border)" }}
+                >
+                  <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                    {formatLensLabel(lens)} Context
+                  </div>
                   <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
                     Suggested prompts
                   </div>
                   <div className="mt-3">
                     <PromptSuggestions
+                      lens={lens}
                       variant="chips"
                       onSelect={(prompt) => void handleSend(prompt)}
                     />
@@ -185,8 +203,8 @@ export function AdvisorChatOverlay({ isOpen, onClose }: AdvisorChatOverlayProps)
                   <ChatMessage
                     key={`${message.role}-${message.createdAt}-${index}`}
                     message={message}
-                    />
-                  ))}
+                  />
+                ))}
                 <div ref={scrollAnchorRef} />
               </div>
             )}
@@ -230,4 +248,19 @@ function getErrorMessage(error: unknown): string | null {
   }
 
   return "Something went wrong while loading the advisor experience.";
+}
+
+function inferLensFromPath(pathname: string): AdvisorLens {
+  if (pathname.startsWith("/executive-dashboard")) return "executive";
+  if (pathname.startsWith("/analytics")) return "analytics";
+  if (pathname.startsWith("/simulator")) return "simulator";
+  if (pathname.startsWith("/due-diligence-agent")) return "due_diligence";
+  if (pathname.startsWith("/esg-monitoring")) return "esg_monitoring";
+  return "general";
+}
+
+function formatLensLabel(lens: AdvisorLens): string {
+  if (lens === "due_diligence") return "Due Diligence";
+  if (lens === "esg_monitoring") return "ESG Monitoring";
+  return lens[0].toUpperCase() + lens.slice(1);
 }

@@ -6,6 +6,24 @@ export interface AdvisorMessage {
   createdAt: string;
 }
 
+export type AdvisorLens =
+  | "general"
+  | "executive"
+  | "analytics"
+  | "simulator"
+  | "due_diligence"
+  | "esg_monitoring";
+
+export interface AdvisorSimulatorContext {
+  scenarioTitle: string;
+  scenarioSummary: string;
+  highRiskDelta: number;
+  overallRiskDelta: number;
+  operationalRiskDelta: number;
+  esgRiskDelta: number;
+  affectedSupplierCount: number;
+}
+
 export interface AdvisorSession {
   sessionId: string;
   createdAt: string;
@@ -15,6 +33,13 @@ export interface AdvisorSession {
 export interface AdvisorMessageResponse {
   sessionId: string;
   reply: AdvisorMessage;
+  lensUsed: AdvisorLens;
+}
+
+export interface SendAdvisorMessagePayload {
+  message: string;
+  lens?: AdvisorLens;
+  simulatorContext?: AdvisorSimulatorContext | null;
 }
 
 export async function createAdvisorSession(): Promise<AdvisorSession> {
@@ -29,10 +54,10 @@ export async function getAdvisorSession(sessionId: string): Promise<AdvisorSessi
 
 export async function sendAdvisorMessage(
   sessionId: string,
-  message: string,
+  payload: SendAdvisorMessagePayload,
 ): Promise<AdvisorMessageResponse> {
   return apiRequest<AdvisorMessageResponse>(`/advisor/sessions/${sessionId}/messages`, {
     method: "POST",
-    json: { message },
+    json: payload,
   });
 }

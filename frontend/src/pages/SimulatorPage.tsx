@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { useQuery } from "@tanstack/react-query";
 
+import type { AdvisorSimulatorContext } from "../api/advisor";
 import { ApiError } from "../api/client";
 import { getSuppliers } from "../api/datasets";
 import {
@@ -107,6 +109,7 @@ type CompareScenarioConfig = {
 };
 
 export function SimulatorPage() {
+  const navigate = useNavigate();
   const [scenarioType, setScenarioType] = useState<SimulatorMode>("supplier_disruption");
   const [supplierId, setSupplierId] = useState<number | null>(null);
   const [severity, setSeverity] = useState<SupplierDisruptionSeverity>("moderate");
@@ -271,6 +274,16 @@ export function SimulatorPage() {
       setIsCompareRunning(false);
     }
   }
+
+  const openAdvisorForScenario = (data: SimulatorScenarioResponse) => {
+    navigate("/advisor-ai", {
+      state: {
+        lens: "simulator",
+        initialPrompt: "Explain this simulator result and tell me what changed, why it changed, and which suppliers were impacted most.",
+        simulatorContext: buildAdvisorSimulatorContext(data),
+      },
+    });
+  };
 
   return (
     <div className="page-shell">
@@ -1160,6 +1173,15 @@ export function SimulatorPage() {
                   <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
                     {simulation.data.scenario.summary}
                   </p>
+                  <div className="mt-5">
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => openAdvisorForScenario(simulation.data)}
+                    >
+                      Ask Advisor to Explain This Scenario
+                    </button>
+                  </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
                   <SummaryMetric
@@ -2377,6 +2399,20 @@ function buildComparisonHeadline(
   const rightScore = scoreScenarioImpact(right);
   const winner = leftScore >= rightScore ? "Scenario A" : "Scenario B";
   return `${winner} produces the larger overall impact across high-risk supplier growth, average risk uplift, and affected suppliers.`;
+}
+
+function buildAdvisorSimulatorContext(
+  data: SimulatorScenarioResponse,
+): AdvisorSimulatorContext {
+  return {
+    scenarioTitle: data.scenario.title,
+    scenarioSummary: data.scenario.summary,
+    highRiskDelta: data.deltas.highRiskSuppliers,
+    overallRiskDelta: data.deltas.avgOverallRisk,
+    operationalRiskDelta: data.deltas.avgOperationalRisk,
+    esgRiskDelta: data.deltas.avgEsgRisk,
+    affectedSupplierCount: data.affectedSuppliers.length,
+  };
 }
 
 function getErrorMessage(error: unknown): string | null {

@@ -25,4 +25,4 @@ def send_advisor_message(
     session_id: str,
     payload: AdvisorMessageRequest,
 ) -> AdvisorMessageResponse:
-    return advisor_service.send_message(session_id, payload.message)
+    return advisor_service.send_message(session_id, payload)

@@ -34,28 +34,40 @@ export function FloatingChatButton({ isOpen, onClick }: FloatingChatButtonProps)
           />
         </svg>
       ) : (
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true"
-        >
-          <path
-            d="M8 10.5h8M8 14h5"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-          <path
-            d="M20 12c0 4.418-3.582 8-8 8-1.11 0-2.167-.226-3.13-.635L4 20l.86-3.435A7.963 7.963 0 0 1 4 12c0-4.418 3.582-8 8-8s8 3.582 8 8Z"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <AdvisorCompassIcon className="h-6 w-6" />
       )}
     </button>
+  );
+}
+
+export function AdvisorCompassIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      className={className}
+    >
+      <path
+        d="M20 11.5c0 4.1-3.4 7.5-7.5 7.5-1 0-1.9-.2-2.8-.5L5 19l.9-3.4C5.3 14.5 5 13.5 5 12.5 5 8.4 8.4 5 12.5 5S20 8.4 20 11.5Z"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinejoin="round"
+      />
+      <circle cx="12.5" cy="11.5" r="3.1" stroke="currentColor" strokeWidth="1.9" />
+      <path
+        d="M12.5 8.8v5.4M9.8 11.5h5.4"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12.5 11.5l1.9-1.9"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
