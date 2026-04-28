@@ -155,30 +155,70 @@ The Simulator page is the decision-support and what-if analysis workspace. It is
 
 #### Current Frontend Implementation
 
-The page currently implements a working `Supplier Disruption` scenario with:
+The page currently implements:
 
-- supplier selection
-- severity selection
+- centered simulator tabs for:
+  - `Supplier Disruption`
+  - `Country Disruption`
+  - `Commodity Shock`
+  - `Operational Deterioration`
+  - `Scenario Compare`
+- supplier, country, and commodity selectors depending on scenario
+- severity selection for disruption-style scenarios:
   - `Moderate`
   - `Severe`
   - `Unavailable`
-- loading and error handling for the supplier list
-- simulation run action
+- operational deterioration sliders for:
+  - delay increase
+  - defect increase
+  - cost variance increase
+- loading and error handling for supplier and simulator option lists
 - `How This Simulation Works` explainer section
+
+For single-scenario simulation modes, the page currently shows:
+
+- scenario summary banner
 - before vs after KPI cards
-- `Risk Band Movement` visual
-- `Most Affected Suppliers` visual
-- `Affected Supplier Detail` table
+- `Risk Composition Shift`
+- `Impact Delta`
+- `Risk Band Movement`
+- `Most Affected Suppliers`
+- `Affected Supplier Detail`
+
+Scenario-specific visuals currently include:
+
+- `Supplier Disruption`
+  - `Impact Scope Split`
+- `Country Disruption`
+  - `Country Impact Summary`
+- `Commodity Shock`
+  - `Commodity Impact Summary`
+- `Operational Deterioration`
+  - `Operational Input Meters`
+
+`Scenario Compare` currently includes:
+
+- `Scenario A` builder
+- `Scenario B` builder
+- comparison summary banner
+- comparison winner panel
+- side-by-side scenario result cards
+- risk composition comparison
+- KPI delta comparison
 
 #### Current Backend Implementation
 
 The Simulator is powered by:
 
+- `GET /api/v1/simulator/options`
 - `POST /api/v1/simulator/run`
 
 The backend implementation currently supports:
 
 - `supplier_disruption`
+- `country_disruption`
+- `commodity_shock`
+- `operational_deterioration`
 
 The simulator is built on top of the current live supplier risk frame from the risk model.
 
@@ -198,6 +238,36 @@ The backend returns:
 This is a deterministic scenario test. The user selects a supplier and a severity level, and the simulator artificially applies disruption pressure to the live network model. It then compares the network state before and after the scenario.
 
 This is not an ML forecast yet.
+
+#### What `Country Disruption` Means
+
+This simulates disruption across one sourcing country. It applies direct pressure to suppliers in the selected country and lighter commodity-linked spillover outside that geography.
+
+#### What `Commodity Shock` Means
+
+This simulates disruption across one commodity. It applies direct pressure to suppliers mapped to the selected commodity and lighter spillover into related countries that host the affected commodity network.
+
+#### What `Operational Deterioration` Means
+
+This simulates worsening operational performance using explicit user-controlled deterioration levers:
+
+- delay increase
+- defect increase
+- cost variance increase
+
+It can be applied to:
+
+- one supplier
+- one country
+- one commodity
+
+#### What `Scenario Compare` Means
+
+This mode runs two complete scenarios independently and compares them side by side. It helps answer:
+
+- which scenario is worse?
+- which one creates the larger increase in high-risk suppliers?
+- which one creates the larger overall risk uplift?
 
 #### What `Spillover` Means
 
@@ -229,15 +299,14 @@ This models a ripple effect rather than a single isolated supplier shock.
 
 #### Current Simulation Intent
 
-The current Simulator is designed as a controlled, rule-based scenario engine layered on top of the risk model. It is meant to support exploratory disruption analysis first. More advanced scenario types can be added later.
+The current Simulator is designed as a controlled, rule-based scenario engine layered on top of the risk model. It is meant to support exploratory disruption analysis and side-by-side decision comparison.
 
 #### Planned Next Simulator Directions
 
-- country disruption
 - certification failure
-- commodity shock
+- multi-supplier failure
 - alternate supplier / substitution scenarios
-- richer before vs after comparison visuals
+- more advanced compare insights
 
 ### 3. Analytics
 
@@ -587,7 +656,7 @@ Key file:
 
 - [frontend/src/pages/SimulatorPage.tsx](C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\frontend\src\pages\SimulatorPage.tsx:1)
 - [frontend/src/api/simulator.ts](C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\frontend\src\api\simulator.ts:1)
-- [frontend/src/features/simulator/hooks/useSupplierDisruptionSimulation.ts](C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\frontend\src\features\simulator\hooks\useSupplierDisruptionSimulation.ts:1)
+- [frontend/src/features/simulator/hooks/useRunSimulation.ts](C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\frontend\src\features\simulator\hooks\useRunSimulation.ts:1)
 
 ### ESG Monitoring
 
@@ -894,6 +963,7 @@ Current backend endpoint:
 
 ### Simulator
 
+- `GET /api/v1/simulator/options`
 - `POST /api/v1/simulator/run`
 
 ### Onboarding
