@@ -16,6 +16,9 @@ export class ApiError extends Error {
   }
 }
 
+const AI_SAFETY_MESSAGE =
+  "This request could not be processed because it conflicts with AI safety rules.";
+
 type RequestOptions = RequestInit & {
   json?: unknown;
 };
@@ -49,7 +52,7 @@ export async function apiRequest<T>(
         ? (payload as { detail: string }).detail
         : `Request failed with status ${response.status}`;
 
-    throw new ApiError(detail, response.status, payload);
+    throw new ApiError(detail.includes("AI safety rules") ? AI_SAFETY_MESSAGE : detail, response.status, payload);
   }
 
   return payload as T;

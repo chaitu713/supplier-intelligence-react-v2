@@ -11,3 +11,4 @@ python-dotenv
 azure-identity
 azure-core
 google-genai
+pytest

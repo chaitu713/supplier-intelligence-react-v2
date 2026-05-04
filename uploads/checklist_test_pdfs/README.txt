@@ -1,0 +1,20 @@
+Checklist evidence PDFs for Evidence Checklist cards.
+
+Complete examples:
+01_plot_traceability_valid_cocoa_brazil.pdf
+02_geolocation_polygon_valid_cocoa_brazil.pdf
+03_deforestation_free_declaration_valid.pdf
+04_labor_child_risk_questionnaire_complete.pdf
+05_chain_of_custody_valid_aggregator.pdf
+06_complete_eudr_pack_summary.pdf
+
+Needs review examples:
+07_missing_geolocation_needs_followup.pdf
+08_deforestation_declaration_expired.pdf
+09_labor_questionnaire_open_findings.pdf
+10_chain_of_custody_missing_lot_link.pdf
+11_plot_traceability_missing_supplier_needs_review.pdf
+12_deforestation_missing_cutoff_needs_review.pdf
+13_labor_missing_child_risk_needs_review.pdf
+
+Checklist evidence uses document-specific validation. Valid examples should become Complete; negative examples should become Needs Review.

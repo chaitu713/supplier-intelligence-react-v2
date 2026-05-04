@@ -6,8 +6,10 @@ from .core.exceptions import register_exception_handlers
 from .core.logging import configure_logging, get_logger
 from .routers.analytics import router as analytics_router
 from .routers.advisor import router as advisor_router
+from .routers.ai_review import router as ai_review_router
 from .routers.datasets import router as datasets_router
 from .routers.auditing import router as auditing_router
+from .routers.esg_monitoring import router as esg_monitoring_router
 from .routers.health import router as health_router
 from .routers.onboarding_router import router as onboarding_router
 from .routers.risk import router as risk_router
@@ -47,6 +49,8 @@ def create_app() -> FastAPI:
     application.include_router(auditing_router)
     application.include_router(analytics_router)
     application.include_router(advisor_router)
+    application.include_router(ai_review_router)
+    application.include_router(esg_monitoring_router)
     application.include_router(risk_router)
     application.include_router(simulator_router)
     application.include_router(onboarding_router)

@@ -1,25 +1,16 @@
-Valid certificate upload test PDFs
+Certification evidence PDFs for certification cards.
 
-All PDFs use:
-Issue Date: 2026-02-01
-Expiry Date: 2028-02-01
-Status: Verified
+Verified examples:
+01_rspo_palm_oil_verified.pdf
+02_rainforest_cocoa_verified.pdf
+03_fsc_wood_verified.pdf
+04_pefc_wood_verified.pdf
+05_fairtrade_coffee_verified.pdf
+06_iso14001_facility_verified.pdf
+07_iso22000_food_safety_verified.pdf
+08_haccp_food_safety_verified.pdf
 
-Palm Oil: RSPO
-Palm Oil: ISO14001
-Palm Oil: HACCP
-Cocoa: Rainforest Alliance
-Cocoa: Fairtrade
-Cocoa: ISO22000
-Coffee: Rainforest Alliance
-Coffee: Fairtrade
-Coffee: ISO22000
-Rubber: ISO14001
-Rubber: GMP
-Rubber: HACCP
-Wood: FSC
-Wood: PEFC
-Wood: ISO14001
-Soya: Fairtrade
-Soya: ISO22000
-Soya: HACCP
+Needs review examples:
+09_rspo_expired_needs_review.pdf - expired certificate
+10_mismatch_uploaded_for_rspo_needs_review.pdf - upload against RSPO to test certificate mismatch
+11_pefc_missing_expiry_needs_review.pdf - missing expiry date

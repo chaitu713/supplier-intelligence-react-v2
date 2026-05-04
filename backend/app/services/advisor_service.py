@@ -9,6 +9,8 @@ import pandas as pd
 
 from ..core.exceptions import AppError
 from ..core.logging import get_logger
+from ..ai.guardrails import GuardrailViolation, SAFE_BLOCK_MESSAGE
+from .ai_gateway import AiGatewayError
 from ..schemas.advisor import AdvisorLens, AdvisorMessageRequest, AdvisorSimulatorContext
 from .dataset_service import DatasetService
 from .risk_service import RiskService
@@ -118,6 +120,11 @@ class AdvisorService:
             )
             if response:
                 return str(response)
+        except GuardrailViolation:
+            logger.warning("Advisor prompt blocked by AI guardrails")
+            raise AppError(SAFE_BLOCK_MESSAGE, status_code=400)
+        except AiGatewayError as exc:
+            logger.exception("Advisor AI provider failed, using deterministic fallback", exc_info=exc)
         except Exception as exc:
             logger.exception("Advisor AI generation failed, using deterministic fallback", exc_info=exc)
 

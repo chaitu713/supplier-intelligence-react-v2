@@ -1,0 +1,278 @@
+evidence_id,supplier_id,temporary_supplier_key,evidence_type,linked_entity_type,linked_entity_name,file_name,local_path,upload_date,document_status,extracted_text_preview,extracted_certificate_name,extracted_certificate_number,extracted_issuer,extracted_issue_date,extracted_expiry_date,extracted_scope_site,validation_status,validation_notes,review_status
+1,,debug,Certification,Certification,RSPO,rspo_valid_blueriver.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\e225b2442e184298a2173536f88080d4_rspo_valid_blueriver.pdf,2026-05-04,Extracted,"RSPO Certificate Evidence
+This sample certificate is generated for onboarding evidence upload testing.
+CERTIFICATE NUMBER: RSPO-2026-BR-001
+Issued by: Responsible Palm Certification Authority
+Issue Date: 2026-01-15
+Expiry Date: 2027-01-15
+Supplier: BlueRiver Commodities Ltd
+Scope: Palm Oil sourcing and trading operations in Indonesia
+Status: Active and verified
+Generated test evidence document for Supplier Risk Intelligence onboarding.",RSPO,RSPO-2026-BR-001,Responsible Palm Certification Authority,2026-01-15,2027-01-15,,Verified,Certificate evidence passed automated checks,Verified
+2,,test,Certification,Certification,RSPO,rspo_valid_blueriver.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\6cc5d440878441918739b08877972d20_rspo_valid_blueriver.pdf,2026-05-04,Extracted,"RSPO Certificate Evidence
+This sample certificate is generated for onboarding evidence upload testing.
+CERTIFICATE NUMBER: RSPO-2026-BR-001
+Issued by: Responsible Palm Certification Authority
+Issue Date: 2026-01-15
+Expiry Date: 2027-01-15
+Supplier: BlueRiver Commodities Ltd
+Scope: Palm Oil sourcing and trading operations in Indonesia
+Status: Active and verified
+Generated test evidence document for Supplier Risk Intelligence onboarding.",RSPO,RSPO-2026-BR-001,Responsible Palm Certification Authority,2026-01-15,2027-01-15,,Verified,Certificate evidence passed automated checks,Verified
+3,,test,Certification,Certification,RSPO,rspo_valid_blueriver.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\bfcabbf555654b5e95fb47d2f7cf6c9a_rspo_valid_blueriver.pdf,2026-05-04,Extracted,"RSPO Certificate Evidence
+This sample certificate is generated for onboarding evidence upload testing.
+CERTIFICATE NUMBER: RSPO-2026-BR-001
+Issued by: Responsible Palm Certification Authority
+Issue Date: 2026-01-15
+Expiry Date: 2027-01-15
+Supplier: BlueRiver Commodities Ltd
+Scope: Palm Oil sourcing and trading operations in Indonesia
+Status: Active and verified
+Generated test evidence document for Supplier Risk Intelligence onboarding.",RSPO,RSPO-2026-BR-001,Responsible Palm Certification Authority,2026-01-15,2027-01-15,,Verified,Certificate evidence passed automated checks,Verified
+4,,GreenHarvest Trading Co.,Certification,Certification,RSPO,rspo_valid_blueriver.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\4ca955c0637e47ada21513d58ec57964_rspo_valid_blueriver.pdf,2026-05-04,Extracted,"RSPO Certificate Evidence
+This sample certificate is generated for onboarding evidence upload testing.
+CERTIFICATE NUMBER: RSPO-2026-BR-001
+Issued by: Responsible Palm Certification Authority
+Issue Date: 2026-01-15
+Expiry Date: 2027-01-15
+Supplier: BlueRiver Commodities Ltd
+Scope: Palm Oil sourcing and trading operations in Indonesia
+Status: Active and verified
+Generated test evidence document for Supplier Risk Intelligence onboarding.",RSPO,RSPO-2026-BR-001,Responsible Palm Certification Authority,2026-01-15,2027-01-15,,Verified,Certificate evidence passed automated checks,Verified
+5,,test,Certification,Certification,FSC,fsc_valid_cedar_grove.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\bc0bdc0340334ea4aebcb8d81b086a3a_fsc_valid_cedar_grove.pdf,2026-05-04,Extracted,"FSC Certificate Evidence
+This sample certificate is generated for onboarding evidence upload testing.
+Certificate Number: FSC-2026-CG-014
+Issuer: Forest Stewardship Council Accredited Body
+Issue Date: 2026-02-01
+Expiry Date: 2028-02-01
+Supplier: Cedar Grove Exports
+Scope: Wood chain-of-custody operations in India
+Status: Active and verified
+Generated test evidence document for Supplier Risk Intelligence onboarding.",FSC,FSC-2026-CG-014,Forest Stewardship Council Accredited Body,2026-02-01,2028-02-01,Wood chain-of-custody operations in India,Verified,Certificate evidence passed automated checks,Verified
+6,,GreenHarvest Trading Co.,Certification,Certification,RSPO,palm_oil__rspo__valid.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\9a2531df6e6a49f592c98c07c9744bea_palm_oil__rspo__valid.pdf,2026-05-04,Extracted,"RSPO Certification Document
+Commodity: Palm Oil
+Certificate Name: RSPO
+Certificate Number: PT-001
+Status: Verified
+Issue Date: 2026-02-01
+Expiry Date: 2028-02-01
+This certificate is issued for supplier compliance validation.
+Use this file to test certificate replacement upload in Auditing.",RSPO,PT-001,,2026-02-01,2028-02-01,,Verified,Certificate evidence passed automated checks,Verified
+7,,BlueRiver Cocoa Exports,Certification,Certification,Fairtrade,cocoa__fairtrade__valid.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\4661bda8d6f94b02bd357b4e2aed08ab_cocoa__fairtrade__valid.pdf,2026-05-04,Extracted,"Fairtrade Certification Document
+Commodity: Cocoa
+Certificate Name: Fairtrade
+Certificate Number: CC-002
+Status: Verified
+Issue Date: 2026-02-01
+Expiry Date: 2028-02-01
+This certificate is issued for supplier compliance validation.
+Use this file to test certificate replacement upload in Auditing.",Fairtrade,CC-002,,2026-02-01,2028-02-01,,Verified,Certificate evidence passed automated checks,Verified
+8,,ui-test,Certification,Certification,Fairtrade,fairtrade_valid_summit_leaf.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\2937e90318394b20a13d3376ff8d88e7_fairtrade_valid_summit_leaf.pdf,2026-05-04,Extracted,"Fairtrade Certificate Evidence
+This sample certificate is generated for onboarding evidence upload testing.
+Certificate No: FAIR-2026-SL-022
+Certification Body: Fairtrade International Assurance
+Issue Date: 2026-03-10
+Expiry Date: 2027-03-10
+Supplier: Summit Leaf Trading Pte Ltd
+Scope: Coffee and cocoa trading operations
+Status: Active and verified
+Generated test evidence document for Supplier Risk Intelligence onboarding.",Fairtrade,FAIR-2026-SL-022,Fairtrade International Assurance,2026-03-10,2027-03-10,Coffee and cocoa trading operations,Verified,Certificate evidence passed automated checks,Verified
+9,,ui-test,Certification,Certification,RSPO,palm_oil__rspo__valid.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\13c64dc5fdbd45fab6fbd27348b7bbac_palm_oil__rspo__valid.pdf,2026-05-04,Extracted,"RSPO Certification Document
+Commodity: Palm Oil
+Certificate Name: RSPO
+Certificate Number: PT-001
+Status: Verified
+Issue Date: 2026-02-01
+Expiry Date: 2028-02-01
+This certificate is issued for supplier compliance validation.
+Use this file to test certificate replacement upload in Auditing.",RSPO,PT-001,RSPO Certification Body,2026-02-01,2028-02-01,Palm Oil supplier certification coverage,Verified,Certificate evidence passed automated checks,Verified
+10,,BlueRiver Cocoa Exports,Certification,Certification,Fairtrade,05_fairtrade_coffee_verified.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\c23861b2ab984424992b29314ccf62fb_05_fairtrade_coffee_verified.pdf,2026-05-04,Extracted,"Fairtrade Producer Certificate
+Supplier Sustainability Evidence Document
+Certificate Name: Fairtrade
+Certificate Number: FT-SLP-2026-3365
+Issued By: FLOCERT GmbH
+Supplier: Summit Leaf Producers
+Commodity: Coffee
+Scope: Fairtrade coffee producer organization certification
+Site: Antigua Grower Network, Guatemala
+Issue Date: 2026-02-18
+Expiry Date: 2027-02-17
+Status: Active
+Generated for onboarding evidence extraction tests. Use the matching certification row unless the filename says mismatch.",Fairtrade,FT-SLP-2026-3365,FLOCERT GmbH,2026-02-18,2027-02-17,"Fairtrade coffee producer organization certification; Site: Antigua Grower Network, Guatemala",Verified,Certificate evidence passed automated checks,Verified
+11,,GreenHarvest Trading Co.,Certification,Certification,RSPO,01_rspo_palm_oil_verified.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\3bb02a164d5441718560620ede3838aa_01_rspo_palm_oil_verified.pdf,2026-05-04,Extracted,"RSPO Principles & Criteria Certificate
+Supplier Sustainability Evidence Document
+Certificate Name: RSPO
+Certificate Number: RSPO-BRI-2026-1042
+Issued By: Control Union Certifications
+Supplier: BlueRiver Oils Pvt Ltd
+Commodity: Palm Oil
+Scope: Palm oil mill and supply base certification coverage
+Site: Johor Mill Site, Malaysia
+Issue Date: 2026-01-15
+Expiry Date: 2027-01-14
+Status: Active
+Generated for onboarding evidence extraction tests. Use the matching certification row unless the filename say",RSPO,RSPO-BRI-2026-1042,Control Union Certifications,2026-01-15,2027-01-14,"Palm oil mill and supply base certification coverage; Site: Johor Mill Site, Malaysia",Verified,Certificate evidence passed automated checks,Verified
+12,,GreenHarvest Trading Co.,Certification,Certification,FSC,03_fsc_wood_verified.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\695de6998e224436b9def1233b9cabe1_03_fsc_wood_verified.pdf,2026-05-04,Extracted,"FSC Chain of Custody Certificate
+Supplier Sustainability Evidence Document
+Certificate Name: FSC
+Certificate Number: FSC-CED-2026-5128
+Issued By: SCS Global Services
+Supplier: Cedar Grove Timber Co
+Commodity: Wood
+Scope: FSC chain of custody for sawn timber and panels
+Site: British Columbia Processing Site, Canada
+Issue Date: 2026-03-01
+Expiry Date: 2027-02-28
+Status: Active
+Generated for onboarding evidence extraction tests. Use the matching certification row unless the filename says mismatch.",FSC,FSC-CED-2026-5128,SCS Global Services,2026-03-01,2027-02-28,"FSC chain of custody for sawn timber and panels; Site: British Columbia Processing Site, Canada",Verified,Certificate evidence passed automated checks,Verified
+13,,GreenHarvest Trading Co.,Certification,Certification,ISO14001,06_iso14001_facility_verified.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\3b5a6f30a31e463a918e7fc40afb026d_06_iso14001_facility_verified.pdf,2026-05-04,Extracted,"ISO 14001 Environmental Management Certificate
+Supplier Sustainability Evidence Document
+Certificate Name: ISO14001
+Certificate Number: ISO14-TSC-2026-9274
+Issued By: Bureau Veritas Certification
+Supplier: Terra Source Manufacturing
+Commodity: Packaging Materials
+Scope: Environmental management system for manufacturing operations
+Site: Pune Packaging Plant, India
+Issue Date: 2026-01-05
+Expiry Date: 2029-01-04
+Status: Active
+Generated for onboarding evidence extraction tests. Use the matching cer",ISO14001,ISO14-TSC-2026-9274,Bureau Veritas Certification,2026-01-05,2029-01-04,"Environmental management system for manufacturing operations; Site: Pune Packaging Plant, India",Verified,Certificate evidence passed automated checks,Verified
+14,,BlueRiver Cocoa Exports,Certification,Certification,Fairtrade,05_fairtrade_coffee_verified.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\0f25efeae99d433186459d511de7409e_05_fairtrade_coffee_verified.pdf,2026-05-04,Extracted,"Fairtrade Producer Certificate
+Supplier Sustainability Evidence Document
+Certificate Name: Fairtrade
+Certificate Number: FT-SLP-2026-3365
+Issued By: FLOCERT GmbH
+Supplier: Summit Leaf Producers
+Commodity: Coffee
+Scope: Fairtrade coffee producer organization certification
+Site: Antigua Grower Network, Guatemala
+Issue Date: 2026-02-18
+Expiry Date: 2027-02-17
+Status: Active
+Generated for onboarding evidence extraction tests. Use the matching certification row unless the filename says mismatch.",Fairtrade,FT-SLP-2026-3365,FLOCERT GmbH,2026-02-18,2027-02-17,"Fairtrade coffee producer organization certification; Site: Antigua Grower Network, Guatemala",Verified,Certificate evidence passed automated checks,Verified
+15,,BlueRiver Cocoa Exports,Traceability,Onboarding Requirement,Plot or farm-level traceability,01_plot_traceability_valid_cocoa_brazil.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\0ad9c917ba7541939419ba1a70f62bf2_01_plot_traceability_valid_cocoa_brazil.pdf,2026-05-04,Extracted,"Plot-Level Traceability Evidence
+Responsible Sourcing Onboarding Checklist Evidence
+Supplier: BlueRiver Cocoa Exports
+Country: Brazil
+Commodity: Cocoa
+Evidence Status: Valid
+Requirement Type: Plot or farm-level traceability
+Traceability ID: TRACE-BCE-2026-0001
+Farm / Plot Group: Para Cocoa Producer Cluster A
+Plots Covered: PLOT-BR-PA-1001; PLOT-BR-PA-1002; PLOT-BR-PA-1003
+Harvest Period: 2026-01-01 to 2026-03-31
+Mass Balance: Segregated lot records available
+Chain Reference: LOT-BCE-COCOA-2026-Q",Plot or farm-level traceability,,,2026-01-01,2026-04-01,Cocoa supplier certification coverage,Expired,Certificate number was not detected; Certificate appears expired,Expired
+16,,BlueRiver Cocoa Exports,Traceability,Onboarding Requirement,Geolocation or polygon evidence,02_geolocation_polygon_valid_cocoa_brazil.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\bd4997d7882945cea7f64978294cec7d_02_geolocation_polygon_valid_cocoa_brazil.pdf,2026-05-04,Extracted,"Geolocation and Polygon Evidence
+Responsible Sourcing Onboarding Checklist Evidence
+Supplier: BlueRiver Cocoa Exports
+Country: Brazil
+Commodity: Cocoa
+Evidence Status: Valid
+Requirement Type: Geolocation or polygon evidence
+Geo Evidence ID: GEO-BCE-2026-8821
+Coordinate System: WGS84
+Polygon Reference: BR-PA-BCE-COCOA-POLY-01
+Centroid: -1.4558, -48.4902
+Boundary File: bce_cocoa_cluster_a_2026.geojson
+Coverage: 100 percent of declared plots
+Issue Date: 2026-04-02
+Generated sample evidence for chec",Geolocation or polygon evidence,,,2026-04-02,,Cocoa supplier certification coverage,Needs Review,Certificate number was not detected; Expiry date was not detected,Needs Review
+17,,BlueRiver Cocoa Exports,ESG,Onboarding Requirement,Deforestation-free declaration,03_deforestation_free_declaration_valid.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\2fc3b92b95b844329cb038f7c21d330a_03_deforestation_free_declaration_valid.pdf,2026-05-04,Extracted,"Deforestation-Free Declaration
+Responsible Sourcing Onboarding Checklist Evidence
+Supplier: BlueRiver Cocoa Exports
+Country: Brazil
+Commodity: Cocoa
+Evidence Status: Valid
+Requirement Type: Deforestation-free declaration
+Declaration ID: DFD-BCE-2026-4108
+Statement: Supplier declares no deforestation or forest degradation after cutoff da
+te.
+Cutoff Date: 2020-12-31
+Applicable Origin: Para cocoa sourcing region, Brazil
+Responsible Manager: Sustainability Lead
+Issue Date: 2026-04-03
+Expiry Date: 20",Deforestation-free declaration,,,2020-12-31,2027-04-02,Cocoa supplier certification coverage,Needs Review,Certificate number was not detected,Needs Review
+18,,BlueRiver Cocoa Exports,Social,Onboarding Requirement,Labor and child-risk questionnaire,04_labor_child_risk_questionnaire_complete.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\f52389ccdb5249fb9a5382e828be97a7_04_labor_child_risk_questionnaire_complete.pdf,2026-05-04,Extracted,"Labor and Child-Risk Questionnaire
+Responsible Sourcing Onboarding Checklist Evidence
+Supplier: BlueRiver Cocoa Exports
+Country: Brazil
+Commodity: Cocoa
+Evidence Status: Complete
+Requirement Type: Labor and child-risk questionnaire
+Questionnaire ID: SAQ-BCE-2026-2290
+Child Labor Policy: Available and communicated to producer groups
+Worker Grievance MechaAnvisamila:ble
+Working Hours Control: Seasonal monitoring records maintained
+Wage Controls: Minimum wage compliance self-declared
+Corrective Act",Labor and child-risk questionnaire,,,2026-04-04,,Cocoa supplier certification coverage,Needs Review,Certificate number was not detected; Expiry date was not detected,Needs Review
+19,,BlueRiver Cocoa Exports,Certification,Certification,Fairtrade,05_fairtrade_coffee_verified.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\86113063d0e5481bb0107e45e71e2e99_05_fairtrade_coffee_verified.pdf,2026-05-04,Extracted,"Fairtrade Producer Certificate
+Supplier Sustainability Evidence Document
+Certificate Name: Fairtrade
+Certificate Number: FT-SLP-2026-3365
+Issued By: FLOCERT GmbH
+Supplier: Summit Leaf Producers
+Commodity: Coffee
+Scope: Fairtrade coffee producer organization certification
+Site: Antigua Grower Network, Guatemala
+Issue Date: 2026-02-18
+Expiry Date: 2027-02-17
+Status: Active
+Generated for onboarding evidence extraction tests. Use the matching certification row unless the filename says mismatch.",Fairtrade,FT-SLP-2026-3365,FLOCERT GmbH,2026-02-18,2027-02-17,"Fairtrade coffee producer organization certification; Site: Antigua Grower Network, Guatemala",Verified,Certificate evidence passed automated checks,Verified
+20,,BlueRiver Cocoa Exports,Traceability,Onboarding Requirement,Plot or farm-level traceability,01_plot_traceability_valid_cocoa_brazil.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\c71ede9123084a72ab7fa8cb503fe200_01_plot_traceability_valid_cocoa_brazil.pdf,2026-05-04,Extracted,"Plot-Level Traceability Evidence
+Responsible Sourcing Onboarding Checklist Evidence
+Supplier: BlueRiver Cocoa Exports
+Country: Brazil
+Commodity: Cocoa
+Evidence Status: Valid
+Requirement Type: Plot or farm-level traceability
+Traceability ID: TRACE-BCE-2026-0001
+Farm / Plot Group: Para Cocoa Producer Cluster A
+Plots Covered: PLOT-BR-PA-1001; PLOT-BR-PA-1002; PLOT-BR-PA-1003
+Harvest Period: 2026-01-01 to 2026-03-31
+Mass Balance: Segregated lot records available
+Chain Reference: LOT-BCE-COCOA-2026-Q",Plot or farm-level traceability,,,2026-01-01,2026-04-01,Cocoa supplier certification coverage,Complete,Plot or farm-level traceability evidence uploaded and extracted,Complete
+21,,BlueRiver Cocoa Exports,Traceability,Onboarding Requirement,Geolocation or polygon evidence,02_geolocation_polygon_valid_cocoa_brazil.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\a2d8a0e2931d4b0393f6ef42d04365cf_02_geolocation_polygon_valid_cocoa_brazil.pdf,2026-05-04,Extracted,"Geolocation and Polygon Evidence
+Responsible Sourcing Onboarding Checklist Evidence
+Supplier: BlueRiver Cocoa Exports
+Country: Brazil
+Commodity: Cocoa
+Evidence Status: Valid
+Requirement Type: Geolocation or polygon evidence
+Geo Evidence ID: GEO-BCE-2026-8821
+Coordinate System: WGS84
+Polygon Reference: BR-PA-BCE-COCOA-POLY-01
+Centroid: -1.4558, -48.4902
+Boundary File: bce_cocoa_cluster_a_2026.geojson
+Coverage: 100 percent of declared plots
+Issue Date: 2026-04-02
+Generated sample evidence for chec",Geolocation or polygon evidence,,,2026-04-02,,Cocoa supplier certification coverage,Complete,Geolocation or polygon evidence evidence uploaded and extracted,Complete
+22,,BlueRiver Cocoa Exports,ESG,Onboarding Requirement,Deforestation-free declaration,03_deforestation_free_declaration_valid.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\75a44dd65c4d4cca93229cf6cfe2a322_03_deforestation_free_declaration_valid.pdf,2026-05-04,Extracted,"Deforestation-Free Declaration
+Responsible Sourcing Onboarding Checklist Evidence
+Supplier: BlueRiver Cocoa Exports
+Country: Brazil
+Commodity: Cocoa
+Evidence Status: Valid
+Requirement Type: Deforestation-free declaration
+Declaration ID: DFD-BCE-2026-4108
+Statement: Supplier declares no deforestation or forest degradation after cutoff da
+te.
+Cutoff Date: 2020-12-31
+Applicable Origin: Para cocoa sourcing region, Brazil
+Responsible Manager: Sustainability Lead
+Issue Date: 2026-04-03
+Expiry Date: 20",Deforestation-free declaration,,,2020-12-31,2027-04-02,Cocoa supplier certification coverage,Complete,Deforestation-free declaration evidence uploaded and extracted,Complete
+23,,BlueRiver Cocoa Exports,Social,Onboarding Requirement,Labor and child-risk questionnaire,04_labor_child_risk_questionnaire_complete.pdf,C:\Users\chait\OneDrive\Desktop\supplier-risk-intelligence-react\uploads\onboarding\evidence\911ca39809d841279938514eb167532a_04_labor_child_risk_questionnaire_complete.pdf,2026-05-04,Extracted,"Labor and Child-Risk Questionnaire
+Responsible Sourcing Onboarding Checklist Evidence
+Supplier: BlueRiver Cocoa Exports
+Country: Brazil
+Commodity: Cocoa
+Evidence Status: Complete
+Requirement Type: Labor and child-risk questionnaire
+Questionnaire ID: SAQ-BCE-2026-2290
+Child Labor Policy: Available and communicated to producer groups
+Worker Grievance MechaAnvisamila:ble
+Working Hours Control: Seasonal monitoring records maintained
+Wage Controls: Minimum wage compliance self-declared
+Corrective Act",Labor and child-risk questionnaire,,,2026-04-04,,Cocoa supplier certification coverage,Needs Review,Requirement evidence contains follow-up or gap signals,Needs Review

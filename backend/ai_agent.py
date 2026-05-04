@@ -1,15 +1,11 @@
 from __future__ import annotations
 
 import json
-import os
 from typing import Any
 
 from dotenv import load_dotenv
-from google import genai
 
 load_dotenv()
-API_KEY = os.getenv("GEMINI_API_KEY")
-client = genai.Client(api_key=API_KEY) if API_KEY else None
 
 
 def ask_supplier_ai(
@@ -18,24 +14,71 @@ def ask_supplier_ai(
     lens: str = "general",
     deterministic_brief: str | None = None,
 ) -> str:
-    if client is None:
-        raise RuntimeError("GEMINI_API_KEY is not configured")
-
     prompt = _build_advisor_prompt(
         question=question,
         context=context,
         lens=lens,
         deterministic_brief=deterministic_brief,
     )
-    response = client.models.generate_content(
-        model="gemini-3.1-flash-lite-preview",
-        contents=prompt,
+    try:
+        from backend.app.ai.prompt_registry import get_prompt_policy_block
+        from backend.app.services.ai_gateway import AiTextRequest, generate_ai_text
+    except ImportError:
+        from app.ai.prompt_registry import get_prompt_policy_block
+        from app.services.ai_gateway import AiTextRequest, generate_ai_text
+
+    response = generate_ai_text(
+        AiTextRequest(
+            feature="advisor",
+            prompt=prompt,
+            user_input=question,
+            context=context,
+        )
     )
-    return response.text or ""
+    return response.text
 
 
 def ask_supplier_agent(question, performance_df):
-    raise NotImplementedError("Due diligence agent is handled separately.")
+    context = {}
+    try:
+        context = {
+            "row_count": int(len(performance_df)),
+            "columns": list(performance_df.columns)[:40],
+        }
+    except Exception:
+        context = {"row_count": 0, "columns": []}
+
+    prompt = f"""
+You are supporting a supplier due diligence review.
+
+{get_prompt_policy_block("due_diligence")}
+
+Grounding context metadata:
+{json.dumps(context, indent=2, default=str)}
+
+Supplier review request:
+{question}
+
+Rules:
+- Stay grounded in the supplied supplier review request.
+- Do not invent certifications, audit evidence, ESG metrics, or risk scores.
+- Keep the response concise and action-oriented.
+- Make clear that the output supports, but does not replace, human review.
+"""
+    try:
+        from backend.app.services.ai_gateway import AiTextRequest, generate_ai_text
+    except ImportError:
+        from app.services.ai_gateway import AiTextRequest, generate_ai_text
+
+    response = generate_ai_text(
+        AiTextRequest(
+            feature="due_diligence",
+            prompt=prompt,
+            user_input=str(question),
+            context=context,
+        )
+    )
+    return response.text
 
 
 def _build_advisor_prompt(
@@ -44,6 +87,11 @@ def _build_advisor_prompt(
     lens: str,
     deterministic_brief: str | None,
 ) -> str:
+    try:
+        from backend.app.ai.prompt_registry import get_prompt_policy_block
+    except ImportError:
+        from app.ai.prompt_registry import get_prompt_policy_block
+
     lens_instructions = {
         "general": "Answer like a supplier intelligence advisor who synthesizes risk, ESG, geography, and sourcing posture.",
         "executive": "Answer for leadership with concise risk posture explanations and implications.",
@@ -57,6 +105,8 @@ def _build_advisor_prompt(
 
     return f"""
 You are Supplier Advisor AI inside a responsible sourcing and supplier intelligence application.
+
+{get_prompt_policy_block("advisor")}
 
 Active lens:
 {lens}

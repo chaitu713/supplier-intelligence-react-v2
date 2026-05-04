@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 
 const TABS = [
   { id: "document", step: "01", label: "Document Upload" },
-  { id: "supplier", step: "02", label: "Supplier Details" },
-  { id: "mapping", step: "03", label: "Commodities & Certifications" },
+  { id: "mapping", step: "02", label: "Commodities & Certifications" },
+  { id: "supplier", step: "03", label: "Supplier Details" },
   { id: "review", step: "04", label: "Review & Submit" },
+  { id: "revalidation", step: "05", label: "Active Supplier Revalidation" },
 ];
 
 const COMMODITY_OPTIONS = [
@@ -14,6 +15,36 @@ const COMMODITY_OPTIONS = [
   { id: 4, name: "Rubber", riskLevel: "Medium", deforestationRiskScore: 0.8694 },
   { id: 5, name: "Wood", riskLevel: "Medium", deforestationRiskScore: 0.3357 },
   { id: 6, name: "Soya", riskLevel: "High", deforestationRiskScore: 0.8319 },
+];
+
+const EUDR_COMMODITIES = new Set(["Palm Oil", "Cocoa", "Coffee", "Rubber", "Wood", "Soya"]);
+const HIGH_LAND_RISK_COUNTRIES = new Set(["Brazil", "Indonesia", "Malaysia", "Thailand", "Vietnam"]);
+const ASSURANCE_CERTIFICATIONS = new Set([
+  "Fairtrade",
+  "Rainforest Alliance",
+  "RSPO",
+  "FSC",
+  "PEFC",
+  "ISO14001",
+  "ISO22000",
+  "HACCP",
+]);
+
+const ESG_SCORE_FIELDS = [
+  ["carbon", "Carbon", "environmental"],
+  ["water", "Water", "environmental"],
+  ["renewable", "Renewable", "environmental"],
+  ["waste", "Waste", "environmental"],
+  ["land", "Land use", "environmental"],
+  ["deforestation", "Deforestation", "environmental"],
+  ["labor", "Labor", "social"],
+  ["child", "Child risk", "social"],
+  ["hours", "Working hours", "social"],
+  ["wage", "Wage", "social"],
+  ["compliance", "Compliance", "governance"],
+  ["transparency", "Transparency", "governance"],
+  ["policy", "Policy", "governance"],
+  ["reporting", "Reporting", "governance"],
 ];
 
 const CERTIFICATION_OPTIONS = [
@@ -28,6 +59,315 @@ const CERTIFICATION_OPTIONS = [
   "HACCP",
 ];
 
+function requiresTraceability(commodityNames) {
+  return commodityNames.some((name) => EUDR_COMMODITIES.has(name));
+}
+
+function clampScore(value) {
+  return String(Math.max(0, Math.min(100, Math.round(value))));
+}
+
+function normalizeNames(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function buildEsgBaselineSuggestion({ country, commodities, certifications, evidenceStatus }) {
+  const scores = {
+    environmental: { carbon: 48, water: 48, renewable: 50, waste: 46, land: 45, deforestation: 45 },
+    social: { labor: 46, child: 44, hours: 42, wage: 44 },
+    governance: { compliance: 45, transparency: 48, policy: 48, reporting: 50 },
+  };
+  const reasons = ["Baseline generated from country, commodity, certification, and evidence context."];
+  const commodityNames = normalizeNames(commodities);
+  const certificationNames = normalizeNames(certifications);
+  const eudrMatches = commodityNames.filter((name) => EUDR_COMMODITIES.has(name));
+
+  if (eudrMatches.length) {
+    scores.environmental.land += 18;
+    scores.environmental.deforestation += 22;
+    scores.governance.compliance += 8;
+    scores.governance.transparency += 8;
+    reasons.push(`EUDR commodity detected: ${eudrMatches.join(", ")}.`);
+  }
+
+  if (HIGH_LAND_RISK_COUNTRIES.has(country)) {
+    scores.environmental.land += 8;
+    scores.environmental.deforestation += 10;
+    reasons.push(`${country} starts with higher land-use monitoring sensitivity.`);
+  }
+
+  if (commodityNames.includes("Cocoa")) {
+    scores.social.labor += 6;
+    scores.social.child += 12;
+    scores.social.wage += 6;
+    reasons.push("Cocoa adds labor, child-risk, and wage due-diligence sensitivity.");
+  }
+
+  if (commodityNames.includes("Palm Oil")) {
+    scores.environmental.water += 8;
+    scores.environmental.waste += 6;
+    reasons.push("Palm oil increases water and waste monitoring sensitivity.");
+  }
+
+  if (commodityNames.includes("Coffee")) {
+    scores.environmental.water += 7;
+    scores.social.wage += 4;
+    reasons.push("Coffee adds water and wage-risk monitoring sensitivity.");
+  }
+
+  if (commodityNames.includes("Rubber")) {
+    scores.environmental.land += 6;
+    scores.social.hours += 5;
+    reasons.push("Rubber adds land conversion and working-hours sensitivity.");
+  }
+
+  const assuranceMatches = certificationNames.filter((name) => ASSURANCE_CERTIFICATIONS.has(name));
+  if (assuranceMatches.length) {
+    scores.social.labor -= 8;
+    scores.social.child -= 8;
+    scores.governance.compliance -= 7;
+    scores.governance.reporting -= 5;
+    reasons.push(`Declared assurance lowers initial risk pending verification: ${assuranceMatches.join(", ")}.`);
+  }
+
+  if (evidenceStatus === "Verified") {
+    scores.governance.compliance -= 8;
+    scores.governance.transparency -= 6;
+    scores.governance.reporting -= 6;
+    reasons.push("Verified evidence lowers governance uncertainty.");
+  } else if (["Expired", "Needs Review"].includes(evidenceStatus)) {
+    scores.governance.compliance += 15;
+    scores.governance.transparency += 8;
+    scores.governance.reporting += 8;
+    reasons.push("Evidence review issue raises governance and disclosure risk.");
+  } else {
+    scores.governance.transparency += 4;
+    scores.governance.reporting += 4;
+    reasons.push("Scores stay conservative until evidence is verified.");
+  }
+
+  const flattenedScores = {};
+  ESG_SCORE_FIELDS.forEach(([name, , pillar]) => {
+    flattenedScores[name] = clampScore(scores[pillar][name]);
+  });
+
+  const scoreValues = Object.values(flattenedScores).map(Number);
+  return {
+    scores,
+    flatScores: flattenedScores,
+    reasons,
+    confidence: commodityNames.length && country ? "medium" : "low",
+    overall: Math.round(scoreValues.reduce((sum, value) => sum + value, 0) / scoreValues.length),
+  };
+}
+
+function flattenBackendBaseline(suggestion) {
+  if (!suggestion?.scores) {
+    return null;
+  }
+  return ESG_SCORE_FIELDS.reduce((acc, [name, , pillar]) => {
+    const value = suggestion.scores?.[pillar]?.[name];
+    if (value !== undefined && value !== null) {
+      acc[name] = clampScore(Number(value));
+    }
+    return acc;
+  }, {});
+}
+
+function buildOnboardingRequirements({ commodities, certifications, evidenceUploads, requirementUploads, formData }) {
+  const commodityNames = normalizeNames(commodities);
+  const certificationNames = normalizeNames(certifications);
+  const eudrMatches = commodityNames.filter((name) => EUDR_COMMODITIES.has(name));
+  const requirements = [];
+  const requirementStatus = (id, fieldValue, requestedStatus = "Missing") =>
+    requirementUploads?.[id]?.validation_status || (fieldValue === "Yes" || fieldValue === "Complete" ? "Complete" : requestedStatus);
+
+  certificationNames.forEach((name) => {
+    const evidence = evidenceUploads[name];
+    requirements.push({
+      id: `cert-${name}`,
+      type: "Certification",
+      title: `${name} certificate evidence`,
+      reason: "Selected certification must be supported by a valid uploaded document.",
+      status: evidence?.validation_status === "Verified" ? "Complete" : evidence ? evidence.validation_status : "Missing",
+      required: true,
+      canUpload: false,
+    });
+  });
+
+  if (eudrMatches.length) {
+    requirements.push(
+      {
+        id: "plot-traceability",
+        type: "Traceability",
+        title: "Plot or farm-level traceability",
+        reason: `${eudrMatches.join(", ")} is EUDR relevant and needs upstream origin traceability.`,
+        status: requirementStatus("plot-traceability", formData.plot_traceability_available),
+        required: true,
+        canUpload: true,
+      },
+      {
+        id: "geolocation",
+        type: "Traceability",
+        title: "Geolocation or polygon evidence",
+        reason: "EUDR due diligence requires location evidence for origin risk checks.",
+        status: requirementStatus("geolocation", formData.geolocation_evidence_available),
+        required: true,
+        canUpload: true,
+      },
+      {
+        id: "deforestation-declaration",
+        type: "ESG",
+        title: "Deforestation-free declaration",
+        reason: "Responsible sourcing onboarding needs a formal no-deforestation attestation.",
+        status: requirementStatus("deforestation-declaration", formData.deforestation_declaration_available),
+        required: true,
+        canUpload: true,
+      },
+    );
+  }
+
+  if (formData.supplier_role === "Aggregator" || formData.supplier_role === "Trader") {
+    requirements.push({
+      id: "chain-of-custody",
+      type: "Traceability",
+      title: "Chain-of-custody evidence",
+      reason: `${formData.supplier_role} suppliers need custody controls between upstream producers and buyers.`,
+      status: requirementStatus("chain-of-custody", formData.chain_of_custody_available),
+      required: true,
+      canUpload: true,
+    });
+  }
+
+  if (commodityNames.includes("Cocoa") || commodityNames.includes("Coffee")) {
+    requirements.push({
+      id: "labor-saq",
+      type: "Social",
+      title: "Labor and child-risk questionnaire",
+      reason: `${commodityNames.includes("Cocoa") ? "Cocoa" : "Coffee"} sourcing requires stronger social due-diligence screening.`,
+      status: requirementStatus("labor-saq", formData.labor_questionnaire_status, "Requested"),
+      required: true,
+      canUpload: true,
+    });
+  }
+
+  if (!requirements.length) {
+    requirements.push({
+      id: "baseline-profile",
+      type: "Baseline",
+      title: "Supplier profile and certification review",
+      reason: "No commodity-specific evidence trigger was detected yet.",
+      status: "Requested",
+      required: false,
+      canUpload: false,
+    });
+  }
+
+  const requiredItems = requirements.filter((item) => item.required);
+  const completeRequired = requiredItems.filter((item) => item.status === "Complete");
+  return {
+    requirements,
+    totalRequired: requiredItems.length,
+    completeRequired: completeRequired.length,
+    status:
+      requiredItems.length === 0
+        ? "Baseline"
+        : completeRequired.length === requiredItems.length
+          ? "Complete"
+          : "Open",
+  };
+}
+
+function getSuggestedApprovalStatus({ onboardingRequirements, evidenceUploads }) {
+  const evidenceValues = Object.values(evidenceUploads || {});
+  const hasReviewIssue = evidenceValues.some((item) =>
+    ["Expired", "Needs Review"].includes(String(item?.validation_status || "")),
+  );
+  if (hasReviewIssue) {
+    return "Evidence Under Review";
+  }
+  if (onboardingRequirements.totalRequired > 0 && onboardingRequirements.completeRequired === onboardingRequirements.totalRequired) {
+    return "Ready for Approval";
+  }
+  if (onboardingRequirements.totalRequired > 0) {
+    return "Evidence Requested";
+  }
+  return "Draft";
+}
+
+function buildAiOnboardingDecision({ status, onboardingRequirements, evidenceGaps, baselineSuggestion, formData }) {
+  const reasons = [];
+  const nextActions = [];
+  const missingRequirements = onboardingRequirements.requirements.filter((item) => item.required && item.status !== "Complete");
+
+  if (status === "Ready for Approval") {
+    reasons.push("All required onboarding evidence checks are complete.");
+    reasons.push("No expired or needs-review certification evidence is currently blocking onboarding.");
+    nextActions.push("Move supplier to sourcing approval or commercial onboarding.");
+  } else if (status === "Evidence Under Review") {
+    reasons.push("One or more uploaded evidence documents is expired or requires review.");
+    nextActions.push("Request corrected evidence or validate the exception before supplier activation.");
+  } else if (status === "Evidence Requested") {
+    reasons.push(`${missingRequirements.length} required evidence item${missingRequirements.length === 1 ? "" : "s"} remain open.`);
+    nextActions.push("Request the missing traceability, certification, or declaration evidence from the supplier.");
+  } else {
+    reasons.push("Supplier record is still in draft intake state.");
+    nextActions.push("Complete commodity mapping and evidence requirements before onboarding decision.");
+  }
+
+  if (formData.eudr_relevant === "Yes") {
+    reasons.push("Supplier is EUDR relevant, so traceability evidence is required before approval.");
+  }
+
+  if (baselineSuggestion?.overall >= 60) {
+    reasons.push(`ESG baseline is elevated at ${baselineSuggestion.overall}/100.`);
+    nextActions.push("Keep supplier in monitoring or conditional approval until ESG risk is reduced.");
+  } else if (baselineSuggestion?.overall) {
+    reasons.push(`ESG baseline is ${baselineSuggestion.overall}/100, within monitorable onboarding range.`);
+  }
+
+  evidenceGaps.slice(0, 4).forEach((gap) => nextActions.push(gap));
+
+  return {
+    recommendation: status,
+    confidence:
+      status === "Ready for Approval" && onboardingRequirements.totalRequired > 0
+        ? "High"
+        : formData.supplier_name && formData.country && selectedTruthy(formData.commodities)
+          ? "Medium"
+          : "Low",
+    reasons: Array.from(new Set(reasons)).slice(0, 5),
+    nextActions: Array.from(new Set(nextActions)).slice(0, 5),
+  };
+}
+
+function selectedTruthy(value) {
+  return normalizeNames(value).length > 0;
+}
+
+function buildEvidenceGaps({ certificationRows, evidenceUploads, formData }) {
+  const gaps = certificationRows.flatMap((row) => {
+    const rowGaps = [];
+    if (!evidenceUploads[row.name]) rowGaps.push(`${row.name} evidence upload`);
+    if (!row.certificate_number) rowGaps.push(`${row.name} certificate number`);
+    if (!row.issuing_body) rowGaps.push(`${row.name} issuing body`);
+    if (!row.expiry_date) rowGaps.push(`${row.name} expiry date`);
+    if (evidenceUploads[row.name]?.validation_status === "Expired") rowGaps.push(`${row.name} is expired`);
+    if (evidenceUploads[row.name]?.validation_status === "Needs Review") rowGaps.push(`${row.name} needs review`);
+    return rowGaps;
+  });
+  if (formData.eudr_relevant === "Yes" && formData.traceability_required !== "Yes") {
+    gaps.push("EUDR relevant suppliers should require traceability");
+  }
+  return gaps;
+}
+
 const emptyForm = {
   supplier_name: "",
   country: "",
@@ -38,7 +378,36 @@ const emptyForm = {
   size: "Medium",
   annual_revenue: "",
   onboarding_date: new Date().toISOString().slice(0, 10),
-  status: "Active",
+  status: "Pending",
+  esg_baseline_date: new Date().toISOString().slice(0, 10),
+  evidence_status: "Intake Started",
+  eudr_relevant: "No",
+  traceability_required: "No",
+  site_region: "",
+  supplier_role: "Producer",
+  plot_traceability_available: "No",
+  geolocation_evidence_available: "No",
+  chain_of_custody_available: "No",
+  deforestation_declaration_available: "No",
+  labor_questionnaire_status: "Requested",
+  traceability_notes: "",
+  approval_status: "Draft",
+  approval_conditions: "",
+  approval_blockers: "",
+  carbon: "50",
+  water: "50",
+  renewable: "50",
+  waste: "50",
+  land: "50",
+  deforestation: "50",
+  labor: "50",
+  child: "50",
+  hours: "50",
+  wage: "50",
+  compliance: "50",
+  transparency: "50",
+  policy: "50",
+  reporting: "50",
 };
 
 export default function OnboardingPage({ embedded = false } = {}) {
@@ -49,14 +418,27 @@ export default function OnboardingPage({ embedded = false } = {}) {
   const [formData, setFormData] = useState(emptyForm);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isActivating, setIsActivating] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [submissionMessage, setSubmissionMessage] = useState("");
   const [submittedSupplierId, setSubmittedSupplierId] = useState(null);
   const [showRawText, setShowRawText] = useState(false);
   const [certificationRows, setCertificationRows] = useState([]);
+  const [evidenceUploads, setEvidenceUploads] = useState({});
+  const [requirementUploads, setRequirementUploads] = useState({});
+  const [evidenceUploadState, setEvidenceUploadState] = useState({});
+  const [requirementUploadState, setRequirementUploadState] = useState({});
+  const [baselineSuggestion, setBaselineSuggestion] = useState(null);
+  const [llmDecision, setLlmDecision] = useState(null);
+  const [isDecisionLoading, setIsDecisionLoading] = useState(false);
   const [aiAssistance, setAiAssistance] = useState(null);
   const [supplierOptions, setSupplierOptions] = useState([]);
   const [traceabilitySuppliers, setTraceabilitySuppliers] = useState([]);
+  const [revalidationSupplierId, setRevalidationSupplierId] = useState("");
+  const [revalidationOutcome, setRevalidationOutcome] = useState("Revalidation Requested");
+  const [revalidationNotes, setRevalidationNotes] = useState("");
+  const [isRevalidating, setIsRevalidating] = useState(false);
+  const [revalidationMessage, setRevalidationMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -125,6 +507,13 @@ export default function OnboardingPage({ embedded = false } = {}) {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+  const activeSupplierOptions = useMemo(
+    () => supplierOptions.filter((supplier) => String(supplier.status || "").toLowerCase() === "active"),
+    [supplierOptions],
+  );
+  const selectedRevalidationSupplier = activeSupplierOptions.find(
+    (supplier) => String(supplier.supplier_id) === String(revalidationSupplierId),
+  );
   const selectedCertificationNames = formData.certifications
     .split(",")
     .map((item) => item.trim())
@@ -195,6 +584,52 @@ export default function OnboardingPage({ embedded = false } = {}) {
   const selectedCommodities = COMMODITY_OPTIONS.filter((item) =>
     selectedCommodityNames.includes(item.name),
   );
+  const onboardingRequirements = useMemo(
+    () =>
+      buildOnboardingRequirements({
+        commodities: selectedCommodityNames,
+        certifications: selectedCertificationNames,
+        evidenceUploads,
+        requirementUploads,
+        formData,
+      }),
+    [
+      selectedCommodityNames,
+      selectedCertificationNames,
+      evidenceUploads,
+      requirementUploads,
+      formData.plot_traceability_available,
+      formData.geolocation_evidence_available,
+      formData.chain_of_custody_available,
+      formData.deforestation_declaration_available,
+      formData.labor_questionnaire_status,
+      formData.supplier_role,
+    ],
+  );
+  const suggestedApprovalStatus = useMemo(
+    () => getSuggestedApprovalStatus({ onboardingRequirements, evidenceUploads }),
+    [onboardingRequirements, evidenceUploads],
+  );
+  const evidenceGaps = useMemo(
+    () => buildEvidenceGaps({ certificationRows, evidenceUploads, formData }),
+    [
+      certificationRows,
+      evidenceUploads,
+      formData.eudr_relevant,
+      formData.traceability_required,
+    ],
+  );
+  const deterministicDecision = useMemo(
+    () =>
+      buildAiOnboardingDecision({
+        status: suggestedApprovalStatus,
+        onboardingRequirements,
+        evidenceGaps,
+        baselineSuggestion,
+        formData,
+      }),
+    [suggestedApprovalStatus, onboardingRequirements, evidenceGaps, baselineSuggestion, formData],
+  );
   const averageDeforestationRisk = selectedCommodities.length
     ? (
         selectedCommodities.reduce((sum, item) => sum + item.deforestationRiskScore, 0) /
@@ -226,21 +661,41 @@ export default function OnboardingPage({ embedded = false } = {}) {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to upload and extract document.");
+        throw new Error(await getResponseError(response, "Failed to upload and extract document."));
       }
 
       const result = await response.json();
       setExtractedData(result);
       setValidationData(result?.validation ?? { is_valid: false, errors: [], warnings: [] });
       setAiAssistance(result?.ai_assistance ?? null);
+      const extractedCommodities = Array.isArray(result?.commodities) ? result.commodities : [];
+      const shouldRequireTraceability = requiresTraceability(extractedCommodities);
+      const generatedBaseline =
+        result?.esg_baseline_suggestion ??
+        buildEsgBaselineSuggestion({
+          country: result?.country ?? "",
+          commodities: extractedCommodities,
+          certifications: result?.certifications ?? [],
+          evidenceStatus: "Baseline Created",
+        });
+      const baselineScores =
+        flattenBackendBaseline(generatedBaseline) ?? generatedBaseline.flatScores ?? {};
+      setBaselineSuggestion(generatedBaseline);
       setFormData({
         ...emptyForm,
         supplier_name: result?.supplier_name ?? "",
         country: result?.country ?? "",
-        commodities: Array.isArray(result?.commodities) ? result.commodities.join(", ") : "",
+        site_region: result?.country ?? "",
+        commodities: extractedCommodities.join(", "),
         certifications: Array.isArray(result?.certifications)
           ? result.certifications.join(", ")
           : "",
+        eudr_relevant: shouldRequireTraceability ? "Yes" : "No",
+        traceability_required: shouldRequireTraceability ? "Yes" : "No",
+        evidence_status: "Baseline Created",
+        approval_status: shouldRequireTraceability ? "Evidence Requested" : "Draft",
+        approval_blockers: shouldRequireTraceability ? "Traceability and evidence checklist must be completed before approval." : "",
+        ...baselineScores,
       });
       setCertificationRows(
         (Array.isArray(result?.certifications) ? result.certifications : []).map((name) => ({
@@ -248,6 +703,9 @@ export default function OnboardingPage({ embedded = false } = {}) {
           issue_date: "",
           expiry_date: "",
           status: "Pending",
+          certificate_number: "",
+          issuing_body: "",
+          scope: "",
         })),
       );
       setShowRawText(false);
@@ -269,6 +727,12 @@ export default function OnboardingPage({ embedded = false } = {}) {
     setSubmittedSupplierId(null);
 
     try {
+      if (formData.status !== "Pending") {
+        throw new Error(
+          "This onboarding workflow is only for suppliers in Pending status. Active suppliers should be handled through ESG monitoring or supplier refresh.",
+        );
+      }
+
       const payload = new FormData();
       payload.append("supplier_name", formData.supplier_name);
       payload.append("country", formData.country);
@@ -278,6 +742,36 @@ export default function OnboardingPage({ embedded = false } = {}) {
       payload.append("onboarding_date", formData.onboarding_date);
       payload.append("status", formData.status);
       payload.append("parent_supplier_id", formData.parent_supplier_id);
+      payload.append("esg_baseline_date", formData.esg_baseline_date);
+      payload.append("evidence_status", formData.evidence_status);
+      payload.append("eudr_relevant", formData.eudr_relevant);
+      payload.append("traceability_required", formData.traceability_required);
+      payload.append("site_region", formData.site_region);
+      payload.append("supplier_role", formData.supplier_role);
+      payload.append("plot_traceability_available", formData.plot_traceability_available);
+      payload.append("geolocation_evidence_available", formData.geolocation_evidence_available);
+      payload.append("chain_of_custody_available", formData.chain_of_custody_available);
+      payload.append("deforestation_declaration_available", formData.deforestation_declaration_available);
+      payload.append("labor_questionnaire_status", formData.labor_questionnaire_status);
+      payload.append("traceability_notes", formData.traceability_notes);
+      payload.append("onboarding_requirements_json", JSON.stringify(onboardingRequirements));
+      payload.append("approval_status", formData.approval_status || suggestedApprovalStatus);
+      payload.append("approval_conditions", formData.approval_conditions);
+      payload.append("approval_blockers", formData.approval_blockers);
+      payload.append("carbon", formData.carbon);
+      payload.append("water", formData.water);
+      payload.append("renewable", formData.renewable);
+      payload.append("waste", formData.waste);
+      payload.append("land", formData.land);
+      payload.append("deforestation", formData.deforestation);
+      payload.append("labor", formData.labor);
+      payload.append("child", formData.child);
+      payload.append("hours", formData.hours);
+      payload.append("wage", formData.wage);
+      payload.append("compliance", formData.compliance);
+      payload.append("transparency", formData.transparency);
+      payload.append("policy", formData.policy);
+      payload.append("reporting", formData.reporting);
       payload.append("commodities", JSON.stringify(selectedCommodityNames));
       payload.append("certifications", JSON.stringify(selectedCertificationNames));
       payload.append("certification_rows", JSON.stringify(certificationRows));
@@ -288,7 +782,7 @@ export default function OnboardingPage({ embedded = false } = {}) {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to submit supplier onboarding.");
+        throw new Error(await getResponseError(response, "Failed to submit supplier onboarding."));
       }
 
       const result = await response.json();
@@ -304,9 +798,89 @@ export default function OnboardingPage({ embedded = false } = {}) {
     }
   }
 
+  async function handleActivateSupplier() {
+    if (!submittedSupplierId) {
+      return;
+    }
+
+    setIsActivating(true);
+    setErrorMessage("");
+
+    try {
+      const response = await fetch("http://localhost:8000/onboarding/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ supplier_id: submittedSupplierId }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await getResponseError(response, "Failed to activate supplier."));
+      }
+
+      const result = await response.json();
+      setFormData((current) => ({
+        ...current,
+        status: result.status || "Active",
+        approval_status: result.approval_status || "Approved",
+        evidence_status: "Verified",
+      }));
+      setSubmissionMessage(result.message || "Supplier approved and activated");
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to activate supplier.");
+    } finally {
+      setIsActivating(false);
+    }
+  }
+
+  async function handleRevalidateSupplier() {
+    if (!revalidationSupplierId) {
+      setErrorMessage("Select an active supplier before updating revalidation.");
+      return;
+    }
+
+    setIsRevalidating(true);
+    setErrorMessage("");
+    setRevalidationMessage("");
+
+    try {
+      const response = await fetch("http://localhost:8000/onboarding/revalidate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          supplier_id: Number(revalidationSupplierId),
+          outcome: revalidationOutcome,
+          notes: revalidationNotes,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await getResponseError(response, "Failed to update supplier revalidation."));
+      }
+
+      const result = await response.json();
+      setSupplierOptions((current) =>
+        current.map((supplier) =>
+          String(supplier.supplier_id) === String(result.supplier_id)
+            ? {
+                ...supplier,
+                status: result.status,
+              }
+            : supplier,
+        ),
+      );
+      setRevalidationMessage(
+        `${result.message}: ${result.approval_status} (${result.evidence_status})`,
+      );
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to update supplier revalidation.");
+    } finally {
+      setIsRevalidating(false);
+    }
+  }
+
   function handleUseExtractedData() {
     if (extractedData) {
-      setActiveTab("supplier");
+      setActiveTab("mapping");
     }
   }
 
@@ -323,10 +897,22 @@ export default function OnboardingPage({ embedded = false } = {}) {
     const nextValues = selectedCommodityNames.includes(name)
       ? selectedCommodityNames.filter((item) => item !== name)
       : [...selectedCommodityNames, name];
+    const shouldRequireTraceability = requiresTraceability(nextValues);
+    const nextBaseline = buildEsgBaselineSuggestion({
+      country: formData.country,
+      commodities: nextValues,
+      certifications: selectedCertificationNames,
+      evidenceStatus: formData.evidence_status,
+    });
+      setBaselineSuggestion(nextBaseline);
+    setLlmDecision(null);
 
     setFormData((current) => ({
       ...current,
       commodities: nextValues.join(", "),
+      eudr_relevant: shouldRequireTraceability ? "Yes" : "No",
+      traceability_required: shouldRequireTraceability ? "Yes" : "No",
+      ...nextBaseline.flatScores,
     }));
   }
 
@@ -335,17 +921,34 @@ export default function OnboardingPage({ embedded = false } = {}) {
     const nextValues = exists
       ? selectedCertificationNames.filter((item) => item !== name)
       : [...selectedCertificationNames, name];
+    const nextBaseline = buildEsgBaselineSuggestion({
+      country: formData.country,
+      commodities: selectedCommodityNames,
+      certifications: nextValues,
+      evidenceStatus: formData.evidence_status,
+    });
+    setBaselineSuggestion(nextBaseline);
+    setLlmDecision(null);
 
     setFormData((current) => ({
       ...current,
       certifications: nextValues.join(", "),
+      ...nextBaseline.flatScores,
     }));
 
     setCertificationRows((current) => {
       if (exists) {
         return current.filter((row) => row.name !== name);
       }
-      return [...current, { name, issue_date: "", expiry_date: "", status: "Pending" }];
+      return [...current, {
+        name,
+        issue_date: "",
+        expiry_date: "",
+        status: "Pending",
+        certificate_number: "",
+        issuing_body: "",
+        scope: "",
+      }];
     });
   }
 
@@ -355,6 +958,217 @@ export default function OnboardingPage({ embedded = false } = {}) {
     );
   }
 
+  async function handleEvidenceUpload(certificationName, file) {
+    if (!file) {
+      return;
+    }
+    setEvidenceUploadState((current) => ({ ...current, [certificationName]: "Uploading" }));
+    setErrorMessage("");
+
+    try {
+      const payload = new FormData();
+      payload.append("file", file);
+      payload.append("evidence_type", "Certification");
+      payload.append("linked_entity_type", "Certification");
+      payload.append("linked_entity_name", certificationName);
+      payload.append("temporary_supplier_key", formData.supplier_name || "draft_supplier");
+
+      const response = await fetch("http://localhost:8000/onboarding/evidence/upload", {
+        method: "POST",
+        body: payload,
+      });
+
+      if (!response.ok) {
+        throw new Error(await getResponseError(response, "Failed to upload certification evidence."));
+      }
+
+      const result = await response.json();
+      setLlmDecision(null);
+      setEvidenceUploads((current) => ({ ...current, [certificationName]: result }));
+      setEvidenceUploadState((current) => ({ ...current, [certificationName]: "Uploaded" }));
+      const nextEvidenceStatus =
+        result.validation_status === "Verified"
+          ? "Verified"
+          : result.validation_status === "Expired" || result.validation_status === "Needs Review"
+            ? result.validation_status
+            : "Evidence Received";
+      const nextBaseline = buildEsgBaselineSuggestion({
+        country: formData.country,
+        commodities: selectedCommodityNames,
+        certifications: selectedCertificationNames,
+        evidenceStatus: nextEvidenceStatus,
+      });
+      setBaselineSuggestion(nextBaseline);
+      setFormData((current) => ({
+        ...current,
+        site_region: current.site_region || result.extracted_scope_site || "",
+      evidence_status: nextEvidenceStatus,
+        approval_status:
+          nextEvidenceStatus === "Expired" || nextEvidenceStatus === "Needs Review"
+            ? "Evidence Under Review"
+            : current.approval_status,
+        approval_blockers:
+          nextEvidenceStatus === "Expired" || nextEvidenceStatus === "Needs Review"
+            ? `${certificationName} evidence requires business review.`
+            : current.approval_blockers,
+        ...nextBaseline.flatScores,
+      }));
+      setCertificationRows((current) =>
+        current.map((row) =>
+          row.name === certificationName
+            ? {
+                ...row,
+                certificate_number: result.extracted_certificate_number || row.certificate_number || "",
+                issuing_body: result.extracted_issuer || row.issuing_body || "",
+                issue_date: result.extracted_issue_date || row.issue_date || "",
+                expiry_date: result.extracted_expiry_date || row.expiry_date || "",
+                scope: result.extracted_scope_site || row.scope || "",
+                evidence_id: result.evidence_id || row.evidence_id || "",
+                validation_status: result.validation_status || row.validation_status || "",
+                status: result.validation_status === "Verified" ? "Verified" : row.status,
+              }
+            : row,
+        ),
+      );
+    } catch (error) {
+      setEvidenceUploadState((current) => ({ ...current, [certificationName]: "Failed" }));
+      setErrorMessage(error instanceof Error ? error.message : "Failed to upload evidence.");
+    }
+  }
+
+  async function handleRequirementUpload(requirement, file) {
+    if (!file) {
+      return;
+    }
+    setRequirementUploadState((current) => ({ ...current, [requirement.id]: "Uploading" }));
+    setErrorMessage("");
+
+    try {
+      const payload = new FormData();
+      payload.append("file", file);
+      payload.append("evidence_type", requirement.type);
+      payload.append("linked_entity_type", "Onboarding Requirement");
+      payload.append("linked_entity_name", requirement.title);
+      payload.append("temporary_supplier_key", formData.supplier_name || "draft_supplier");
+
+      const response = await fetch("http://localhost:8000/onboarding/evidence/upload", {
+        method: "POST",
+        body: payload,
+      });
+
+      if (!response.ok) {
+        throw new Error(await getResponseError(response, "Failed to upload requirement evidence."));
+      }
+
+      const result = await response.json();
+      const requirementStatus =
+        result.validation_status === "Complete" || result.validation_status === "Verified"
+          ? "Complete"
+          : "Needs Review";
+      const uploadRecord = {
+        ...result,
+        validation_status: requirementStatus,
+        validation_notes: result.validation_notes || "Requirement evidence uploaded.",
+      };
+      setRequirementUploads((current) => ({ ...current, [requirement.id]: uploadRecord }));
+      setRequirementUploadState((current) => ({ ...current, [requirement.id]: "Uploaded" }));
+      setLlmDecision(null);
+
+      setFormData((current) => {
+        const next = { ...current };
+        const isComplete = requirementStatus === "Complete";
+        if (requirement.id === "plot-traceability") next.plot_traceability_available = isComplete ? "Yes" : "No";
+        if (requirement.id === "geolocation") next.geolocation_evidence_available = isComplete ? "Yes" : "No";
+        if (requirement.id === "deforestation-declaration") next.deforestation_declaration_available = isComplete ? "Yes" : "No";
+        if (requirement.id === "chain-of-custody") next.chain_of_custody_available = isComplete ? "Yes" : "No";
+        if (requirement.id === "labor-saq") next.labor_questionnaire_status = isComplete ? "Complete" : "Needs Review";
+        next.evidence_status =
+          current.evidence_status === "Verified"
+            ? "Verified"
+            : isComplete
+              ? "Evidence Received"
+              : "Needs Review";
+        next.approval_status = isComplete ? current.approval_status : "Evidence Under Review";
+        return next;
+      });
+    } catch (error) {
+      setRequirementUploadState((current) => ({ ...current, [requirement.id]: "Failed" }));
+      setErrorMessage(error instanceof Error ? error.message : "Failed to upload requirement evidence.");
+    }
+  }
+
+  async function handleGenerateAiDecision(deterministicDecision, evidenceGaps) {
+    setIsDecisionLoading(true);
+    setErrorMessage("");
+    try {
+      const response = await fetch("http://localhost:8000/onboarding/decision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          payload: {
+            supplier: {
+              name: formData.supplier_name,
+              country: formData.country,
+              tier: formData.tier,
+              role: formData.supplier_role,
+            },
+            commodities: selectedCommodityNames,
+            certifications: selectedCertificationNames,
+            evidenceUploads,
+            evidenceGaps,
+            onboardingRequirements,
+            esgBaseline: baselineSuggestion,
+            traceability: {
+              eudrRelevant: formData.eudr_relevant,
+              traceabilityRequired: formData.traceability_required,
+              plotTraceability: formData.plot_traceability_available,
+              geolocationEvidence: formData.geolocation_evidence_available,
+              chainOfCustody: formData.chain_of_custody_available,
+              deforestationDeclaration: formData.deforestation_declaration_available,
+              laborQuestionnaire: formData.labor_questionnaire_status,
+            },
+            deterministic_decision: deterministicDecision,
+          },
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(await getResponseError(response, "Unable to generate AI onboarding decision."));
+      }
+      const result = await response.json();
+      setLlmDecision(result);
+      setFormData((current) => ({
+        ...current,
+        approval_status: result.recommendation || deterministicDecision.recommendation,
+        approval_conditions:
+          current.approval_conditions || (Array.isArray(result.nextActions) ? result.nextActions.join("\n") : ""),
+        approval_blockers:
+          result.recommendation === "Ready for Approval"
+            ? ""
+            : current.approval_blockers || (Array.isArray(result.nextActions) ? result.nextActions.join("\n") : ""),
+      }));
+    } catch (error) {
+      setLlmDecision({ ...deterministicDecision, source: "deterministic_fallback" });
+      setFormData((current) => ({
+        ...current,
+        approval_status: deterministicDecision.recommendation,
+        approval_conditions: current.approval_conditions || deterministicDecision.nextActions.join("\n"),
+        approval_blockers:
+          deterministicDecision.recommendation === "Ready for Approval"
+            ? ""
+            : current.approval_blockers || deterministicDecision.nextActions.join("\n"),
+      }));
+    } finally {
+      setIsDecisionLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab !== "review" || llmDecision || isDecisionLoading || !formData.supplier_name) {
+      return;
+    }
+    void handleGenerateAiDecision(deterministicDecision, evidenceGaps);
+  }, [activeTab, llmDecision, isDecisionLoading, formData.supplier_name]);
+
   function handleClear() {
     setSelectedFile(null);
     setExtractedData(null);
@@ -363,6 +1177,18 @@ export default function OnboardingPage({ embedded = false } = {}) {
     setErrorMessage("");
     setShowRawText(false);
     setAiAssistance(null);
+    setBaselineSuggestion(null);
+    setLlmDecision(null);
+    setCertificationRows([]);
+    setEvidenceUploads({});
+    setRequirementUploads({});
+    setEvidenceUploadState({});
+    setRequirementUploadState({});
+    setIsActivating(false);
+    setRevalidationSupplierId("");
+    setRevalidationOutcome("Revalidation Requested");
+    setRevalidationNotes("");
+    setRevalidationMessage("");
     setActiveTab("document");
   }
 
@@ -462,6 +1288,51 @@ export default function OnboardingPage({ embedded = false } = {}) {
                   <strong style={styles.previewValue}>{value}</strong>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div style={styles.panel}>
+            <div style={styles.sectionHead}>
+              <div>
+                <h2 style={styles.sectionTitle}>ESG monitoring baseline</h2>
+                <p style={styles.sectionText}>
+                  These fields seed ESG Monitoring and create the supplier baseline for future continuous checks.
+                </p>
+              </div>
+              <span style={styles.pillAlt}>Monitoring ready</span>
+            </div>
+
+            <div style={styles.formGrid}>
+              <div style={styles.field}>
+                <label htmlFor="esg_baseline_date" style={styles.label}>ESG baseline date</label>
+                <input
+                  id="esg_baseline_date"
+                  name="esg_baseline_date"
+                  type="date"
+                  value={formData.esg_baseline_date}
+                  onChange={handleFieldChange}
+                  style={styles.textInput}
+                />
+              </div>
+
+              <div style={styles.field}>
+                <label htmlFor="site_region" style={styles.label}>Site / sourcing region</label>
+                <input
+                  id="site_region"
+                  name="site_region"
+                  type="text"
+                  value={formData.site_region}
+                  onChange={handleFieldChange}
+                  placeholder="e.g. Riau, Sumatra"
+                  style={styles.textInput}
+                />
+              </div>
+
+              <div style={styles.systemField}>
+                <span style={styles.summaryLabel}>System evidence status</span>
+                <strong style={styles.summaryValue}>{formData.evidence_status}</strong>
+                <p style={styles.hint}>Updated automatically by extraction, evidence uploads, review, and activation.</p>
+              </div>
             </div>
           </div>
 
@@ -608,7 +1479,7 @@ export default function OnboardingPage({ embedded = false } = {}) {
       <div style={styles.stack}>
         <section style={styles.hero}>
           <div style={styles.heroCopy}>
-            <span style={styles.eyebrow}>Tab 2</span>
+            <span style={styles.eyebrow}>Tab 3</span>
             <h1 style={styles.heroTitle}>Supplier details and onboarding defaults</h1>
             <p style={styles.heroText}>
               Confirm the supplier master record using the document extraction as a starting point,
@@ -743,10 +1614,13 @@ export default function OnboardingPage({ embedded = false } = {}) {
                   onChange={handleFieldChange}
                   style={styles.textInput}
                 >
-                  <option value="Active">Active</option>
                   <option value="Pending">Pending</option>
+                  <option value="Active" disabled>Active - use monitoring/refresh</option>
                   <option value="Inactive">Inactive</option>
                 </select>
+                <p style={styles.hint}>
+                  Full evidence onboarding is run for Pending suppliers. Active suppliers move through monitoring and refresh.
+                </p>
               </div>
 
               <div style={styles.field}>
@@ -766,9 +1640,139 @@ export default function OnboardingPage({ embedded = false } = {}) {
           <div style={styles.panel}>
             <div style={styles.sectionHead}>
               <div>
+                <h2 style={styles.sectionTitle}>Traceability requirements</h2>
+                <p style={styles.sectionText}>
+                  These fields define what evidence is needed before approval and feed Traceability later.
+                </p>
+              </div>
+              <span style={styles.pillAlt}>{onboardingRequirements.status}</span>
+            </div>
+
+            <div style={styles.formGrid}>
+              <div style={styles.field}>
+                <label htmlFor="supplier_role" style={styles.label}>Supplier role</label>
+                <select
+                  id="supplier_role"
+                  name="supplier_role"
+                  value={formData.supplier_role}
+                  onChange={handleFieldChange}
+                  style={styles.textInput}
+                >
+                  <option value="Producer">Producer</option>
+                  <option value="Aggregator">Aggregator</option>
+                  <option value="Processor">Processor</option>
+                  <option value="Trader">Trader</option>
+                  <option value="Manufacturer">Manufacturer</option>
+                </select>
+              </div>
+
+              <div style={styles.field}>
+                <label htmlFor="plot_traceability_available" style={styles.label}>Plot traceability available</label>
+                <select
+                  id="plot_traceability_available"
+                  name="plot_traceability_available"
+                  value={formData.plot_traceability_available}
+                  onChange={handleFieldChange}
+                  style={styles.textInput}
+                >
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                </select>
+              </div>
+
+              <div style={styles.field}>
+                <label htmlFor="geolocation_evidence_available" style={styles.label}>Geolocation evidence</label>
+                <select
+                  id="geolocation_evidence_available"
+                  name="geolocation_evidence_available"
+                  value={formData.geolocation_evidence_available}
+                  onChange={handleFieldChange}
+                  style={styles.textInput}
+                >
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                </select>
+              </div>
+
+              <div style={styles.field}>
+                <label htmlFor="chain_of_custody_available" style={styles.label}>Chain of custody evidence</label>
+                <select
+                  id="chain_of_custody_available"
+                  name="chain_of_custody_available"
+                  value={formData.chain_of_custody_available}
+                  onChange={handleFieldChange}
+                  style={styles.textInput}
+                >
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                </select>
+              </div>
+
+              <div style={styles.field}>
+                <label htmlFor="deforestation_declaration_available" style={styles.label}>Deforestation-free declaration</label>
+                <select
+                  id="deforestation_declaration_available"
+                  name="deforestation_declaration_available"
+                  value={formData.deforestation_declaration_available}
+                  onChange={handleFieldChange}
+                  style={styles.textInput}
+                >
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                </select>
+              </div>
+
+              <div style={styles.field}>
+                <label htmlFor="labor_questionnaire_status" style={styles.label}>Labor questionnaire</label>
+                <select
+                  id="labor_questionnaire_status"
+                  name="labor_questionnaire_status"
+                  value={formData.labor_questionnaire_status}
+                  onChange={handleFieldChange}
+                  style={styles.textInput}
+                >
+                  <option value="Not Required">Not Required</option>
+                  <option value="Requested">Requested</option>
+                  <option value="Complete">Complete</option>
+                </select>
+              </div>
+
+              <div style={styles.field}>
+                <label htmlFor="eudr_relevant" style={styles.label}>EUDR relevant</label>
+                <select id="eudr_relevant" name="eudr_relevant" value={formData.eudr_relevant} onChange={handleFieldChange} style={styles.textInput}>
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                </select>
+              </div>
+
+              <div style={styles.field}>
+                <label htmlFor="traceability_required" style={styles.label}>Traceability required</label>
+                <select id="traceability_required" name="traceability_required" value={formData.traceability_required} onChange={handleFieldChange} style={styles.textInput}>
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={styles.field}>
+              <label htmlFor="traceability_notes" style={styles.label}>Traceability notes</label>
+              <textarea
+                id="traceability_notes"
+                name="traceability_notes"
+                value={formData.traceability_notes}
+                onChange={handleFieldChange}
+                placeholder="Capture known origin regions, plot coverage, evidence gaps, or business comments."
+                style={styles.textArea}
+              />
+            </div>
+          </div>
+
+          <div style={styles.panel}>
+            <div style={styles.sectionHead}>
+              <div>
                 <h2 style={styles.sectionTitle}>Readiness and extracted context</h2>
                 <p style={styles.sectionText}>
-                  Keep the supplier record tight before moving into commodity and certification mapping.
+                  Confirm the supplier profile after the supply scope and evidence requirements are known.
                 </p>
               </div>
             </div>
@@ -790,7 +1794,7 @@ export default function OnboardingPage({ embedded = false } = {}) {
                 </ul>
               </div>
             ) : (
-              <p style={styles.success}>Supplier details are complete enough for the next tab.</p>
+              <p style={styles.success}>Supplier details are complete enough for final review.</p>
             )}
 
             <div style={styles.previewGrid}>
@@ -813,18 +1817,18 @@ export default function OnboardingPage({ embedded = false } = {}) {
             <div style={styles.actions}>
               <button
                 type="button"
-                onClick={() => setActiveTab("document")}
+                onClick={() => setActiveTab("mapping")}
                 style={styles.secondaryButton}
               >
-                Back to Document Upload
+                Back to Commodities & Certifications
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab("mapping")}
+                onClick={() => setActiveTab("review")}
                 disabled={missingFields.length > 0}
                 className="btn-primary"
               >
-                Continue to Commodities & Certifications
+                Continue to Review & Submit
               </button>
             </div>
           </div>
@@ -838,7 +1842,7 @@ export default function OnboardingPage({ embedded = false } = {}) {
       <div style={styles.stack}>
         <section style={styles.hero}>
           <div style={styles.heroCopy}>
-            <span style={styles.eyebrow}>Tab 3</span>
+            <span style={styles.eyebrow}>Tab 2</span>
             <h1 style={styles.heroTitle}>Commodity and certification mapping</h1>
             <p style={styles.heroText}>
               Convert extracted text into structured `v2` mappings and add the certification metadata
@@ -921,42 +1925,231 @@ export default function OnboardingPage({ embedded = false } = {}) {
 
             {certificationRows.length > 0 ? (
               <div style={styles.certRows}>
-                {certificationRows.map((row) => (
-                  <div key={row.name} style={styles.certRow}>
-                    <div style={styles.certName}>{row.name}</div>
-                    <input
-                      type="date"
-                      value={row.issue_date}
-                      onChange={(event) =>
-                        handleCertificationRowChange(row.name, "issue_date", event.target.value)
-                      }
-                      style={styles.textInput}
-                    />
-                    <input
-                      type="date"
-                      value={row.expiry_date}
-                      onChange={(event) =>
-                        handleCertificationRowChange(row.name, "expiry_date", event.target.value)
-                      }
-                      style={styles.textInput}
-                    />
-                    <select
-                      value={row.status}
-                      onChange={(event) =>
-                        handleCertificationRowChange(row.name, "status", event.target.value)
-                      }
-                      style={styles.textInput}
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="Verified">Verified</option>
-                      <option value="Expired">Expired</option>
-                    </select>
-                  </div>
-                ))}
+                {certificationRows.map((row) => {
+                  const evidence = evidenceUploads[row.name];
+                  const evidenceStatus = evidence?.validation_status || "Missing Evidence";
+                  const statusStyle =
+                    evidenceStatus === "Verified"
+                      ? styles.statusVerified
+                      : evidenceStatus === "Expired" || evidenceStatus === "Needs Review"
+                        ? styles.statusReview
+                        : styles.statusMissing;
+
+                  return (
+                    <div key={row.name} style={styles.certEvidenceCard}>
+                      <div style={styles.certCardHeader}>
+                        <div style={styles.certTitleBlock}>
+                          <strong style={styles.certTitle}>{row.name}</strong>
+                          <span style={{ ...styles.statusPill, ...statusStyle }}>{evidenceStatus}</span>
+                        </div>
+                        <label style={styles.uploadButton}>
+                          {evidenceUploadState[row.name] === "Uploading" ? "Uploading..." : "Upload evidence"}
+                          <input
+                            type="file"
+                            accept=".pdf,.png,.jpg,.jpeg,.txt"
+                            onChange={(event) => handleEvidenceUpload(row.name, event.target.files?.[0])}
+                            style={{ display: "none" }}
+                          />
+                        </label>
+                      </div>
+
+                      <div style={styles.certFieldGrid}>
+                        <div style={styles.field}>
+                          <label style={styles.label}>Certificate number</label>
+                          <input
+                            type="text"
+                            value={row.certificate_number || ""}
+                            onChange={(event) =>
+                              handleCertificationRowChange(row.name, "certificate_number", event.target.value)
+                            }
+                            placeholder="Auto-extracted after upload"
+                            style={styles.textInput}
+                          />
+                        </div>
+                        <div style={styles.field}>
+                          <label style={styles.label}>Issuing body</label>
+                          <input
+                            type="text"
+                            value={row.issuing_body || ""}
+                            onChange={(event) =>
+                              handleCertificationRowChange(row.name, "issuing_body", event.target.value)
+                            }
+                            placeholder="e.g. FLOCERT GmbH"
+                            style={styles.textInput}
+                          />
+                        </div>
+                        <div style={styles.field}>
+                          <label style={styles.label}>Issue date</label>
+                          <input
+                            type="date"
+                            value={row.issue_date}
+                            onChange={(event) =>
+                              handleCertificationRowChange(row.name, "issue_date", event.target.value)
+                            }
+                            style={styles.textInput}
+                          />
+                        </div>
+                        <div style={styles.field}>
+                          <label style={styles.label}>Expiry date</label>
+                          <input
+                            type="date"
+                            value={row.expiry_date}
+                            onChange={(event) =>
+                              handleCertificationRowChange(row.name, "expiry_date", event.target.value)
+                            }
+                            style={styles.textInput}
+                          />
+                        </div>
+                        <div style={styles.field}>
+                          <label style={styles.label}>Review status</label>
+                          <select
+                            value={row.status}
+                            onChange={(event) =>
+                              handleCertificationRowChange(row.name, "status", event.target.value)
+                            }
+                            style={styles.textInput}
+                          >
+                            <option value="Pending">Pending</option>
+                            <option value="Verified">Verified</option>
+                            <option value="Expired">Expired</option>
+                          </select>
+                        </div>
+                        <div style={{ ...styles.field, ...styles.certScopeField }}>
+                          <label style={styles.label}>Scope / site</label>
+                          <input
+                            type="text"
+                            value={row.scope || ""}
+                            onChange={(event) =>
+                              handleCertificationRowChange(row.name, "scope", event.target.value)
+                            }
+                            placeholder="Auto-extracted scope or facility"
+                            style={styles.textInput}
+                          />
+                        </div>
+                      </div>
+
+                      {evidence ? (
+                        <div style={styles.evidenceStatusCard}>
+                          <strong>{evidence.validation_status}</strong>
+                          <span>{evidence.validation_notes}</span>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <p style={styles.muted}>No certification rows yet. Select one or more certifications to continue.</p>
             )}
+          </div>
+
+          <div style={styles.panel}>
+            <div style={styles.sectionHead}>
+              <div>
+                <h2 style={styles.sectionTitle}>Evidence checklist</h2>
+                <p style={styles.sectionText}>
+                  Required documents are generated from the selected commodities, certifications, and traceability profile.
+                </p>
+              </div>
+              <span style={styles.pillAlt}>
+                {onboardingRequirements.completeRequired}/{onboardingRequirements.totalRequired || 0} required complete
+              </span>
+            </div>
+
+            <div style={styles.requirementGrid}>
+              {onboardingRequirements.requirements.map((item) => {
+                const statusStyle =
+                  item.status === "Complete"
+                    ? styles.statusVerified
+                    : item.status === "Missing" || item.status === "Needs Review" || item.status === "Expired"
+                      ? styles.statusReview
+                      : styles.statusMissing;
+                return (
+                  <div key={item.id} style={styles.requirementCard}>
+                    <div style={styles.requirementTopline}>
+                      <span style={styles.requirementType}>{item.type}</span>
+                      <span style={{ ...styles.statusPill, ...statusStyle }}>{item.status}</span>
+                    </div>
+                    <strong style={styles.requirementTitle}>{item.title}</strong>
+                    <span style={styles.requirementReason}>{item.reason}</span>
+                    {item.canUpload ? (
+                      <div style={styles.requirementUploadRow}>
+                        <label style={styles.uploadButton}>
+                          {requirementUploadState[item.id] === "Uploading" ? "Uploading..." : "Upload document"}
+                          <input
+                            type="file"
+                            accept=".pdf,.png,.jpg,.jpeg,.txt"
+                            onChange={(event) => handleRequirementUpload(item, event.target.files?.[0])}
+                            style={{ display: "none" }}
+                          />
+                        </label>
+                        {requirementUploads[item.id] ? (
+                          <span style={styles.requirementReason}>
+                            Evidence ID {requirementUploads[item.id].evidence_id}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={styles.panel}>
+            <div style={styles.sectionHead}>
+              <div>
+                <h2 style={styles.sectionTitle}>AI-suggested ESG baseline</h2>
+                <p style={styles.sectionText}>
+                  Scores are generated from supplier country, commodities, certifications, and evidence status.
+                  Review and override only when you have stronger evidence.
+                </p>
+              </div>
+              <span style={styles.pillAlt}>
+                {baselineSuggestion ? `${String(baselineSuggestion.confidence || "medium").toUpperCase()} confidence` : "Awaiting context"}
+              </span>
+            </div>
+
+            {baselineSuggestion ? (
+              <div style={styles.baselineSummary}>
+                <div style={styles.previewCard}>
+                  <span style={styles.previewLabel}>Overall baseline</span>
+                  <strong style={styles.previewValue}>{baselineSuggestion.overall}/100</strong>
+                </div>
+                <div style={styles.reasonList}>
+                  {(baselineSuggestion.reasons || []).slice(0, 4).map((reason) => (
+                    <span key={reason} style={styles.reasonItem}>{reason}</span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div style={styles.scoreGrid}>
+              {ESG_SCORE_FIELDS.map(([name, label, pillar]) => {
+                const score = Number(formData[name] || 0);
+                return (
+                  <div key={name} style={styles.scoreField}>
+                    <div style={styles.scoreHead}>
+                      <div>
+                        <label htmlFor={name} style={styles.label}>{label}</label>
+                        <span style={styles.scorePillar}>{pillar}</span>
+                      </div>
+                      <strong style={styles.scoreValue}>{score}</strong>
+                    </div>
+                    <input
+                      id={name}
+                      name={name}
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={formData[name]}
+                      onChange={handleFieldChange}
+                      style={styles.rangeInput}
+                    />
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </section>
 
@@ -986,16 +2179,16 @@ export default function OnboardingPage({ embedded = false } = {}) {
           </div>
 
           <div style={styles.actions}>
-            <button type="button" onClick={() => setActiveTab("supplier")} style={styles.secondaryButton}>
-              Back to Supplier Details
+            <button type="button" onClick={() => setActiveTab("document")} style={styles.secondaryButton}>
+              Back to Document Upload
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab("review")}
+              onClick={() => setActiveTab("supplier")}
               disabled={selectedCommodityNames.length === 0}
               className="btn-primary"
             >
-              Continue to Review & Submit
+              Continue to Supplier Details
             </button>
           </div>
         </section>
@@ -1012,6 +2205,7 @@ export default function OnboardingPage({ embedded = false } = {}) {
     if (!formData.onboarding_date) missingFields.push("Onboarding date");
     if (!formData.status) missingFields.push("Status");
     if (selectedCommodityNames.length === 0) missingFields.push("At least one commodity");
+    const displayedDecision = llmDecision || deterministicDecision;
 
     return (
       <div style={styles.stack}>
@@ -1020,7 +2214,7 @@ export default function OnboardingPage({ embedded = false } = {}) {
             <span style={styles.eyebrow}>Tab 4</span>
             <h1 style={styles.heroTitle}>Final review and onboarding submission</h1>
             <p style={styles.heroText}>
-              Review the supplier record, mapping choices, and submission readiness before creating
+              Review the supply scope, supplier record, evidence checks, and submission readiness before creating
               the onboarded supplier entry in your current `v2` datasets.
             </p>
           </div>
@@ -1055,6 +2249,18 @@ export default function OnboardingPage({ embedded = false } = {}) {
               <ReviewItem label="Annual revenue" value={formData.annual_revenue || "Not provided"} />
               <ReviewItem label="Status" value={formData.status || "Missing"} />
               <ReviewItem label="Onboarding date" value={formData.onboarding_date || "Missing"} />
+              <ReviewItem label="ESG baseline date" value={formData.esg_baseline_date || "Missing"} />
+              <ReviewItem label="Evidence status" value={formData.evidence_status || "Missing"} />
+              <ReviewItem label="EUDR relevant" value={formData.eudr_relevant || "Missing"} />
+              <ReviewItem label="Traceability required" value={formData.traceability_required || "Missing"} />
+              <ReviewItem label="Supplier role" value={formData.supplier_role || "Missing"} />
+              <ReviewItem
+                label="Evidence checklist"
+                value={`${onboardingRequirements.completeRequired}/${onboardingRequirements.totalRequired || 0} required complete`}
+              />
+              <ReviewItem label="Business status" value={formData.approval_status || suggestedApprovalStatus} />
+              <ReviewItem label="AI recommendation" value={displayedDecision.recommendation} />
+              <ReviewItem label="Site / region" value={formData.site_region || "Not provided"} />
               <ReviewItem
                 label="Avg deforestation risk"
                 value={averageDeforestationRisk ?? "No commodities selected"}
@@ -1085,6 +2291,125 @@ export default function OnboardingPage({ embedded = false } = {}) {
               <p style={styles.success}>All required onboarding inputs are present.</p>
             )}
 
+            {evidenceGaps.length > 0 ? (
+              <div style={styles.validationBlock}>
+                <h3 style={styles.warningTitle}>Evidence gaps</h3>
+                <ul style={styles.list}>
+                  {evidenceGaps.map((field) => (
+                    <li key={field} style={styles.warningItem}>{field}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p style={styles.success}>Certification evidence checks are complete.</p>
+            )}
+
+            <div style={styles.approvalPanel}>
+              <div style={styles.sectionHead}>
+                <div>
+                  <h2 style={styles.sectionTitle}>AI onboarding decision</h2>
+                  <p style={styles.sectionText}>
+                    AI recommends the onboarding outcome from extracted fields, evidence checks, traceability requirements, and ESG baseline.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData((current) => ({
+                      ...current,
+                      approval_status: displayedDecision.recommendation,
+                      approval_blockers:
+                        displayedDecision.recommendation === "Ready for Approval"
+                          ? ""
+                          : current.approval_blockers || displayedDecision.nextActions.join("\n"),
+                      approval_conditions:
+                        current.approval_conditions || displayedDecision.nextActions.join("\n"),
+                    }))
+                  }
+                  style={styles.secondaryButton}
+                >
+                  Apply recommendation
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleGenerateAiDecision(deterministicDecision, evidenceGaps)}
+                  style={styles.secondaryButton}
+                  disabled={isDecisionLoading}
+                >
+                  {isDecisionLoading ? "Asking LLM..." : "Ask LLM"}
+                </button>
+              </div>
+
+              <div style={styles.decisionBanner}>
+                <span style={styles.previewLabel}>AI recommendation</span>
+                <strong style={styles.decisionValue}>{displayedDecision.recommendation}</strong>
+                <span style={styles.requirementReason}>
+                  Confidence: {displayedDecision.confidence}. Source: {displayedDecision.source || "deterministic"}. Business user can confirm or override.
+                </span>
+              </div>
+
+              <div style={styles.decisionGrid}>
+                <div style={styles.decisionList}>
+                  <span style={styles.previewLabel}>Why AI recommends this</span>
+                  {displayedDecision.reasons.map((reason) => (
+                    <span key={reason} style={styles.reasonItem}>{reason}</span>
+                  ))}
+                </div>
+                <div style={styles.decisionList}>
+                  <span style={styles.previewLabel}>Next actions</span>
+                  {displayedDecision.nextActions.map((action) => (
+                    <span key={action} style={styles.reasonItem}>{action}</span>
+                  ))}
+                </div>
+              </div>
+
+              <div style={styles.formGrid}>
+                <div style={styles.field}>
+                  <label htmlFor="approval_status" style={styles.label}>Business status</label>
+                  <select
+                    id="approval_status"
+                    name="approval_status"
+                    value={formData.approval_status}
+                    onChange={handleFieldChange}
+                    style={styles.textInput}
+                  >
+                    <option value="Draft">Draft</option>
+                    <option value="Evidence Requested">Evidence Requested</option>
+                    <option value="Evidence Under Review">Evidence Under Review</option>
+                    <option value="Ready for Approval">Ready for Approval</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Approved With Conditions">Approved With Conditions</option>
+                    <option value="Rejected">Rejected</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={styles.formGrid}>
+                <div style={styles.field}>
+                  <label htmlFor="approval_conditions" style={styles.label}>Conditions / next actions</label>
+                  <textarea
+                    id="approval_conditions"
+                    name="approval_conditions"
+                    value={formData.approval_conditions}
+                    onChange={handleFieldChange}
+                    placeholder="Example: request plot evidence, complete questionnaire, or accept supplier with conditions."
+                    style={styles.textArea}
+                  />
+                </div>
+                <div style={styles.field}>
+                  <label htmlFor="approval_blockers" style={styles.label}>Blockers detected</label>
+                  <textarea
+                    id="approval_blockers"
+                    name="approval_blockers"
+                    value={formData.approval_blockers}
+                    onChange={handleFieldChange}
+                    placeholder="Open evidence gaps, expired documents, missing traceability, or policy blockers."
+                    style={styles.textArea}
+                  />
+                </div>
+              </div>
+            </div>
+
             <div style={styles.previewGrid}>
               <div style={styles.previewCard}>
                 <span style={styles.previewLabel}>Commodities</span>
@@ -1096,6 +2421,12 @@ export default function OnboardingPage({ embedded = false } = {}) {
                 <span style={styles.previewLabel}>Certifications</span>
                 <strong style={styles.previewValue}>
                   {selectedCertificationNames.join(", ") || "None selected"}
+                </strong>
+              </div>
+              <div style={styles.previewCard}>
+                <span style={styles.previewLabel}>ESG baseline sample</span>
+                <strong style={styles.previewValue}>
+                  Water {formData.water}, Labor {formData.labor}, Compliance {formData.compliance}
                 </strong>
               </div>
             </div>
@@ -1132,8 +2463,8 @@ export default function OnboardingPage({ embedded = false } = {}) {
             {errorMessage ? <p style={styles.error}>{errorMessage}</p> : null}
 
             <div style={styles.actions}>
-              <button type="button" onClick={() => setActiveTab("mapping")} style={styles.secondaryButton}>
-                Back to Mapping
+              <button type="button" onClick={() => setActiveTab("supplier")} style={styles.secondaryButton}>
+                Back to Supplier Details
               </button>
               <button
                 type="button"
@@ -1143,6 +2474,16 @@ export default function OnboardingPage({ embedded = false } = {}) {
               >
                 {isSubmitting ? "Submitting..." : "Submit Onboarding"}
               </button>
+              {submittedSupplierId && formData.status === "Pending" ? (
+                <button
+                  type="button"
+                  onClick={handleActivateSupplier}
+                  disabled={isActivating || formData.approval_status === "Evidence Requested" || formData.approval_status === "Evidence Under Review"}
+                  className="btn-primary"
+                >
+                  {isActivating ? "Activating..." : "Approve & Activate"}
+                </button>
+              ) : null}
             </div>
           </div>
         </section>
@@ -1153,7 +2494,7 @@ export default function OnboardingPage({ embedded = false } = {}) {
               <div>
                 <h2 style={styles.sectionTitle}>Certification review</h2>
                 <p style={styles.sectionText}>
-                  Quick review of the certification rows captured in Tab 3.
+                  Quick review of the certification rows captured in Tab 2.
                 </p>
               </div>
             </div>
@@ -1174,6 +2515,120 @@ export default function OnboardingPage({ embedded = false } = {}) {
     );
   }
 
+  function renderRevalidationTab() {
+    return (
+      <div style={styles.stack}>
+        <section style={styles.hero}>
+          <div style={styles.heroCopy}>
+            <span style={styles.eyebrow}>Active Supplier Refresh</span>
+            <h1 style={styles.heroTitle}>Revalidate existing active suppliers</h1>
+            <p style={styles.heroText}>
+              Use this lane for suppliers that are already active. Refresh certifications, traceability, and ESG evidence
+              without sending them through new-supplier onboarding again.
+            </p>
+          </div>
+          <div style={styles.metricGrid}>
+            <Metric value={activeSupplierOptions.length} label="Active suppliers" />
+            <Metric value={selectedRevalidationSupplier?.country || "None"} label="Selected country" />
+            <Metric value={revalidationOutcome} label="Refresh outcome" />
+          </div>
+        </section>
+
+        <section style={styles.grid}>
+          <div style={styles.panel}>
+            <div style={styles.sectionHead}>
+              <div>
+                <h2 style={styles.sectionTitle}>Supplier refresh record</h2>
+                <p style={styles.sectionText}>
+                  Select an active supplier, choose the revalidation outcome, and store the refresh decision.
+                </p>
+              </div>
+              <span style={styles.pillAlt}>Active only</span>
+            </div>
+
+            <div style={styles.formGrid}>
+              <div style={styles.field}>
+                <label htmlFor="revalidation_supplier" style={styles.label}>Active supplier</label>
+                <select
+                  id="revalidation_supplier"
+                  value={revalidationSupplierId}
+                  onChange={(event) => setRevalidationSupplierId(event.target.value)}
+                  style={styles.textInput}
+                >
+                  <option value="">Select supplier</option>
+                  {activeSupplierOptions.map((supplier) => (
+                    <option key={supplier.supplier_id} value={supplier.supplier_id}>
+                      {supplier.supplier_name} - {supplier.country}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={styles.field}>
+                <label htmlFor="revalidation_outcome" style={styles.label}>Revalidation outcome</label>
+                <select
+                  id="revalidation_outcome"
+                  value={revalidationOutcome}
+                  onChange={(event) => setRevalidationOutcome(event.target.value)}
+                  style={styles.textInput}
+                >
+                  <option value="Revalidation Requested">Revalidation Requested</option>
+                  <option value="Evidence Received">Evidence Received</option>
+                  <option value="Needs Review">Needs Review</option>
+                  <option value="Revalidated">Revalidated</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={styles.field}>
+              <label htmlFor="revalidation_notes" style={styles.label}>Refresh notes</label>
+              <textarea
+                id="revalidation_notes"
+                value={revalidationNotes}
+                onChange={(event) => setRevalidationNotes(event.target.value)}
+                placeholder="Summarize certificate expiry checks, traceability refresh, open gaps, or accepted evidence."
+                style={styles.textArea}
+              />
+            </div>
+
+            {revalidationMessage ? <p style={styles.success}>{revalidationMessage}</p> : null}
+            {errorMessage ? <p style={styles.error}>{errorMessage}</p> : null}
+
+            <div style={styles.actions}>
+              <button
+                type="button"
+                onClick={handleRevalidateSupplier}
+                disabled={!revalidationSupplierId || isRevalidating}
+                className="btn-primary"
+              >
+                {isRevalidating ? "Updating..." : "Save Revalidation"}
+              </button>
+            </div>
+          </div>
+
+          <div style={styles.panel}>
+            <div style={styles.sectionHead}>
+              <div>
+                <h2 style={styles.sectionTitle}>Selected supplier snapshot</h2>
+                <p style={styles.sectionText}>
+                  This is the supplier refresh context that later feeds ESG Monitoring and Auditing.
+                </p>
+              </div>
+            </div>
+            <div style={styles.reviewGrid}>
+              <ReviewItem label="Supplier" value={selectedRevalidationSupplier?.supplier_name || "Not selected"} />
+              <ReviewItem label="Supplier ID" value={selectedRevalidationSupplier?.supplier_id || "Not selected"} />
+              <ReviewItem label="Tier" value={selectedRevalidationSupplier?.tier || "Missing"} />
+              <ReviewItem label="Status" value={selectedRevalidationSupplier?.status || "Missing"} />
+              <ReviewItem label="Certification" value={selectedRevalidationSupplier?.certification || "Not shown"} />
+              <ReviewItem label="Onboarding date" value={selectedRevalidationSupplier?.onboarding_date || "Missing"} />
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   function renderActiveTab() {
     if (activeTab === "document") return renderDocumentTab();
     if (activeTab === "supplier") {
@@ -1181,6 +2636,9 @@ export default function OnboardingPage({ embedded = false } = {}) {
     }
     if (activeTab === "mapping") {
       return renderMappingTab();
+    }
+    if (activeTab === "revalidation") {
+      return renderRevalidationTab();
     }
     return renderReviewTab();
   }
@@ -1259,10 +2717,24 @@ export default function OnboardingPage({ embedded = false } = {}) {
           <strong style={styles.flowBannerValue}>{selectedCommodityNames.length}</strong>
         </div>
         <div style={styles.flowBannerItem}>
+          <span style={styles.flowBannerLabel}>Workflow lane</span>
+          <strong style={styles.flowBannerValue}>{formData.status === "Pending" ? "Pending onboarding" : "Refresh only"}</strong>
+        </div>
+        <div style={styles.flowBannerItem}>
           <span style={styles.flowBannerLabel}>Submission state</span>
           <strong style={styles.flowBannerValue}>{reviewReady ? "Ready" : "In progress"}</strong>
         </div>
       </section>
+
+      {formData.status !== "Pending" ? (
+        <section style={styles.statusNotice}>
+          <strong>Supplier is outside the onboarding lane.</strong>
+          <span>
+            Keep this workflow for Pending suppliers. Existing Active suppliers should be reviewed through ESG Monitoring,
+            revalidation, or periodic evidence refresh instead of creating a new onboarding record.
+          </span>
+        </section>
+      ) : null}
 
       {renderActiveTab()}
     </div>
@@ -1273,6 +2745,15 @@ export default function OnboardingPage({ embedded = false } = {}) {
   }
 
   return <main style={styles.page}>{shellContent}</main>;
+}
+
+async function getResponseError(response, fallback) {
+  try {
+    const payload = await response.json();
+    return typeof payload?.detail === "string" ? payload.detail : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function Metric({ value, label }) {
@@ -1343,6 +2824,7 @@ const styles = {
   flowBannerItem: { display: "grid", gap: "4px", padding: "16px 18px", borderRadius: "20px", background: "linear-gradient(180deg, rgba(255,255,255,0.94), rgba(246,250,246,0.98))", border: "1px solid rgba(17, 22, 18, 0.08)", boxShadow: "0 8px 20px rgba(17, 22, 18, 0.05)" },
   flowBannerLabel: { fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.14em", color: "#73826f" },
   flowBannerValue: { color: "#152117", fontSize: "1rem" },
+  statusNotice: { display: "grid", gap: "6px", padding: "16px 18px", borderRadius: "18px", background: "#fff7ed", border: "1px solid #fed7aa", color: "#7c2d12", fontSize: "14px", lineHeight: 1.5 },
   stack: { display: "grid", gap: "22px" },
   hero: { display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(260px, 1fr)", gap: "18px", padding: "26px", borderRadius: "28px", background: "linear-gradient(140deg, rgba(12, 25, 17, 0.96), rgba(24, 52, 34, 0.92) 55%, rgba(39, 78, 49, 0.9))", color: "#f5faf5", boxShadow: "0 18px 40px rgba(10, 24, 16, 0.18)" },
   heroCopy: { display: "grid", gap: "12px" },
@@ -1364,11 +2846,13 @@ const styles = {
   label: { fontSize: "13px", fontWeight: 700, color: "#1d2a1f" },
   fileInput: { width: "100%", padding: "14px", borderRadius: "16px", border: "1px dashed rgba(17, 22, 18, 0.18)", background: "#fff" },
   textInput: { width: "100%", minHeight: "46px", padding: "12px 14px", borderRadius: "14px", border: "1px solid rgba(17, 22, 18, 0.14)", background: "#fff", color: "#152117", fontSize: "14px" },
+  textArea: { width: "100%", minHeight: "92px", padding: "12px 14px", borderRadius: "14px", border: "1px solid rgba(17, 22, 18, 0.14)", background: "#fff", color: "#152117", fontSize: "14px", resize: "vertical", fontFamily: "inherit" },
   hint: { color: "#6a7a67", fontSize: "13px" },
   summaryGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" },
   summary: { display: "grid", gap: "4px", padding: "14px 16px", borderRadius: "16px", background: "#fff", border: "1px solid rgba(17, 22, 18, 0.08)" },
   summaryLabel: { fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.12em", color: "#71816d" },
   summaryValue: { color: "#101913", wordBreak: "break-word" },
+  systemField: { display: "grid", gap: "6px", alignContent: "start", minHeight: "96px", padding: "14px 16px", borderRadius: "16px", background: "#f8fbf8", border: "1px solid rgba(17, 22, 18, 0.08)" },
   actions: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: "12px" },
   secondaryButton: { minHeight: "44px", padding: "0 18px", borderRadius: "12px", border: "1px solid rgba(17, 22, 18, 0.14)", background: "#fff", color: "#152117", fontWeight: 600, cursor: "pointer" },
   disabledButton: { opacity: 0.45, cursor: "not-allowed" },
@@ -1379,6 +2863,27 @@ const styles = {
   previewCard: { display: "grid", gap: "6px", padding: "16px", borderRadius: "18px", background: "linear-gradient(180deg, #ffffff, #f7faf7)", border: "1px solid rgba(17, 22, 18, 0.08)" },
   previewLabel: { fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.12em", color: "#758571" },
   previewValue: { color: "#152117", fontSize: "1rem", lineHeight: 1.35, wordBreak: "break-word" },
+  baselineSummary: { display: "grid", gridTemplateColumns: "minmax(160px, 220px) 1fr", gap: "14px", alignItems: "stretch" },
+  reasonList: { display: "grid", gap: "8px", alignContent: "start" },
+  reasonItem: { display: "block", padding: "10px 12px", borderRadius: "14px", background: "#f8fbf8", border: "1px solid rgba(17, 22, 18, 0.08)", color: "#435447", fontSize: "13px", lineHeight: 1.45 },
+  requirementGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "12px" },
+  requirementCard: { display: "grid", gap: "10px", padding: "16px", borderRadius: "18px", background: "linear-gradient(180deg, #ffffff, #f8fbf8)", border: "1px solid rgba(17, 22, 18, 0.08)" },
+  requirementTopline: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" },
+  requirementType: { fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#758571", fontWeight: 800 },
+  requirementTitle: { color: "#152117", lineHeight: 1.35 },
+  requirementReason: { color: "#586856", fontSize: "13px", lineHeight: 1.45 },
+  requirementUploadRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", flexWrap: "wrap", paddingTop: "4px" },
+  approvalPanel: { display: "grid", gap: "16px", padding: "18px", borderRadius: "20px", background: "linear-gradient(180deg, #ffffff, #f8fbf8)", border: "1px solid rgba(17, 22, 18, 0.1)" },
+  decisionBanner: { display: "grid", gap: "6px", padding: "16px", borderRadius: "18px", background: "#f8fbf8", border: "1px solid rgba(17, 22, 18, 0.08)" },
+  decisionValue: { color: "#152117", fontSize: "1.35rem", lineHeight: 1.2 },
+  decisionGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "14px" },
+  decisionList: { display: "grid", gap: "8px", alignContent: "start" },
+  scoreGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "12px" },
+  scoreField: { display: "grid", gap: "10px", padding: "14px", borderRadius: "16px", background: "#ffffff", border: "1px solid rgba(17, 22, 18, 0.08)" },
+  scoreHead: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" },
+  scorePillar: { display: "block", marginTop: "3px", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#758571" },
+  scoreValue: { fontSize: "1.15rem", color: "#142018" },
+  rangeInput: { width: "100%", accentColor: "#166534" },
   reviewGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px" },
   reviewItem: { display: "grid", gap: "6px", padding: "16px", borderRadius: "18px", background: "linear-gradient(180deg, #ffffff, #f7faf7)", border: "1px solid rgba(17, 22, 18, 0.08)" },
   optionGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", width: "100%", minWidth: 0 },
@@ -1386,9 +2891,21 @@ const styles = {
   optionCardActive: { background: "linear-gradient(180deg, #ecfdf3, #f7fff9)", borderColor: "#22c55e" },
   optionTitle: { fontWeight: 700, color: "#152117" },
   optionMeta: { color: "#5f6f5c", fontSize: "13px" },
-  certRows: { display: "grid", gap: "12px", width: "100%", minWidth: 0 },
+  certRows: { display: "grid", gap: "16px", width: "100%", minWidth: 0 },
   certRow: { display: "grid", gridTemplateColumns: "minmax(180px, 1.2fr) repeat(3, minmax(160px, 1fr))", gap: "12px", alignItems: "center", width: "100%", minWidth: 0, padding: "14px 16px", borderRadius: "18px", background: "linear-gradient(180deg, #ffffff, #f7faf7)", border: "1px solid rgba(17, 22, 18, 0.08)" },
+  certEvidenceCard: { display: "grid", gap: "16px", width: "100%", minWidth: 0, padding: "18px", borderRadius: "20px", background: "linear-gradient(180deg, #ffffff, #f8fbf8)", border: "1px solid rgba(17, 22, 18, 0.1)", boxShadow: "0 8px 20px rgba(17, 22, 18, 0.04)" },
+  certCardHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "14px", flexWrap: "wrap" },
+  certTitleBlock: { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", minWidth: 0 },
+  certTitle: { color: "#152117", fontSize: "1.05rem" },
+  certFieldGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "14px", width: "100%", minWidth: 0 },
+  certScopeField: { minWidth: 0 },
   certName: { fontWeight: 700, color: "#152117" },
+  statusPill: { display: "inline-flex", alignItems: "center", minHeight: "28px", padding: "0 10px", borderRadius: "999px", fontSize: "12px", fontWeight: 800 },
+  statusVerified: { background: "#ecfdf3", color: "#166534", border: "1px solid #bbf7d0" },
+  statusReview: { background: "#fff7ed", color: "#c2410c", border: "1px solid #fed7aa" },
+  statusMissing: { background: "#f4f6f4", color: "#5f6f5c", border: "1px solid rgba(17, 22, 18, 0.1)" },
+  uploadButton: { minHeight: "42px", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 16px", borderRadius: "12px", border: "1px solid rgba(22, 101, 52, 0.22)", background: "#ecfdf3", color: "#166534", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" },
+  evidenceStatusCard: { display: "grid", gap: "4px", padding: "12px 14px", borderRadius: "14px", background: "rgba(22, 101, 52, 0.05)", border: "1px solid rgba(22, 101, 52, 0.12)", color: "#41503f", fontSize: "13px" },
   reviewCell: { color: "#41503f", padding: "10px 12px", borderRadius: "12px", background: "rgba(17, 22, 18, 0.04)" },
   validationBlock: { display: "grid", gap: "10px" },
   aiAssistCard: { display: "grid", gap: "14px", padding: "18px", borderRadius: "20px", background: "linear-gradient(180deg, #f7faf7, #eef8f1)", border: "1px solid rgba(34, 197, 94, 0.18)" },
