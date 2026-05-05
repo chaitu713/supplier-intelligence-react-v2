@@ -1,0 +1,11 @@
+action_id,alert_id,supplier_id,action_type,owner,due_date,status,notes,linked_module,linked_record_id
+MAC-2001-001,MA-2001-001,2001,Run Due Diligence,Compliance Lead,2026-05-12,Open,Generate due diligence review for governance and traceability blockers,Due Diligence,
+MAC-2001-002,MA-2001-002,2001,Enhanced Monitoring,ESG Manager,2026-05-19,Open,Track complaint indicator and request supplier explanation,Continuous Monitoring,
+MAC-2001-003,MA-2001-003,2001,Open Trace Gap,Traceability Manager,2026-05-12,Open,Follow up on missing polygon evidence for BlueRiver farm block,Traceability,GAP-2001-001
+MAC-2003-001,MA-2003-001,2003,Open Trace Gap,Regional Compliance,2026-05-10,Open,Block lot release until plot and polygon evidence are received,Traceability,GAP-2003-001
+MAC-2003-002,MA-2003-002,2003,Create Audit/CAPA,Audit Manager,2026-05-20,Open,Review audit signal and decide if new CAPA is required,Auditing,
+MAC-2004-001,MA-2004-001,2004,Run Due Diligence,Compliance Lead,2026-05-15,Open,Review carbon pressure and country/commodity risk before sourcing expansion,Due Diligence,
+MAC-2004-002,MA-2004-002,2004,Run Due Diligence,Social Compliance,2026-05-15,Open,Investigate working-hours indicator and request labor evidence,Due Diligence,
+MAC-2005-001,MA-2005-001,2005,Request Evidence,Supplier Manager,2026-05-18,Open,Request refreshed certification evidence,Onboarding Revalidation,
+MAC-2007-001,MA-2007-001,2007,Request Evidence,Supplier Manager,2026-05-18,Open,Request refreshed certification evidence,Onboarding Revalidation,
+MAC-2007-002,MA-2007-002,2007,Enhanced Monitoring,ESG Manager,2026-05-22,Open,Monitor deforestation signal and request supplier region evidence,Continuous Monitoring,

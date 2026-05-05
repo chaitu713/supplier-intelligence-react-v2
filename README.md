@@ -6,6 +6,10 @@ Ozone AI 4.0 is a supplier intelligence application for responsible sourcing, su
 
 This README is intended to be a full context document. If it is given to another developer or to ChatGPT, it should explain what the application contains, what each module does, what data is used, and how the current workflows connect.
 
+For a more exhaustive plain-English functional and technical walkthrough, including domain term explanations and a full client demo script, see:
+
+- `docs/Ozone_AI_4_Functional_Technical_Guide.md`
+
 ## Current Product Scope
 
 The application supports these major workflows:
@@ -14,7 +18,7 @@ The application supports these major workflows:
 - Analytics workspace for country, commodity, certification, ESG, trend, and supplier ranking analysis.
 - Simulator for disruption and what-if scenario modeling.
 - Supplier Engagement workspace containing Onboarding, Auditing, and Traceability.
-- ESG Monitoring page for indicator-level environmental, social, and governance monitoring.
+- Continuous ESG Monitoring workspace for supplier monitoring signals, ESG alerts, trend changes, and action routing.
 - Due Diligence Agent for supplier-level investigation.
 - Supplier Advisor AI for conversational supplier intelligence.
 - AI review queue for low-confidence or guarded AI outputs.
@@ -46,6 +50,10 @@ Current persistence:
 
 - CSV files in `data/`
 - Local evidence uploads under `uploads/onboarding/evidence`
+- Local audit evidence uploads under `uploads/auditing/evidence`
+- Local traceability evidence uploads under `uploads/traceability/evidence`
+- Continuous Monitoring seed data under `data/monitoring_*_v2.csv`, `data/supplier_evidence_refresh_v2.csv`, and `data/external_esg_signals_v2.csv`
+- Traceability sample PDFs under `uploads/traceability/sample_pdfs`
 - Test evidence PDFs under `uploads/certificate_test_pdfs`
 
 ## Application Navigation
@@ -104,7 +112,7 @@ Important frontend files:
 - `frontend/src/pages/TraceabilityWorkspace.tsx`
   - Traceability workspace.
 - `frontend/src/pages/EsgMonitoringPage.tsx`
-  - ESG monitoring page.
+  - Continuous Monitoring placeholder page. The previous snapshot ESG dashboard was intentionally cleared so the module can be rebuilt around a proper continuous monitoring workflow.
 - `frontend/src/features/risk-monitoring/pages/DueDiligencePage`
   - Due Diligence Agent page.
 - `frontend/src/features/advisor-ai/pages/SupplierAdvisorAIPage`
@@ -153,6 +161,7 @@ Health and datasets:
 - `GET /transactions`
 - `GET /api/v1/transactions`
 - `GET /supplier_performance`
+- `GET /api/v1/supplier_performance`
 
 Analytics:
 
@@ -181,9 +190,13 @@ Risk and due diligence:
 - `GET /api/v1/risk/top-suppliers`
 - `POST /api/v1/risk/due-diligence`
 
-ESG Monitoring:
+Continuous ESG Monitoring:
 
-- `GET /api/v1/esg-monitoring/overview`
+- Current legacy backend endpoint still exists: `GET /api/v1/esg-monitoring/overview`
+- Planned workspace endpoint: `GET /continuous-monitoring/workspace`
+- Planned rule run endpoint: `POST /continuous-monitoring/run-rules`
+- Planned alert update endpoint: `PATCH /continuous-monitoring/alerts/{alert_id}`
+- Planned decision endpoint: `POST /continuous-monitoring/decision`
 
 Onboarding:
 
@@ -195,17 +208,34 @@ Onboarding:
   - Uploads certification/evidence documents.
   - Extracts certificate fields.
   - Saves evidence metadata to `supplier_evidence_v2.csv`.
+- `POST /onboarding/decision`
+  - Generates the AI-assisted onboarding recommendation with deterministic fallback.
+- `POST /onboarding/activate`
+  - Approves and activates a pending supplier.
+- `POST /onboarding/revalidate`
+  - Updates an active supplier revalidation outcome.
 
 Auditing:
 
 - `GET /auditing/workspace`
 - `POST /auditing/insights`
+- `POST /auditing/decision`
+- `POST /auditing/decision/apply`
+- `POST /auditing/close`
+- `POST /auditing/capa`
+- `PATCH /auditing/capa`
+- `POST /auditing/evidence/upload`
 - `POST /auditing/certification-update`
 - `POST /auditing/certification-extract`
 
 Traceability:
 
 - `GET /traceability/workspace`
+- `POST /traceability/evidence/upload`
+- `POST /traceability/evidence/review`
+- `POST /traceability/gap-actions`
+- `PATCH /traceability/gap-actions/{gap_id}`
+- `POST /traceability/decision`
 
 Advisor AI:
 
@@ -256,6 +286,31 @@ Current CSV-backed datasets:
   - CSV-backed audit evidence records.
   - Stores audit report, non-compliance evidence, CAPA proof, and supplier response uploads.
   - Columns: `audit_evidence_id`, `audit_id`, `supplier_id`, `linked_capa_id`, `evidence_type`, `file_name`, `local_path`, `upload_date`, `document_status`, `validation_status`, `validation_notes`, `extracted_text_preview`.
+- `data/supplier_sites_v2.csv`
+  - Traceability site, farm, plot, and processing location records linked to suppliers.
+  - Includes coordinates, site type, region, geolocation evidence status, polygon evidence status, and deforestation risk status.
+- `data/site_polygons_v2.geojson`
+  - GeoJSON polygon footprints linked to supplier sites for the Traceability site and polygon view.
+- `data/traceability_lots_v2.csv`
+  - Lot and shipment lineage records linked to suppliers, commodities, and sites.
+- `data/traceability_events_v2.csv`
+  - Chain-of-custody event records for lot movement, processing, dispatch, receipt, and export milestones.
+- `data/traceability_gap_actions_v2.csv`
+  - Trace-specific gap actions for missing plot data, missing polygon evidence, broken chain links, expired trace evidence, and unsupported origin evidence.
+- `data/traceability_gap_action_history_v2.csv`
+  - Status history for traceability gap actions.
+- `data/traceability_score_history_v2.csv`
+  - Score snapshots for traceability score, EUDR readiness, and evidence coverage changes.
+- `data/traceability_decisions_v2.csv`
+  - Saved trace decision outputs generated by the Traceability decision endpoint.
+- `data/due_diligence_cases_v2.csv`
+  - Generated due diligence case records with supplier, date, score, decision, status, and summary.
+- `data/due_diligence_decisions_v2.csv`
+  - Persisted due diligence decision records with rationale and recommended actions.
+- `data/due_diligence_case_notes_v2.csv`
+  - Placeholder CSV for due diligence reviewer notes and case history.
+- `data/ai_audit_events.jsonl`
+  - Append-only AI governance event log used by the AI gateway/review flow for auditability.
 - `data/alerts_v2.csv`
   - Supplier alerts.
 - `data/transactions_v2.csv`
@@ -789,89 +844,247 @@ Auditing is intended to validate supplier controls after onboarding and update s
 
 The Traceability workspace is available through Supplier Engagement.
 
-Current endpoint:
+Implemented endpoints:
 
 ```text
 GET /traceability/workspace
+POST /traceability/evidence/upload
+POST /traceability/evidence/review
+POST /traceability/gap-actions
+PATCH /traceability/gap-actions/{gap_id}
+POST /traceability/decision
 ```
 
-The traceability workspace provides supplier chain context and supports linked supplier selection in onboarding.
+The Traceability workspace is now an operational client-demo workflow, not only a static interpretation page. It combines supplier hierarchy, commodity footprint, mapped sites, GeoJSON polygon footprints, lot movement records, chain-of-custody events, evidence coverage, open trace actions, traceability score, EUDR readiness, and generated trace decisions.
 
-The Onboarding module now captures traceability fields that should later feed this workspace:
+Frontend tabs:
 
-- Supplier role
-- Plot traceability availability
-- Geolocation evidence availability
-- Chain-of-custody evidence availability
-- Deforestation-free declaration availability
-- Traceability notes
+- `Trace Overview`
+  - Shows selected supplier, traceability score, EUDR readiness, evidence coverage, trace decision support, and a client-facing trace decision journey.
+- `Supplier / Commodity Trace`
+  - Shows supplier chain, trace evidence upload, mapped sites and polygons, lot movement timeline, commodity footprint, certification support, open trace actions, evidence review queue, and trace history.
 
-## ESG Monitoring Module
+The old `AI Trace Insights` tab was removed because its summary duplicated the richer decision support now shown in `Trace Overview`.
 
-The ESG Monitoring page is implemented in:
+Traceability workflow for the current demo:
 
-- `frontend/src/pages/EsgMonitoringPage.tsx`
-- `backend/app/services/esg_monitoring_service.py`
-- `backend/app/routers/esg_monitoring.py`
-- `backend/app/schemas/esg_monitoring.py`
+1. Select a supplier, usually `BlueRiver Commodities Ltd` for the gap-resolution walkthrough.
+2. Review the trace decision journey in `Trace Overview`.
+3. Generate the current trace decision.
+4. Open `Supplier / Commodity Trace`.
+5. Upload trace evidence to the correct site, lot, event, or gap action.
+6. Review the uploaded evidence in the evidence review queue.
+7. Close the related trace gap action after the evidence is accepted.
+8. Generate the trace decision again and show the change in score, coverage, EUDR readiness, and decision.
 
-Main endpoint:
+Traceability evidence upload supports:
+
+- Farm / Plot Traceability
+- Geolocation / Polygon Evidence
+- Chain of Custody Evidence
+- Shipment / Lot Document
+- Deforestation-Free Declaration
+
+Sample PDFs for the demo are stored in:
 
 ```text
-GET /api/v1/esg-monitoring/overview
+uploads/traceability/sample_pdfs
 ```
 
-The page provides:
+The recommended BlueRiver demo PDF is:
 
-- ESG KPI strip
-- Indicator Management tabs:
-  - Environmental
-  - Social
-  - Governance
-- Compliance and assurance signals separated from core environmental/social/governance indicators
-- ESG Alert Feed
-- Supplier ESG Watchlist
-- ML ESG Health Signals panel
+```text
+uploads/traceability/sample_pdfs/02_geolocation_polygon_blueriver.pdf
+```
 
-Environmental indicators include:
+## Continuous ESG Monitoring Module
 
-- Carbon
-- Water
-- Renewable
-- Waste
-- Land use
-- Deforestation
+The previous snapshot-style ESG Monitoring frontend was intentionally cleared. The route still exists, but `frontend/src/pages/EsgMonitoringPage.tsx` now shows a neutral `Continuous Monitoring workspace` placeholder so the module can be redesigned properly.
 
-Social indicators include:
+The required demo data model has now been created. Backend and frontend Continuous Monitoring logic is still pending.
 
-- Labor
-- Child risk
-- Working hours
-- Wage
+Continuous ESG Monitoring should be an operational monitoring command center, not just an ESG score dashboard. It should answer:
 
-Governance indicators include:
+- Which suppliers are deteriorating right now?
+- Which ESG indicators changed since the last review?
+- Which alerts are new, open, worsening, or resolved?
+- Which suppliers need evidence refresh, audit follow-up, traceability follow-up, due diligence, or escalation?
+- Which suppliers are stable and can remain in normal monitoring?
 
-- Compliance
-- Transparency
-- Policy
-- Reporting
+Recommended frontend sections:
 
-The ESG Monitoring backend includes an ML-style scoring layer using:
+- Monitoring Overview
+  - Suppliers monitored, new alerts, critical alerts, deteriorating suppliers, suppliers needing follow-up, and average ESG health.
+- Signal Feed
+  - Timeline/table of supplier monitoring signals with pillar, severity, previous value, current value, change, trigger date, status, and recommended action.
+- Supplier Monitoring Watchlist
+  - Suppliers ranked by urgency using ESG health, trend direction, open alerts, evidence freshness, audit/trace blockers, and recommended route.
+- Indicator Trends
+  - Dated trend views for carbon, water, waste, land use, deforestation, labor, child risk, working hours, wage, compliance, transparency, and reporting.
+- Alert Rules
+  - Rule definitions such as carbon increase, water stress threshold, labor deterioration, certification expiry, stale evidence, overdue CAPA, or traceability blocker.
+- Action Routing
+  - Recommended route per alert: request evidence, start revalidation, create audit/CAPA, open trace gap, run due diligence, escalate supplier, or continue monitoring.
+- Monitoring Decision
+  - Supplier-level outcome: `Stable`, `Watch`, `Evidence Required`, `Enhanced Monitoring`, `Escalate`, or `Block / Suspend`.
 
-- `IsolationForest`
-- `StandardScaler`
-- ESG indicators
-- supplier risk features
-- audit signals
-- alert signals
-- certification signals
-- country and commodity context
+Implemented CSV data model for the demo:
 
-Important note:
+- `data/monitoring_observations_v2.csv`
+  - Dated ESG observations per supplier and indicator.
+- `data/monitoring_alerts_v2.csv`
+  - Generated monitoring alerts with severity, status, trigger, and linked supplier.
+- `data/monitoring_rules_v2.csv`
+  - Rule definitions, thresholds, enabled state, and recommended route.
+- `data/monitoring_actions_v2.csv`
+  - Follow-up actions created from monitoring alerts.
+- `data/supplier_evidence_refresh_v2.csv`
+  - Recurring evidence freshness, stale evidence, and refresh requirements.
+- `data/external_esg_signals_v2.csv`
+  - Optional demo feed for climate, deforestation, labor, sanctions, or news-style signals.
 
-- The current ESG Monitoring implementation is an on-demand monitoring snapshot.
-- It is not yet true continuous monitoring.
-- True continuous monitoring would require scheduled ingestion, persisted dated observations, alert history, streaming/event jobs, and recurring external data refresh.
+Current seeded demo suppliers:
+
+- `2001` BlueRiver Commodities Ltd
+  - Governance/social pressure and open traceability polygon gaps.
+- `2003` TerraSource Foods Co
+  - Critical traceability gaps and audit signal.
+- `2004` Cedar Grove Exports
+  - Critical carbon and working-hours indicators.
+- `2005` Golden Acre Ingredients
+  - Certification expiry / evidence refresh requirement.
+- `2007` Pacific Harvest Partners
+  - Certification expiry and deforestation pressure.
+
+Existing data to reuse:
+
+- `data/suppliers_v2.csv`
+- `data/esg_environmental_v2.csv`
+- `data/esg_social_v2.csv`
+- `data/esg_governance_v2.csv`
+- `data/alerts_v2.csv`
+- `data/audits_v2.csv`
+- `data/audit_capa_v2.csv`
+- `data/supplier_certifications_v2.csv`
+- `data/traceability_gap_actions_v2.csv`
+- `data/traceability_decisions_v2.csv`
+- `data/due_diligence_cases_v2.csv`
+
+Recommended backend shape:
+
+- `backend/app/services/continuous_monitoring_service.py`
+- `backend/app/routers/continuous_monitoring.py`
+- `backend/app/schemas/continuous_monitoring.py`
+
+Recommended endpoints:
+
+```text
+GET /continuous-monitoring/workspace
+POST /continuous-monitoring/run-rules
+PATCH /continuous-monitoring/alerts/{alert_id}
+POST /continuous-monitoring/decision
+```
+
+AI behavior:
+
+- Any monitoring summary or decision must use `backend/app/services/ai_gateway.py`.
+- Add a `continuous_monitoring` prompt definition to `backend/app/ai/prompt_registry.py`.
+- Use deterministic rule output first, then guarded LLM explanation/summary.
+- If AI provider fails, return deterministic fallback.
+
+Production Azure services to document for later:
+
+- Azure Blob Storage or Azure Data Lake Storage for raw feeds, evidence files, and historical snapshots.
+- Azure Functions for scheduled monitoring jobs, evidence expiry checks, rule evaluation, and alert generation.
+- Azure Event Grid for reacting to app events and file/status changes.
+- Azure Event Hubs if high-volume streaming external ESG events are added.
+- Azure Data Explorer for large-scale time-series observations and fast monitoring analytics.
+- Azure Monitor and Application Insights for app/job/API observability.
+- Azure AI Document Intelligence for extracting monitoring evidence from supplier PDFs.
+- Azure OpenAI or configured AI provider through the guarded `ai_gateway`.
+- Azure Maps for future geospatial/deforestation visualization.
+- Azure SQL Database or PostgreSQL when moving from CSV to production persistence.
+
+Implementation prompt for ChatGPT:
+
+```text
+You are working in the Ozone AI 4.0 supplier-risk-intelligence-react repository.
+
+Implement the Continuous ESG Monitoring module in the same style as the existing enhanced Onboarding, Auditing, Traceability, Due Diligence, and Advisor AI modules.
+
+Do not rebuild the old snapshot ESG dashboard. Build an operational Continuous Monitoring workspace.
+
+Current app context:
+- Frontend: React + Vite + TypeScript.
+- Backend: FastAPI.
+- Current persistence: CSV files in data/.
+- Current placeholder page: frontend/src/pages/EsgMonitoringPage.tsx.
+- LLM/AI calls must go only through backend/app/services/ai_gateway.py.
+- Add prompt policy through backend/app/ai/prompt_registry.py.
+- Use deterministic fallback if AI provider fails.
+
+Implement:
+1. CSV files:
+   - data/monitoring_observations_v2.csv
+   - data/monitoring_alerts_v2.csv
+   - data/monitoring_rules_v2.csv
+   - data/monitoring_actions_v2.csv
+   - data/supplier_evidence_refresh_v2.csv
+   - data/external_esg_signals_v2.csv
+
+2. Backend:
+   - backend/app/services/continuous_monitoring_service.py
+   - backend/app/routers/continuous_monitoring.py
+   - backend/app/schemas/continuous_monitoring.py
+   - Register router in backend/app/main.py.
+
+3. Endpoints:
+   - GET /continuous-monitoring/workspace
+   - POST /continuous-monitoring/run-rules
+   - PATCH /continuous-monitoring/alerts/{alert_id}
+   - POST /continuous-monitoring/decision
+
+4. Workspace response should include:
+   - monitoring KPIs
+   - signal feed
+   - supplier watchlist
+   - indicator trends
+   - alert rules
+   - monitoring actions
+   - monitoring decisions
+
+5. Frontend:
+   - Replace the placeholder in frontend/src/pages/EsgMonitoringPage.tsx.
+   - Build sections:
+     - Monitoring Overview
+     - Signal Feed
+     - Supplier Monitoring Watchlist
+     - Indicator Trends
+     - Alert Rules
+     - Action Routing
+     - Monitoring Decision
+   - Keep UI restrained, operational, and consistent with Traceability/Auditing.
+   - Do not create a marketing page.
+
+6. Rule logic:
+   - Generate alerts for indicator deterioration, high severity observations, certification expiry, stale evidence, overdue CAPA, open traceability gaps, and high-risk due diligence decisions.
+   - Route each alert to one action: Request Evidence, Start Revalidation, Create Audit/CAPA, Open Trace Gap, Run Due Diligence, Escalate Supplier, or Continue Monitoring.
+
+7. AI:
+   - Add continuous_monitoring prompt definition.
+   - Generate guarded monitoring summary/decision with allowed outcomes:
+     Stable, Watch, Evidence Required, Enhanced Monitoring, Escalate, Block / Suspend.
+   - If LLM fails, use deterministic fallback.
+
+8. Documentation:
+   - Update README.md.
+   - Update docs/Ozone_AI_4_Functional_Technical_Guide.md.
+
+Verify:
+- Backend imports.
+- Frontend npm run build.
+- No LLM call bypasses ai_gateway.
+```
 
 ## Executive Dashboard
 
@@ -971,7 +1184,20 @@ It is used when suppliers require deeper review based on:
 - Alert concern
 - Executive Dashboard watchlist status
 
-The current business direction is to evolve this into a Supplier ESG & Due Diligence Agent, with EUDR-first capability and continuous compliance intelligence.
+The current implementation now returns a structured investigation package:
+
+- Due diligence case ID
+- Supplier profile
+- Operational, ESG, and overall risk scores
+- Due diligence decision
+- Decision rationale
+- Investigation checklist
+- Risk drivers
+- Evidence gaps
+- Recommended actions
+- Connected audit, certification, traceability, and prior due diligence signals
+
+Generated cases and decisions are persisted to CSV so the demo can show that due diligence is becoming an operational case workflow, not only a text response.
 
 ## Supplier Advisor AI
 
@@ -983,7 +1209,15 @@ Endpoints:
 - `GET /api/v1/advisor/sessions/{session_id}`
 - `POST /api/v1/advisor/sessions/{session_id}/messages`
 
-The assistant is intended to answer supplier intelligence questions using app data and controlled AI behavior.
+The assistant is intended to answer supplier intelligence questions using app data and controlled AI behavior. It now builds Supplier 360 context from risk, audit status, certification health, traceability gaps, and due diligence case decisions where records exist.
+
+Advisor prompt shortcuts now support questions such as:
+
+- Supplier 360 summary for the highest-risk supplier.
+- Which suppliers should go to due diligence first and why.
+- Open audit, certification, and traceability blockers.
+- Recommended decision and next actions for risky suppliers.
+- Continuous monitoring investigation priorities for the future ESG/monitoring redesign.
 
 ## AI Governance and Review
 
@@ -1021,7 +1255,10 @@ Current document extraction use cases:
 
 - Supplier onboarding document extraction.
 - Certification evidence extraction.
+- Onboarding checklist evidence extraction.
+- Audit evidence extraction.
 - Auditing certification extraction.
+- Traceability evidence extraction for plot, polygon, chain-of-custody, shipment, and deforestation-free documents.
 
 ## Local Development
 
@@ -1094,8 +1331,15 @@ Onboarding decision:
 
 Traceability:
 
-- Onboarding now captures traceability requirements.
-- Traceability still needs deeper document linking, plot/polygon evidence handling, and chain-of-custody validation.
+- Traceability now has CSV-backed sites, lots, chain-of-custody events, GeoJSON polygons, evidence uploads, review status, gap actions, score history, EUDR readiness, and saved trace decisions.
+- It is suitable for an internal client demo of trace gap resolution, especially the BlueRiver missing polygon walkthrough.
+
+Due Diligence and Advisor AI:
+
+- Due Diligence now returns a structured case-style investigation with decision, rationale, checklist, risk drivers, evidence gaps, and actions.
+- Generated due diligence cases and decisions are persisted to CSV.
+- Due Diligence AI now uses the shared app AI gateway and prompt registry pattern instead of the removed standalone helper.
+- Supplier Advisor AI now uses Supplier 360 context across risk, audits, certifications, traceability gaps, and due diligence decisions.
 
 ## Recommended Next Enhancements
 
@@ -1104,9 +1348,9 @@ Highest priority:
 - Add supplier questionnaire / SAQ workflow.
 - Add reviewer assignment and decision history when moving from demo to production workflow.
 - Create persisted requirement/evidence tables instead of only serialized JSON in `suppliers_v2.csv`.
-- Connect onboarding traceability fields directly into the Traceability workspace.
 - Add Blob Storage for evidence documents.
 - Add database persistence after the application data model stabilizes.
+- Add production map services for full GIS interaction beyond the current embedded GeoJSON polygon renderer.
 
 Medium priority:
 
@@ -1122,9 +1366,11 @@ Medium priority:
 
 ## Summary
 
-The application is now a functional responsible sourcing and supplier intelligence platform prototype. It includes dashboards, analytics, simulation, onboarding, evidence extraction, traceability preparation, ESG monitoring, due diligence, advisor AI, and AI review governance.
+The application is now a functional responsible sourcing and supplier intelligence platform prototype. It includes dashboards, analytics, simulation, onboarding, evidence extraction, operational traceability, ESG monitoring, due diligence, advisor AI, and AI review governance.
 
-The most advanced current workflow is Onboarding:
+The three most advanced operational workflows are now Onboarding, Auditing, and Traceability.
+
+Onboarding workflow:
 
 1. Upload supplier PDF.
 2. Extract supplier, country, commodities, and certifications.
@@ -1137,3 +1383,37 @@ The most advanced current workflow is Onboarding:
 9. Generate AI-suggested ESG baseline scores.
 10. Review and submit supplier.
 11. Persist supplier, commodity mappings, certifications, evidence, ESG baseline, and traceability fields into CSV datasets.
+
+Auditing workflow:
+
+1. Load the audit queue from persisted audit, supplier, certification, evidence, and CAPA data.
+2. Review audit priority, supplier context, audit history, and evidence health.
+3. Upload audit evidence or certification evidence where needed.
+4. Create and update CAPA actions for audit findings.
+5. Generate an AI audit decision.
+6. Apply or override the decision.
+7. Close the audit only when decision, evidence, and CAPA closure guards allow it.
+
+Traceability workflow:
+
+1. Select a supplier and review the trace journey.
+2. Inspect supplier chain, mapped sites, GeoJSON polygons, lots, events, commodity risk, and certification support.
+3. Upload trace evidence to the correct site, lot, event, or gap action.
+4. Accept or clarify uploaded evidence.
+5. Close resolved trace gap actions.
+6. Generate the trace decision again and show score, coverage, EUDR readiness, and decision movement.
+
+Due Diligence workflow:
+
+1. Select a high-risk supplier.
+2. Run due diligence.
+3. Review the generated case ID, supplier profile, risk scores, and recommended decision.
+4. Review checklist status, risk drivers, evidence gaps, and recommended actions.
+5. Use the result as the escalation bridge from analytics/auditing/traceability into supplier action.
+
+Advisor AI workflow:
+
+1. Open Supplier Advisor AI or the floating advisor.
+2. Choose prompts based on the current lens or page.
+3. Ask for Supplier 360 summaries, due diligence priorities, audit blockers, traceability gaps, or action recommendations.
+4. Use the answer as a plain-English explanation layer over the structured application data.

@@ -40,7 +40,7 @@ def generate_ai_text(request: AiTextRequest) -> AiTextResponse:
     guardrail_result = enforce_prompt_guardrails(
         message=request.user_input or request.prompt,
         feature=request.feature,
-        required_context=request.feature in {"advisor", "auditing", "onboarding"},
+        required_context=request.feature in {"advisor", "auditing", "onboarding", "traceability", "due_diligence"},
         context=request.context,
     )
     if not guardrail_result.allowed:

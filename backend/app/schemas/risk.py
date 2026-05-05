@@ -54,13 +54,25 @@ class DueDiligenceRequest(BaseModel):
 
 
 class DueDiligenceResponse(BaseModel):
+    caseId: str | None = None
     supplier: str
+    supplierId: int | None = None
+    country: str | None = None
+    tier: str | None = None
+    status: str | None = None
     opRisk: str
     opRiskScore: float
     esgRisk: str
     esgRiskScore: float
     overall: str
     overallRiskScore: float
+    decision: str | None = None
+    decisionRationale: list[str] = []
+    investigationChecklist: list[dict] = []
+    riskDrivers: list[dict] = []
+    evidenceGaps: list[str] = []
+    recommendedActions: list[str] = []
+    connectedSignals: dict = {}
     issues: list[str]
     aiSummary: str
 

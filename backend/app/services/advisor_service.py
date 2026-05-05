@@ -10,7 +10,9 @@ import pandas as pd
 from ..core.exceptions import AppError
 from ..core.logging import get_logger
 from ..ai.guardrails import GuardrailViolation, SAFE_BLOCK_MESSAGE
+from ..ai.prompt_registry import get_prompt_policy_block
 from .ai_gateway import AiGatewayError
+from .ai_gateway import AiTextRequest, generate_ai_text
 from ..schemas.advisor import AdvisorLens, AdvisorMessageRequest, AdvisorSimulatorContext
 from .dataset_service import DatasetService
 from .risk_service import RiskService
@@ -107,28 +109,76 @@ class AdvisorService:
         deterministic_brief = specialized_handler(question, context)
 
         try:
-            try:
-                from backend.ai_agent import ask_supplier_ai
-            except ImportError:
-                from ai_agent import ask_supplier_ai
-
-            response = ask_supplier_ai(
-                question=question,
-                context=context,
-                lens=lens,
-                deterministic_brief=deterministic_brief,
+            response = generate_ai_text(
+                AiTextRequest(
+                    feature="advisor",
+                    prompt=self._build_advisor_prompt(question, context, lens, deterministic_brief),
+                    user_input=question,
+                    context=context,
+                )
             )
-            if response:
-                return str(response)
+            if response.text:
+                return response.text
         except GuardrailViolation:
             logger.warning("Advisor prompt blocked by AI guardrails")
             raise AppError(SAFE_BLOCK_MESSAGE, status_code=400)
         except AiGatewayError as exc:
-            logger.exception("Advisor AI provider failed, using deterministic fallback", exc_info=exc)
+            logger.warning("Advisor AI provider failed, using deterministic fallback: %s", exc)
         except Exception as exc:
-            logger.exception("Advisor AI generation failed, using deterministic fallback", exc_info=exc)
+            logger.warning("Advisor AI generation failed, using deterministic fallback: %s", exc)
 
         return deterministic_brief
+
+    def _build_advisor_prompt(
+        self,
+        question: str,
+        context: dict[str, Any],
+        lens: AdvisorLens,
+        deterministic_brief: str | None,
+    ) -> str:
+        lens_instructions = {
+            "general": "Answer like a supplier intelligence advisor who synthesizes risk, ESG, geography, audits, traceability, and sourcing posture.",
+            "executive": "Answer for leadership with concise risk posture explanations and implications.",
+            "analytics": "Answer like an analyst, focusing on drivers, distributions, comparisons, and evidence.",
+            "simulator": "Explain what changed in the scenario, why the deltas occurred, and which supplier groups were affected.",
+            "due_diligence": "Focus on follow-up actions, review priorities, supplier-level blockers, and due diligence decisions.",
+            "esg_monitoring": "Focus on future continuous monitoring, ESG pillar pressure, deteriorating indicators, and monitoring implications.",
+        }
+        return f"""
+You are Supplier Advisor AI inside a responsible sourcing and supplier intelligence application.
+
+{get_prompt_policy_block("advisor")}
+
+Active lens:
+{lens}
+
+Lens instruction:
+{lens_instructions.get(lens, lens_instructions["general"])}
+
+Grounding context:
+{self._to_json(context)}
+
+Deterministic brief:
+{deterministic_brief or "None provided."}
+
+User question:
+{question}
+
+Rules:
+- Answer only from the supplied grounding context.
+- Use the deterministic brief as your primary answer structure, then refine it into a more natural response.
+- If Supplier 360 context is present, use it to explain audit, certification, traceability, and due diligence blockers.
+- If simulator context is present, use it directly instead of speaking generically.
+- Mention specific suppliers, countries, commodities, or KPI deltas only when present in context.
+- Keep the reply concise, structured, and decision-useful.
+- Do not invent entities or metrics not present in the context.
+- If the question asks for unavailable detail, say what is available instead.
+"""
+
+    def _to_json(self, payload: Any) -> str:
+        import json
+
+        return json.dumps(payload, indent=2, default=str)
 
     def _build_advisor_context(
         self,
@@ -204,9 +254,63 @@ class AdvisorService:
                 "socialAvg": round(float(working["social_risk_score"].mean()), 2),
                 "governanceAvg": round(float(working["governance_risk_score"].mean()), 2),
             },
+            "supplier360": self._build_supplier_360_context(working),
             "simulator": simulator_context.model_dump() if simulator_context else None,
         }
         return context
+
+    def _build_supplier_360_context(self, risk_frame: pd.DataFrame) -> list[dict[str, Any]]:
+        settings = self.dataset_service.settings
+        audits = self.dataset_service.load_optional_csv(settings.audits_file, "audits")
+        certs = self.dataset_service.load_optional_csv(
+            settings.supplier_certifications_file,
+            "supplier_certifications",
+        )
+        trace_gaps = self.dataset_service.load_optional_csv(
+            settings.data_dir / "traceability_gap_actions_v2.csv",
+            "traceability_gap_actions",
+        )
+        due_diligence_cases = self.dataset_service.load_optional_csv(
+            settings.data_dir / "due_diligence_cases_v2.csv",
+            "due_diligence_cases",
+        )
+
+        top_frame = risk_frame.sort_values("overall_risk_score", ascending=False).head(8)
+        items: list[dict[str, Any]] = []
+        for _, row in top_frame.iterrows():
+            supplier_id = int(row.get("supplier_id"))
+            supplier_audits = audits[audits.get("supplier_id").eq(supplier_id)] if not audits.empty and "supplier_id" in audits.columns else pd.DataFrame()
+            supplier_certs = certs[certs.get("supplier_id").eq(supplier_id)] if not certs.empty and "supplier_id" in certs.columns else pd.DataFrame()
+            supplier_trace_gaps = trace_gaps[trace_gaps.get("supplier_id").eq(supplier_id)] if not trace_gaps.empty and "supplier_id" in trace_gaps.columns else pd.DataFrame()
+            supplier_dd = due_diligence_cases[due_diligence_cases.get("supplier_id").eq(supplier_id)] if not due_diligence_cases.empty and "supplier_id" in due_diligence_cases.columns else pd.DataFrame()
+
+            latest_audit = ""
+            if not supplier_audits.empty:
+                latest_audit = str(supplier_audits.sort_values("audit_date").tail(1).iloc[0].get("audit_status") or "")
+
+            cert_statuses = supplier_certs.get("status", pd.Series(dtype=str)).astype(str).str.lower() if not supplier_certs.empty else pd.Series(dtype=str)
+            trace_statuses = supplier_trace_gaps.get("status", pd.Series(dtype=str)).astype(str).str.lower() if not supplier_trace_gaps.empty else pd.Series(dtype=str)
+
+            latest_dd_decision = ""
+            if not supplier_dd.empty:
+                latest_dd_decision = str(supplier_dd.tail(1).iloc[0].get("decision") or "")
+
+            items.append({
+                "supplierId": supplier_id,
+                "supplierName": row.get("supplier_name"),
+                "country": row.get("country"),
+                "tier": row.get("tier"),
+                "status": row.get("status"),
+                "overallRisk": round(float(row.get("overall_risk_score", 0.0) or 0.0), 2),
+                "operationalRisk": round(float(row.get("operational_risk_score", 0.0) or 0.0), 2),
+                "esgRisk": round(float(row.get("esg_risk_score", 0.0) or 0.0), 2),
+                "latestAuditStatus": latest_audit or "No recent audit status",
+                "verifiedCertifications": int(cert_statuses.eq("verified").sum()) if not cert_statuses.empty else 0,
+                "pendingCertifications": int(cert_statuses.eq("pending").sum()) if not cert_statuses.empty else 0,
+                "openTraceGaps": int(trace_statuses.ne("closed").sum()) if not trace_statuses.empty else 0,
+                "latestDueDiligenceDecision": latest_dd_decision or "No due diligence case",
+            })
+        return items
 
     def _serialize_suppliers(
         self,
@@ -335,6 +439,11 @@ class AdvisorService:
             lines.append(
                 f"- {top_commodity['commodity']} is the most concentrated commodity exposure with {top_commodity['supplierCount']} suppliers mapped to it."
             )
+        supplier_360 = self._top_item(context.get("supplier360"))
+        if supplier_360:
+            lines.append(
+                f"- Supplier 360 priority: {supplier_360['supplierName']} has {supplier_360['openTraceGaps']} open trace gaps, {supplier_360['pendingCertifications']} pending certifications, and latest due diligence decision '{supplier_360['latestDueDiligenceDecision']}'."
+            )
         lines.append(f"- The current question to answer is: {question}")
         return "\n".join(lines)
 
@@ -399,13 +508,14 @@ class AdvisorService:
 
     def _recommend_due_diligence_targets(self, question: str, context: dict[str, Any]) -> str:
         top_suppliers = context.get("topRiskSuppliers", [])[:3]
+        supplier_360 = context.get("supplier360", [])[:3]
         lines = [
             "Due Diligence Priorities",
             "- The strongest candidates for due diligence are the suppliers with the highest current overall risk and strongest operational or ESG pressure.",
         ]
-        for item in top_suppliers:
+        for item in supplier_360 or top_suppliers:
             lines.append(
-                f"- {item['supplierName']} in {item['country']} should be prioritized at {item['overallRisk']:.1f} overall risk with operational risk {item['operationalRisk']:.1f} and ESG risk {item['esgRisk']:.1f}."
+                f"- {item['supplierName']} in {item['country']} should be prioritized at {item['overallRisk']:.1f} overall risk, audit status '{item.get('latestAuditStatus', 'Unknown')}', {item.get('openTraceGaps', 0)} open trace gaps, and due diligence decision '{item.get('latestDueDiligenceDecision', 'No case')}'."
             )
         lines.append(f"- Due diligence question in focus: {question}")
         return "\n".join(lines)

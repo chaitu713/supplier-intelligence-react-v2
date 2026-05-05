@@ -1,7 +1,13 @@
+from datetime import date
+import json
+
 import pandas as pd
 
+from ..ai.guardrails import GuardrailViolation
+from ..ai.prompt_registry import get_prompt_policy_block
 from ..core.exceptions import AppError
 from ..core.logging import get_logger
+from .ai_gateway import AiGatewayError, AiTextRequest, generate_ai_text
 from .dataset_service import DatasetService
 
 logger = get_logger(__name__)
@@ -102,8 +108,6 @@ class RiskService:
         ]
 
     def run_due_diligence(self, supplier_id: int) -> dict:
-        suppliers = self.dataset_service.load_suppliers_frame()
-        esg = self.dataset_service.load_esg_frame()
         risk_frame = self._build_supplier_risk_frame()
 
         supplier_rows = risk_frame[risk_frame["supplier_id"] == supplier_id]
@@ -112,29 +116,363 @@ class RiskService:
 
         supplier_row = supplier_rows.iloc[0]
         supplier_name = str(supplier_row["supplier_name"])
+        connected_signals = self._build_due_diligence_signals(supplier_id)
+        decision = self._recommend_due_diligence_decision(supplier_row, connected_signals)
+        risk_drivers = self._build_due_diligence_risk_drivers(supplier_row, connected_signals)
+        evidence_gaps = self._build_due_diligence_evidence_gaps(supplier_row, connected_signals)
+        recommended_actions = self._build_due_diligence_actions(decision, evidence_gaps, connected_signals)
+        checklist = self._build_due_diligence_checklist(supplier_row, connected_signals, evidence_gaps)
+        result = self._generate_due_diligence_result(
+            supplier_name=supplier_name,
+            supplier_row=supplier_row,
+            decision=decision,
+            risk_drivers=risk_drivers,
+            evidence_gaps=evidence_gaps,
+            recommended_actions=recommended_actions,
+            checklist=checklist,
+            connected_signals=connected_signals,
+        )
 
-        try:
-            try:
-                from backend.due_diligence_agent import run_due_diligence
-            except ImportError:
-                from due_diligence_agent import run_due_diligence
-
-            result = run_due_diligence(supplier_name, risk_frame, esg, suppliers)
-        except Exception as exc:
-            logger.exception("Due diligence evaluation failed", exc_info=exc)
-            raise AppError("Unable to run due diligence analysis", status_code=500) from exc
+        case_id = self._persist_due_diligence_case(
+            supplier_id=supplier_id,
+            supplier_name=supplier_name,
+            overall_score=float(supplier_row["overall_risk_score"]),
+            decision=decision["decision"],
+            rationale=decision["rationale"],
+            recommended_actions=recommended_actions,
+        )
 
         return {
+            "caseId": case_id,
             "supplier": result["supplier"],
+            "supplierId": supplier_id,
+            "country": supplier_row.get("country"),
+            "tier": supplier_row.get("tier"),
+            "status": supplier_row.get("status"),
             "opRisk": result["op_risk"],
             "opRiskScore": round(float(supplier_row["operational_risk_score"]), 2),
             "esgRisk": result["esg_risk"],
             "esgRiskScore": round(float(supplier_row["esg_risk_score"]), 2),
             "overall": result["overall"],
             "overallRiskScore": round(float(supplier_row["overall_risk_score"]), 2),
+            "decision": decision["decision"],
+            "decisionRationale": decision["rationale"],
+            "investigationChecklist": checklist,
+            "riskDrivers": risk_drivers,
+            "evidenceGaps": evidence_gaps,
+            "recommendedActions": recommended_actions,
+            "connectedSignals": connected_signals,
             "issues": result["issues"],
             "aiSummary": result["ai_summary"],
         }
+
+    def _generate_due_diligence_result(
+        self,
+        supplier_name: str,
+        supplier_row: pd.Series,
+        decision: dict,
+        risk_drivers: list[dict],
+        evidence_gaps: list[str],
+        recommended_actions: list[str],
+        checklist: list[dict],
+        connected_signals: dict,
+    ) -> dict:
+        fallback = self._build_due_diligence_fallback_result(
+            supplier_name,
+            supplier_row,
+            evidence_gaps,
+            recommended_actions,
+        )
+        context = {
+            "supplier": {
+                "supplierId": int(supplier_row.get("supplier_id")),
+                "supplierName": supplier_name,
+                "country": supplier_row.get("country"),
+                "tier": supplier_row.get("tier"),
+                "status": supplier_row.get("status"),
+            },
+            "scores": {
+                "operationalRisk": round(float(supplier_row.get("operational_risk_score") or 0), 2),
+                "esgRisk": round(float(supplier_row.get("esg_risk_score") or 0), 2),
+                "overallRisk": round(float(supplier_row.get("overall_risk_score") or 0), 2),
+            },
+            "decision": decision,
+            "riskDrivers": risk_drivers,
+            "evidenceGaps": evidence_gaps,
+            "recommendedActions": recommended_actions,
+            "investigationChecklist": checklist,
+            "connectedSignals": connected_signals,
+        }
+        prompt = f"""
+You are an AI-assisted supplier due diligence reviewer.
+
+{get_prompt_policy_block("due_diligence")}
+
+Write a concise reviewer-ready due diligence summary in plain English.
+
+Required structure:
+- Supplier posture
+- Key risk drivers
+- Evidence or review gaps
+- Recommended next actions
+- Human reviewer note
+
+Grounding context:
+{json.dumps(context, default=str, indent=2)}
+"""
+        try:
+            response = generate_ai_text(
+                AiTextRequest(
+                    feature="due_diligence",
+                    prompt=prompt,
+                    user_input=f"due diligence summary for supplier {supplier_row.get('supplier_id')}",
+                    context=context,
+                )
+            )
+            fallback["ai_summary"] = response.text.strip() or fallback["ai_summary"]
+        except GuardrailViolation:
+            raise
+        except AiGatewayError as exc:
+            logger.warning("Due diligence AI provider failed; using deterministic fallback: %s", exc)
+        except Exception as exc:
+            logger.warning("Due diligence AI generation failed; using deterministic fallback: %s", exc)
+        return fallback
+
+    def _build_due_diligence_fallback_result(
+        self,
+        supplier_name: str,
+        supplier_row: pd.Series,
+        evidence_gaps: list[str],
+        recommended_actions: list[str],
+    ) -> dict:
+        overall = str(supplier_row.get("overall_risk_level") or "Medium")
+        operational = str(supplier_row.get("operational_risk_level") or "Medium")
+        esg = str(supplier_row.get("esg_risk_level") or "Medium")
+        issues = [
+            f"Overall risk is {overall} with score {float(supplier_row.get('overall_risk_score') or 0):.1f}.",
+            f"Operational risk is {operational}; ESG risk is {esg}.",
+            *evidence_gaps[:3],
+        ]
+        summary = (
+            f"{supplier_name} requires structured due diligence review. "
+            f"The current risk frame shows {overall.lower()} overall risk, "
+            f"{operational.lower()} operational risk, and {esg.lower()} ESG risk. "
+            f"Recommended next action: {recommended_actions[0] if recommended_actions else 'Record reviewer decision.'}"
+        )
+        return {
+            "supplier": supplier_name,
+            "op_risk": operational,
+            "esg_risk": esg,
+            "overall": overall,
+            "issues": issues,
+            "ai_summary": summary,
+        }
+
+    def _build_due_diligence_signals(self, supplier_id: int) -> dict:
+        settings = self.dataset_service.settings
+        supplier_certs = self.dataset_service.load_optional_csv(
+            settings.supplier_certifications_file,
+            "supplier_certifications",
+        )
+        supplier_commodity_map = self.dataset_service.load_optional_csv(
+            settings.supplier_commodity_map_file,
+            "supplier_commodity_map",
+        )
+        commodities = self.dataset_service.load_optional_csv(settings.commodities_file, "commodities")
+        audits = self.dataset_service.load_optional_csv(settings.audits_file, "audits")
+        audit_capa = self.dataset_service.load_optional_csv(settings.data_dir / "audit_capa_v2.csv", "audit_capa")
+        trace_gaps = self.dataset_service.load_optional_csv(
+            settings.data_dir / "traceability_gap_actions_v2.csv",
+            "traceability_gap_actions",
+        )
+        trace_decisions = self.dataset_service.load_optional_csv(
+            settings.data_dir / "traceability_decisions_v2.csv",
+            "traceability_decisions",
+        )
+
+        cert_rows = supplier_certs[supplier_certs.get("supplier_id").eq(supplier_id)] if not supplier_certs.empty and "supplier_id" in supplier_certs.columns else pd.DataFrame()
+        expired_cert_count = 0
+        pending_cert_count = 0
+        verified_cert_count = 0
+        if not cert_rows.empty:
+            statuses = cert_rows.get("status", pd.Series(dtype=str)).astype(str).str.lower()
+            verified_cert_count = int(statuses.eq("verified").sum())
+            pending_cert_count = int(statuses.eq("pending").sum())
+            expiries = pd.to_datetime(cert_rows.get("expiry_date"), errors="coerce")
+            expired_cert_count = int(expiries.lt(RISK_REFERENCE_DATE).sum())
+
+        commodity_rows = pd.DataFrame()
+        if (
+            not supplier_commodity_map.empty
+            and not commodities.empty
+            and "supplier_id" in supplier_commodity_map.columns
+            and "commodity_id" in supplier_commodity_map.columns
+        ):
+            commodity_rows = supplier_commodity_map[supplier_commodity_map["supplier_id"].eq(supplier_id)].merge(
+                commodities,
+                on="commodity_id",
+                how="left",
+            )
+        high_risk_commodities = (
+            commodity_rows[commodity_rows.get("risk_level", pd.Series(dtype=str)).astype(str).eq("High")]["commodity_name"].dropna().astype(str).tolist()
+            if not commodity_rows.empty
+            else []
+        )
+
+        audit_rows = audits[audits.get("supplier_id").eq(supplier_id)] if not audits.empty and "supplier_id" in audits.columns else pd.DataFrame()
+        latest_audit_status = ""
+        open_audit_count = 0
+        if not audit_rows.empty:
+            latest = audit_rows.sort_values("audit_date").tail(1).iloc[0]
+            latest_audit_status = str(latest.get("audit_status") or latest.get("audit_decision") or "")
+            open_audit_count = int(audit_rows.get("audit_status", pd.Series(dtype=str)).astype(str).str.contains("open|review|required|pending", case=False, regex=True).sum())
+
+        capa_rows = audit_capa[audit_capa.get("supplier_id").eq(supplier_id)] if not audit_capa.empty and "supplier_id" in audit_capa.columns else pd.DataFrame()
+        open_capa_count = 0
+        if not capa_rows.empty:
+            capa_statuses = capa_rows.get("status", pd.Series(dtype=str)).astype(str).str.lower()
+            open_capa_count = int(capa_statuses.ne("closed").sum())
+
+        trace_gap_rows = trace_gaps[trace_gaps.get("supplier_id").eq(supplier_id)] if not trace_gaps.empty and "supplier_id" in trace_gaps.columns else pd.DataFrame()
+        open_trace_gap_count = 0
+        trace_gap_types: list[str] = []
+        if not trace_gap_rows.empty:
+            statuses = trace_gap_rows.get("status", pd.Series(dtype=str)).astype(str).str.lower()
+            open_trace_gap_count = int(statuses.ne("closed").sum())
+            trace_gap_types = trace_gap_rows[statuses.ne("closed")].get("gap_type", pd.Series(dtype=str)).dropna().astype(str).tolist()
+
+        latest_trace_decision = ""
+        if not trace_decisions.empty and "supplier_id" in trace_decisions.columns:
+            decision_rows = trace_decisions[trace_decisions["supplier_id"].eq(supplier_id)]
+            if not decision_rows.empty:
+                latest_trace_decision = str(decision_rows.tail(1).iloc[0].get("decision") or "")
+
+        return {
+            "verifiedCertificationCount": verified_cert_count,
+            "expiredCertificationCount": expired_cert_count,
+            "pendingCertificationCount": pending_cert_count,
+            "highRiskCommodities": high_risk_commodities,
+            "latestAuditStatus": latest_audit_status,
+            "openAuditCount": open_audit_count,
+            "openCapaCount": open_capa_count,
+            "openTraceGapCount": open_trace_gap_count,
+            "traceGapTypes": trace_gap_types,
+            "latestTraceDecision": latest_trace_decision,
+        }
+
+    def _recommend_due_diligence_decision(self, supplier_row: pd.Series, signals: dict) -> dict:
+        score = float(supplier_row.get("overall_risk_score") or 0)
+        rationale: list[str] = []
+        if score >= 75:
+            decision = "Block / Suspend"
+            rationale.append("Overall risk score is in the severe range.")
+        elif score >= 65 or signals.get("openCapaCount", 0) > 0 or signals.get("openTraceGapCount", 0) > 1:
+            decision = "Escalate"
+            rationale.append("Supplier has high risk or unresolved operational trace/audit blockers.")
+        elif score >= 55 or signals.get("expiredCertificationCount", 0) > 0 or signals.get("openTraceGapCount", 0) > 0:
+            decision = "Enhanced Monitoring"
+            rationale.append("Supplier needs closer monitoring before clean clearance.")
+        elif signals.get("pendingCertificationCount", 0) > 0:
+            decision = "Clear with Conditions"
+            rationale.append("Supplier can proceed only with pending evidence follow-up.")
+        else:
+            decision = "Clear"
+            rationale.append("No major due diligence blocker is currently detected.")
+
+        if signals.get("highRiskCommodities"):
+            rationale.append("Supplier is linked to high-risk commodities.")
+        if signals.get("openCapaCount", 0) > 0:
+            rationale.append("Open CAPA actions remain unresolved.")
+        if signals.get("openTraceGapCount", 0) > 0:
+            rationale.append("Open traceability gap actions remain unresolved.")
+        return {"decision": decision, "rationale": rationale}
+
+    def _build_due_diligence_risk_drivers(self, supplier_row: pd.Series, signals: dict) -> list[dict]:
+        return [
+            {"label": "Operational risk", "value": round(float(supplier_row.get("operational_risk_score") or 0), 2), "status": supplier_row.get("operational_risk_level")},
+            {"label": "ESG risk", "value": round(float(supplier_row.get("esg_risk_score") or 0), 2), "status": supplier_row.get("esg_risk_level")},
+            {"label": "High-risk commodities", "value": len(signals.get("highRiskCommodities", [])), "status": ", ".join(signals.get("highRiskCommodities", [])) or "None"},
+            {"label": "Open CAPA", "value": signals.get("openCapaCount", 0), "status": "Requires action" if signals.get("openCapaCount", 0) else "None"},
+            {"label": "Open trace gaps", "value": signals.get("openTraceGapCount", 0), "status": "Requires action" if signals.get("openTraceGapCount", 0) else "None"},
+        ]
+
+    def _build_due_diligence_evidence_gaps(self, supplier_row: pd.Series, signals: dict) -> list[str]:
+        gaps: list[str] = []
+        if signals.get("expiredCertificationCount", 0) > 0:
+            gaps.append("Expired certification evidence needs refresh.")
+        if signals.get("pendingCertificationCount", 0) > 0:
+            gaps.append("Pending certification evidence needs reviewer confirmation.")
+        for gap_type in signals.get("traceGapTypes", []):
+            gaps.append(f"Traceability gap open: {gap_type}.")
+        if str(supplier_row.get("evidence_status") or "").lower() in {"missing evidence", "baseline only", "needs review"}:
+            gaps.append(f"Supplier evidence status is {supplier_row.get('evidence_status')}.")
+        return gaps or ["No major evidence gaps detected from current datasets."]
+
+    def _build_due_diligence_actions(self, decision: dict, gaps: list[str], signals: dict) -> list[str]:
+        actions = ["Record due diligence decision and reviewer notes."]
+        if decision["decision"] in {"Escalate", "Block / Suspend"}:
+            actions.append("Escalate supplier to compliance leadership before new sourcing approval.")
+        if signals.get("openCapaCount", 0) > 0:
+            actions.append("Resolve open audit CAPA actions before clean clearance.")
+        if signals.get("openTraceGapCount", 0) > 0:
+            actions.append("Close open traceability gaps after accepted evidence review.")
+        if any("certification" in gap.lower() for gap in gaps):
+            actions.append("Request refreshed certification evidence from supplier.")
+        if len(actions) == 1:
+            actions.append("Keep supplier in normal monitoring cadence.")
+        return actions
+
+    def _build_due_diligence_checklist(self, supplier_row: pd.Series, signals: dict, gaps: list[str]) -> list[dict]:
+        return [
+            {"label": "Supplier identity reviewed", "status": "Complete", "detail": f"{supplier_row.get('supplier_name')} in {supplier_row.get('country')}"},
+            {"label": "Country and commodity risk reviewed", "status": "Complete", "detail": ", ".join(signals.get("highRiskCommodities", [])) or "No high-risk commodities detected"},
+            {"label": "Certification health reviewed", "status": "Needs Review" if signals.get("expiredCertificationCount", 0) or signals.get("pendingCertificationCount", 0) else "Complete", "detail": f"{signals.get('verifiedCertificationCount', 0)} verified, {signals.get('expiredCertificationCount', 0)} expired, {signals.get('pendingCertificationCount', 0)} pending"},
+            {"label": "Audit and CAPA reviewed", "status": "Needs Review" if signals.get("openCapaCount", 0) else "Complete", "detail": signals.get("latestAuditStatus") or "No blocking audit status"},
+            {"label": "Traceability reviewed", "status": "Needs Review" if signals.get("openTraceGapCount", 0) else "Complete", "detail": signals.get("latestTraceDecision") or "No saved trace decision"},
+            {"label": "Evidence gaps reviewed", "status": "Needs Review" if gaps and not gaps[0].startswith("No major") else "Complete", "detail": f"{len(gaps)} evidence finding(s)"},
+        ]
+
+    def _persist_due_diligence_case(
+        self,
+        supplier_id: int,
+        supplier_name: str,
+        overall_score: float,
+        decision: str,
+        rationale: list[str],
+        recommended_actions: list[str],
+    ) -> str:
+        settings = self.dataset_service.settings
+        today = date.today().isoformat()
+        cases_file = settings.data_dir / "due_diligence_cases_v2.csv"
+        decisions_file = settings.data_dir / "due_diligence_decisions_v2.csv"
+        cases = self.dataset_service.load_optional_csv(cases_file, "due_diligence_cases")
+        next_id = len(cases) + 1 if not cases.empty else 1
+        case_id = f"DD-{supplier_id}-{next_id:03d}"
+        case_row = pd.DataFrame([{
+            "case_id": case_id,
+            "supplier_id": supplier_id,
+            "supplier_name": supplier_name,
+            "case_date": today,
+            "overall_risk_score": round(overall_score, 2),
+            "decision": decision,
+            "status": "Generated",
+            "summary": "Due diligence case generated from risk, audit, certification, and traceability context.",
+        }])
+        decision_row = pd.DataFrame([{
+            "decision_id": f"DDD-{supplier_id}-{next_id:03d}",
+            "case_id": case_id,
+            "supplier_id": supplier_id,
+            "decision_date": today,
+            "decision": decision,
+            "rationale": " | ".join(rationale),
+            "recommended_actions": " | ".join(recommended_actions),
+        }])
+        updated_cases = case_row if cases.empty else pd.concat([cases, case_row], ignore_index=True)
+        updated_cases.to_csv(cases_file, index=False)
+        decisions = self.dataset_service.load_optional_csv(decisions_file, "due_diligence_decisions")
+        updated_decisions = decision_row if decisions.empty else pd.concat([decisions, decision_row], ignore_index=True)
+        updated_decisions.to_csv(decisions_file, index=False)
+        return case_id
 
     def _build_supplier_risk_frame(self) -> pd.DataFrame:
         suppliers = self.dataset_service.load_suppliers_frame()

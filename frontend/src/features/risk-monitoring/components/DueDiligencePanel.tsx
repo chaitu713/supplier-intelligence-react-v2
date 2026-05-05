@@ -71,15 +71,15 @@ export function DueDiligencePanel({
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-green-100">
-                  Supplier Reviewed
+                  Due Diligence Case {result.caseId ? `| ${result.caseId}` : ""}
                 </p>
                 <h4 className="mt-2 text-2xl font-semibold">{result.supplier}</h4>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-green-100">
-                  Risk findings are organized below into headline scores, critical issues, and the AI-generated recommendation.
+                  {result.country || "Unknown country"} | {result.tier || "No tier"} | {result.status || "No status"}
                 </p>
               </div>
               <div className="rounded-2xl bg-white/15 px-4 py-3 text-sm text-white ring-1 ring-white/15">
-                Overall assessment: <span className="font-semibold">{result.overall}</span>{" "}
+                Decision: <span className="font-semibold">{result.decision || result.overall}</span>{" "}
                 <span className="text-green-100">({result.overallRiskScore.toFixed(1)})</span>
               </div>
             </div>
@@ -92,12 +92,75 @@ export function DueDiligencePanel({
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+            <div className="surface-card p-5 shadow-sm">
+              <h5 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Due Diligence Decision
+              </h5>
+              <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-4">
+                <p className="text-xl font-semibold text-emerald-950">{result.decision || "Review Required"}</p>
+                <ul className="mt-3 space-y-2 text-sm leading-6 text-emerald-900">
+                  {(result.decisionRationale || []).map((item) => <li key={item}>{item}</li>)}
+                </ul>
+              </div>
+            </div>
+
             <div className="surface-soft p-5">
               <h5 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Key Issues
+                Recommended Actions
+              </h5>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {(result.recommendedActions || []).map((action) => (
+                  <div key={action} className="surface-subtle px-4 py-4 text-sm leading-6 text-[var(--text-secondary)] shadow-sm">
+                    {action}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+            <div className="surface-card p-5 shadow-sm">
+              <h5 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Investigation Checklist
+              </h5>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {(result.investigationChecklist || []).map((item) => (
+                  <div key={item.label} className="rounded-2xl border border-[var(--border)] bg-white px-4 py-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="font-semibold text-[var(--text)]">{item.label}</p>
+                      <span className={item.status === "Complete" ? "tag tag-success" : "tag tag-warning"}>{item.status}</span>
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{item.detail}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="surface-card p-5 shadow-sm">
+              <h5 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Risk Drivers
+              </h5>
+              <div className="mt-4 space-y-3">
+                {(result.riskDrivers || []).map((driver) => (
+                  <div key={driver.label} className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-white px-4 py-3">
+                    <div>
+                      <p className="font-semibold text-[var(--text)]">{driver.label}</p>
+                      <p className="text-xs text-[var(--muted)]">{driver.status}</p>
+                    </div>
+                    <span className="text-lg font-semibold text-[var(--primary)]">{driver.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+            <div className="surface-soft p-5">
+              <h5 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Evidence Gaps
               </h5>
               <ul className="mt-4 space-y-3">
-                {result.issues.map((issue) => (
+                {(result.evidenceGaps?.length ? result.evidenceGaps : result.issues).map((issue) => (
                   <li
                     key={issue}
                   className="surface-subtle px-4 py-4 text-sm leading-6 text-[var(--text-secondary)] shadow-sm"

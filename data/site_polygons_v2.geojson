@@ -1,0 +1,77 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "site_id": "SITE-2001-01",
+        "polygon_id": "POLY-BR-KAL-041",
+        "evidence_status": "Missing"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[113.3784, -1.6855], [113.3872, -1.6842], [113.3893, -1.6784], [113.3812, -1.6756], [113.3766, -1.6808], [113.3784, -1.6855]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "site_id": "SITE-2001-02",
+        "polygon_id": "POLY-BR-SBY-HUB",
+        "evidence_status": "Not Required"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[112.7488, -7.2604], [112.7562, -7.2601], [112.7571, -7.2545], [112.7504, -7.2526], [112.7472, -7.2569], [112.7488, -7.2604]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "site_id": "SITE-2003-01",
+        "polygon_id": "POLY-TS-PARA-014",
+        "evidence_status": "Missing"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-52.448, -3.124], [-52.435, -3.122], [-52.433, -3.114], [-52.444, -3.109], [-52.453, -3.117], [-52.448, -3.124]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "site_id": "SITE-2004-01",
+        "polygon_id": "POLY-CG-GJ-022",
+        "evidence_status": "Not Required"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[71.188, 22.255], [71.197, 22.256], [71.198, 22.263], [71.190, 22.266], [71.184, 22.260], [71.188, 22.255]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "site_id": "SITE-2036-01",
+        "polygon_id": "POLY-SL-IL-WH",
+        "evidence_status": "Not Required"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-89.404, 40.629], [-89.392, 40.630], [-89.390, 40.637], [-89.401, 40.640], [-89.407, 40.634], [-89.404, 40.629]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "site_id": "SITE-2047-01",
+        "polygon_id": "POLY-AP-SUM-CC",
+        "evidence_status": "Missing"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[101.337, -0.595], [101.349, -0.594], [101.353, -0.586], [101.343, -0.580], [101.334, -0.586], [101.337, -0.595]]]
+      }
+    }
+  ]
+}

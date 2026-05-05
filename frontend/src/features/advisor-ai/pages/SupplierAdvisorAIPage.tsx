@@ -102,7 +102,8 @@ export function SupplierAdvisorAIPage() {
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-6 text-[var(--text-secondary)] sm:text-base">
             Ask with the right lens so the advisor can explain executive posture, analytics findings,
-            simulator outcomes, or ESG monitoring signals using the live supplier risk frame.
+            simulator outcomes, due diligence priorities, audit blockers, certification gaps, and
+            traceability signals using the live Supplier 360 risk frame.
           </p>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -163,6 +164,14 @@ export function SupplierAdvisorAIPage() {
                 </p>
               </div>
             ) : null}
+
+            <div className="surface-soft mt-4 p-4">
+              <p className="muted-eyebrow">Supplier 360 Context</p>
+              <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                The advisor can now ground answers in supplier risk, audit status, certification
+                health, traceability gaps, and due diligence case decisions where those records exist.
+              </p>
+            </div>
           </aside>
 
           <div className="space-y-5">
@@ -190,7 +199,8 @@ export function SupplierAdvisorAIPage() {
                     Supplier Advisor AI Ready
                   </h3>
                   <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[var(--muted)]">
-                    Ask anything about supplier risk, ESG performance, or operational insights.
+                    Ask anything about supplier risk, audit blockers, traceability gaps, ESG pressure,
+                    due diligence decisions, or operational insights.
                   </p>
                 </div>
               ) : (
@@ -246,12 +256,12 @@ const lensLabelMap: Record<AdvisorLens, string> = {
 };
 
 const lensDescriptionMap: Record<AdvisorLens, string> = {
-  general: "Best for broad supplier comparisons, geographic concentration risk, ESG concerns, or low-risk sourcing alternatives.",
+  general: "Best for broad Supplier 360 questions across risk, audits, certifications, traceability gaps, ESG concerns, and sourcing priorities.",
   executive: "Best for concise leadership-ready summaries of network posture, high-risk exposure, and immediate priorities.",
   analytics: "Best for asking why risk is clustered, which drivers matter most, and how countries or commodities compare.",
   simulator: "Best for explaining what changed in a scenario, which suppliers were affected most, and why the deltas moved.",
-  due_diligence: "Best for determining which suppliers deserve follow-up review and what their top risk drivers are.",
-  esg_monitoring: "Best for ESG pillar pressure, deterioration patterns, and suppliers that may need ESG follow-up.",
+  due_diligence: "Best for determining which suppliers deserve follow-up review, what their blockers are, and what decision/actions make sense.",
+  esg_monitoring: "Best for future continuous monitoring questions around ESG pillar pressure, deterioration patterns, and suppliers that may need follow-up.",
 };
 
 interface AdvisorLocationState {

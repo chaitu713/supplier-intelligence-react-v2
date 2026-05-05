@@ -1,0 +1,5 @@
+signal_id,supplier_id,signal_date,source_type,source_name,pillar,signal_title,signal_summary,severity,confidence
+EXT-2001-001,2001,2026-05-05,Regional Risk Feed,Indonesia Labor Watch,Social,Worker complaint signal increased,Regional labor complaint signals increased near supplier sourcing area,High,0.72
+EXT-2003-001,2003,2026-05-05,Deforestation Feed,Brazil Land Monitor,Environmental,Plot evidence missing in sensitive sourcing region,External land-use watch flags sourcing area for enhanced evidence review,Critical,0.79
+EXT-2004-001,2004,2026-05-05,Climate Feed,India Emissions Watch,Environmental,Carbon pressure elevated,Regional emissions intensity and supplier carbon indicator both increased,Critical,0.75
+EXT-2007-001,2007,2026-05-05,Deforestation Feed,Indonesia Forest Monitor,Environmental,Deforestation pressure increased,External signal indicates elevated deforestation pressure in supplier region,High,0.76

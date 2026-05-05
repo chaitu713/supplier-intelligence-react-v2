@@ -2,9 +2,9 @@ import type { AdvisorLens } from "../../../api/advisor";
 
 const suggestionsByLens: Record<AdvisorLens, string[]> = {
   general: [
-    "Why are high-risk suppliers increasing?",
-    "Which suppliers should go to due diligence first?",
-    "Which countries are driving the most supplier risk?",
+    "Give me a Supplier 360 summary for the highest-risk supplier.",
+    "Which suppliers should go to due diligence first and why?",
+    "What actions should the sourcing team prioritize this week?",
   ],
   executive: [
     "Summarize the current network risk posture.",
@@ -23,13 +23,13 @@ const suggestionsByLens: Record<AdvisorLens, string[]> = {
   ],
   due_diligence: [
     "Which suppliers should move to due diligence first?",
-    "Which supplier needs the strongest follow-up action?",
-    "What is the top risk driver for the highest-risk supplier?",
+    "Summarize open audit, certification, and traceability blockers.",
+    "What decision and next actions would you recommend for the riskiest supplier?",
   ],
   esg_monitoring: [
     "Which suppliers are driving ESG pressure?",
     "Which ESG pillar looks weakest right now?",
-    "What should the ESG monitoring team investigate first?",
+    "What should the future continuous monitoring team investigate first?",
   ],
 };
 

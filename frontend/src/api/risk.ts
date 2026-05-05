@@ -41,13 +41,25 @@ export interface RiskSupplierItem {
 }
 
 export interface DueDiligenceResponse {
+  caseId: string | null;
   supplier: string;
+  supplierId: number | null;
+  country: string | null;
+  tier: string | null;
+  status: string | null;
   opRisk: string;
   opRiskScore: number;
   esgRisk: string;
   esgRiskScore: number;
   overall: string;
   overallRiskScore: number;
+  decision: string | null;
+  decisionRationale: string[];
+  investigationChecklist: Array<{ label: string; status: string; detail: string }>;
+  riskDrivers: Array<{ label: string; value: number; status: string }>;
+  evidenceGaps: string[];
+  recommendedActions: string[];
+  connectedSignals: Record<string, unknown>;
   issues: string[];
   aiSummary: string;
 }

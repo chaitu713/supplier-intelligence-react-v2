@@ -66,6 +66,18 @@ PROMPT_REGISTRY: dict[str, PromptDefinition] = {
             "Make clear that the result supports human due diligence review.",
         ),
     ),
+    "traceability": PromptDefinition(
+        name="traceability_decision",
+        version="2026-05-05",
+        owner="supplier-intelligence",
+        expected_format="strict_json",
+        rules=COMMON_SUPPLIER_AI_RULES
+        + (
+            "Trace decision must be one of the allowed trace decision values.",
+            "Never mark a trace complete when open high-severity evidence gaps remain.",
+            "Keep EUDR readiness recommendations advisory and suitable for human review.",
+        ),
+    ),
 }
 
 
