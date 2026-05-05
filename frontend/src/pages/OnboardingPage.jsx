@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 
 const TABS = [
-  { id: "document", step: "01", label: "Document Upload" },
-  { id: "mapping", step: "02", label: "Commodities & Certifications" },
-  { id: "supplier", step: "03", label: "Supplier Details" },
-  { id: "review", step: "04", label: "Review & Submit" },
-  { id: "revalidation", step: "05", label: "Active Supplier Revalidation" },
+  { id: "document", label: "Document Upload" },
+  { id: "mapping", label: "Commodities & Certifications" },
+  { id: "supplier", label: "Supplier Details" },
+  { id: "review", label: "Review & Submit" },
+  { id: "revalidation", label: "Active Supplier Revalidation" },
 ];
 
 const COMMODITY_OPTIONS = [
@@ -1223,13 +1223,19 @@ export default function OnboardingPage({ embedded = false } = {}) {
           </div>
 
           <div style={styles.uploadCard}>
-            <label htmlFor="supplier-upload" style={styles.label}>Supplier document</label>
-            <input
-              id="supplier-upload"
-              type="file"
-              onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-              style={styles.fileInput}
-            />
+            <label htmlFor="supplier-upload" style={styles.uploadSurface}>
+              <span style={styles.uploadTitle}>Select supplier document</span>
+              <span style={styles.uploadText}>
+                {selectedFile?.name || "PDF upload only. Extraction runs as soon as you pick a file."}
+              </span>
+              <input
+                id="supplier-upload"
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg,.txt"
+                onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+                style={styles.hiddenInput}
+              />
+            </label>
             <p style={styles.hint}>
               Best results come from documents that clearly mention supplier identity and certificate names.
             </p>
@@ -1942,13 +1948,18 @@ export default function OnboardingPage({ embedded = false } = {}) {
                           <strong style={styles.certTitle}>{row.name}</strong>
                           <span style={{ ...styles.statusPill, ...statusStyle }}>{evidenceStatus}</span>
                         </div>
-                        <label style={styles.uploadButton}>
-                          {evidenceUploadState[row.name] === "Uploading" ? "Uploading..." : "Upload evidence"}
+                        <label style={styles.uploadSurfaceInline}>
+                          <span style={styles.uploadTitleSmall}>
+                            {evidenceUploadState[row.name] === "Uploading" ? "Uploading evidence..." : "Select evidence file"}
+                          </span>
+                          <span style={styles.uploadTextSmall}>
+                            {evidence?.file_name || "PDF/image/text evidence. Extraction runs after selection."}
+                          </span>
                           <input
                             type="file"
                             accept=".pdf,.png,.jpg,.jpeg,.txt"
                             onChange={(event) => handleEvidenceUpload(row.name, event.target.files?.[0])}
-                            style={{ display: "none" }}
+                            style={styles.hiddenInput}
                           />
                         </label>
                       </div>
@@ -2074,13 +2085,18 @@ export default function OnboardingPage({ embedded = false } = {}) {
                     <span style={styles.requirementReason}>{item.reason}</span>
                     {item.canUpload ? (
                       <div style={styles.requirementUploadRow}>
-                        <label style={styles.uploadButton}>
-                          {requirementUploadState[item.id] === "Uploading" ? "Uploading..." : "Upload document"}
+                        <label style={styles.uploadSurfaceInline}>
+                          <span style={styles.uploadTitleSmall}>
+                            {requirementUploadState[item.id] === "Uploading" ? "Uploading document..." : "Select checklist document"}
+                          </span>
+                          <span style={styles.uploadTextSmall}>
+                            {requirementUploads[item.id]?.file_name || "PDF/image/text evidence. Validation runs after selection."}
+                          </span>
                           <input
                             type="file"
                             accept=".pdf,.png,.jpg,.jpeg,.txt"
                             onChange={(event) => handleRequirementUpload(item, event.target.files?.[0])}
-                            style={{ display: "none" }}
+                            style={styles.hiddenInput}
                           />
                         </label>
                         {requirementUploads[item.id] ? (
@@ -2671,7 +2687,6 @@ export default function OnboardingPage({ embedded = false } = {}) {
                     ...(!isEnabled ? styles.tabDisabled : {}),
                   }}
                 >
-                  <span style={styles.tabStep}>{tab.step}</span>
                   <span style={styles.tabLabel}>{tab.label}</span>
                 </button>
               );
@@ -2694,7 +2709,6 @@ export default function OnboardingPage({ embedded = false } = {}) {
                     ...(isActive ? styles.tabActive : {}),
                   }}
                 >
-                  <span style={styles.tabStep}>{tab.step}</span>
                   <span style={styles.tabLabel}>{tab.label}</span>
                 </button>
               );
@@ -2814,12 +2828,11 @@ const styles = {
   eyebrow: { fontSize: "11px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#166534" },
   pageTitle: { margin: 0, fontSize: "clamp(2rem, 3vw, 3.2rem)", color: "#101913", lineHeight: 1.05 },
   pageText: { margin: 0, maxWidth: "760px", color: "#465542" },
-  tabRail: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" },
-  tab: { display: "grid", gap: "6px", padding: "16px 18px", borderRadius: "18px", border: "1px solid rgba(17, 22, 18, 0.1)", background: "rgba(255,255,255,0.8)", textAlign: "left", cursor: "pointer", transition: "transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease" },
-  tabActive: { background: "linear-gradient(135deg, #166534, #14532d)", borderColor: "#166534", boxShadow: "0 14px 28px rgba(22, 101, 52, 0.2)", color: "#fff" },
+  tabRail: { display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", alignItems: "center", gap: "8px", width: "100%", padding: "8px", borderRadius: "8px", border: "1px solid #dfe7dd", background: "#ffffff", boxShadow: "0 1px 2px rgba(17,22,18,0.04)" },
+  tab: { display: "flex", alignItems: "center", justifyContent: "center", width: "100%", minHeight: "38px", padding: "8px 14px", borderRadius: "6px", border: "1px solid transparent", background: "transparent", color: "#40503d", textAlign: "center", cursor: "pointer", transition: "background 0.16s ease, color 0.16s ease, border-color 0.16s ease" },
+  tabActive: { background: "#166534", borderColor: "#166534", boxShadow: "none", color: "#fff" },
   tabDisabled: { opacity: 0.55, cursor: "not-allowed" },
-  tabStep: { fontSize: "11px", letterSpacing: "0.18em", textTransform: "uppercase" },
-  tabLabel: { fontSize: "15px", fontWeight: 600 },
+  tabLabel: { fontSize: "13px", fontWeight: 800, whiteSpace: "nowrap" },
   flowBanner: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" },
   flowBannerItem: { display: "grid", gap: "4px", padding: "16px 18px", borderRadius: "20px", background: "linear-gradient(180deg, rgba(255,255,255,0.94), rgba(246,250,246,0.98))", border: "1px solid rgba(17, 22, 18, 0.08)", boxShadow: "0 8px 20px rgba(17, 22, 18, 0.05)" },
   flowBannerLabel: { fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.14em", color: "#73826f" },
@@ -2841,6 +2854,13 @@ const styles = {
   pill: { padding: "8px 12px", borderRadius: "999px", background: "#ecfdf3", color: "#166534", border: "1px solid #bbf7d0", fontSize: "12px", fontWeight: 700 },
   pillAlt: { padding: "8px 12px", borderRadius: "999px", background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe", fontSize: "12px", fontWeight: 700 },
   uploadCard: { display: "grid", gap: "16px", padding: "18px", borderRadius: "22px", background: "linear-gradient(180deg, rgba(241, 246, 241, 0.95), rgba(255,255,255,0.98))", border: "1px solid rgba(17, 22, 18, 0.08)" },
+  uploadSurface: { display: "grid", gap: "10px", width: "100%", minWidth: 0, padding: "22px 20px", borderRadius: "8px", border: "1px dashed #76b889", background: "#fbfffc", cursor: "pointer" },
+  uploadSurfaceInline: { display: "grid", gap: "6px", width: "min(360px, 100%)", minWidth: "240px", padding: "13px 15px", borderRadius: "8px", border: "1px dashed #76b889", background: "#fbfffc", cursor: "pointer" },
+  uploadTitle: { color: "#14532d", fontSize: "16px", fontWeight: 800 },
+  uploadTitleSmall: { color: "#14532d", fontSize: "13px", fontWeight: 800 },
+  uploadText: { color: "#5f705c", fontSize: "15px", lineHeight: 1.45, wordBreak: "break-word" },
+  uploadTextSmall: { color: "#5f705c", fontSize: "12px", lineHeight: 1.4, wordBreak: "break-word" },
+  hiddenInput: { display: "none" },
   formGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" },
   field: { display: "grid", gap: "8px" },
   label: { fontSize: "13px", fontWeight: 700, color: "#1d2a1f" },

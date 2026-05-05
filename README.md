@@ -1,8 +1,8 @@
-# TCS ENVIROZONE AI 4.0
+# Ozone AI 4.0
 
 Responsible Sourcing & Supplier Intelligence
 
-TCS ENVIROZONE AI 4.0 is a supplier intelligence application for responsible sourcing, supplier risk management, ESG monitoring, supplier onboarding, auditing, traceability, due diligence, simulation, and AI-assisted review. The app currently uses a React + Vite frontend, a FastAPI backend, and CSV-backed datasets in `data/` as the temporary persistence layer.
+Ozone AI 4.0 is a supplier intelligence application for responsible sourcing, supplier risk management, ESG monitoring, supplier onboarding, auditing, traceability, due diligence, simulation, and AI-assisted review. The app currently uses a React + Vite frontend, a FastAPI backend, and CSV-backed datasets in `data/` as the temporary persistence layer.
 
 This README is intended to be a full context document. If it is given to another developer or to ChatGPT, it should explain what the application contains, what each module does, what data is used, and how the current workflows connect.
 
@@ -60,6 +60,14 @@ Main frontend routes:
 - `/due-diligence-agent`
 - `/advisor-ai`
 
+Navigation standards:
+
+- Main application navigation is handled by the shared app shell.
+- Module-level navigation uses full-width segmented buttons with a green active state and no numeric step labels.
+- Supplier Engagement keeps Onboarding, Auditing, and Traceability mounted after first render so switching between those modules does not repeatedly cold-load the active workspace.
+- Supplier Engagement, Onboarding, Auditing, Traceability, and Simulator use the same full-width inner navigation pattern for consistency.
+- File upload controls use a consistent dashed green upload surface with clear title/helper text and hidden native file inputs across Onboarding and Auditing.
+
 Redirects:
 
 - `/` redirects to `/executive-dashboard`
@@ -70,7 +78,7 @@ Redirects:
 
 Main shell:
 
-- App brand: `TCS ENVIROZONE AI 4.0`
+- App brand: `Ozone AI 4.0`
 - Subtitle: `Responsible Sourcing & Supplier Intelligence`
 
 ## Frontend Structure
@@ -446,7 +454,7 @@ uploads/checklist_test_pdfs
 
 `uploads/certificate_test_pdfs` contains certification card evidence:
 
-- Valid certification examples for RSPO, Rainforest Alliance, FSC, PEFC, Fairtrade, ISO14001, ISO22000, and HACCP.
+- Valid certification examples for RSPO, Rainforest Alliance, FSC, PEFC, Fairtrade, ISO14001, ISO22000, GMP, and HACCP.
 - Expired certificate test.
 - Mismatched certificate upload test.
 - Missing expiry date test.
@@ -718,6 +726,8 @@ Current capabilities include:
 
 - Backend-driven audit workspace payload from CSV.
 - Frontend audit queue, selected audit, supplier context, certification context, audit history, evidence health, and metrics are loaded from `GET /auditing/workspace`.
+- Audit Queue has production-grade queue controls: supplier search, filter chips, compact metric tiles, and click-through from a supplier row directly into Audit Review.
+- The active Auditing UI uses a restrained enterprise-console layout with tighter section spacing, table-like queue rows, compact summary cards, clearer status badges, and calmer CAPA/evidence/AI decision panels.
 - The older hardcoded frontend audit queue has been removed from the active `AuditingWorkspaceV2.tsx` implementation.
 - `audits_v2.csv` now persists audit workflow state instead of only deriving status in memory.
 - Persistent audit fields include priority, status, decision, decision date, decision notes, CAPA required, CAPA due date, and CAPA status.
@@ -940,6 +950,7 @@ The simulator shows:
 - Affected supplier detail
 - Scenario-specific summaries
 - Scenario A vs Scenario B comparison
+- Full-width green segmented scenario mode navigation consistent with the operational modules.
 
 ## Due Diligence Agent
 

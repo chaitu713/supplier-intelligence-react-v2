@@ -2,9 +2,9 @@ import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 
 const AUDIT_TABS = [
-  { id: "queue", step: "01", label: "Audit Queue" },
-  { id: "review", step: "02", label: "Audit Review" },
-  { id: "insights", step: "03", label: "AI Audit Insights" },
+  { id: "queue", label: "Audit Queue" },
+  { id: "review", label: "Audit Review" },
+  { id: "insights", label: "AI Audit Insights" },
 ] as const;
 
 const FILTERS = ["All", "High priority", "Open review", "External"] as const;
@@ -145,6 +145,7 @@ const emptyEvidenceSummary: EvidenceSummary = {
 export function AuditingWorkspace() {
   const [activeTab, setActiveTab] = useState<AuditTabId>("queue");
   const [activeFilter, setActiveFilter] = useState<FilterId>("All");
+  const [queueSearch, setQueueSearch] = useState("");
   const [selectedAuditId, setSelectedAuditId] = useState<number | null>(null);
   const [workspace, setWorkspace] = useState<AuditWorkspacePayload | null>(null);
   const [workspaceLoading, setWorkspaceLoading] = useState(true);
@@ -197,9 +198,6 @@ export function AuditingWorkspace() {
         const result = await response.json();
         if (cancelled) return;
         setWorkspace(result);
-        if (!selectedAuditId && result.queue?.[0]?.audit_id) {
-          setSelectedAuditId(result.queue[0].audit_id);
-        }
       } catch (error) {
         if (!cancelled) {
           setWorkspaceError(error instanceof Error ? error.message : "Unable to load audit workspace.");
@@ -225,11 +223,33 @@ export function AuditingWorkspace() {
   const capaActions = workspace?.capa_actions ?? [];
 
   const visibleRows = useMemo(() => {
-    if (activeFilter === "High priority") return queue.filter((row) => row.priority === "High");
-    if (activeFilter === "Open review") return queue.filter((row) => row.status !== "Monitor");
-    if (activeFilter === "External") return queue.filter((row) => row.type === "External");
-    return queue;
-  }, [activeFilter, queue]);
+    const filteredRows =
+      activeFilter === "High priority"
+        ? queue.filter((row) => row.priority === "High")
+        : activeFilter === "Open review"
+          ? queue.filter((row) => row.status !== "Monitor")
+          : activeFilter === "External"
+            ? queue.filter((row) => row.type === "External")
+            : queue;
+
+    const searchTerm = queueSearch.trim().toLowerCase();
+    if (!searchTerm) return filteredRows;
+
+    return filteredRows.filter((row) =>
+      [
+        row.supplier_name,
+        String(row.supplier_id),
+        row.country,
+        row.tier,
+        row.type,
+        row.status,
+        row.priority,
+        row.audit_date,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(searchTerm)),
+    );
+  }, [activeFilter, queue, queueSearch]);
 
   const selectedAudit =
     visibleRows.find((row) => row.audit_id === selectedAuditId) ??
@@ -240,6 +260,8 @@ export function AuditingWorkspace() {
   const supplier = workspace?.supplier ?? {};
   const supplierHistory = workspace?.audit_history ?? [];
   const certifications = workspace?.certifications ?? [];
+  const savedAuditDecision = selectedAuditContext?.audit_decision || selectedAudit?.decision || "Pending";
+  const savedAuditStatus = selectedAuditContext?.audit_status || selectedAudit?.status || "Open review";
 
   const expiredCount = certifications.filter((cert) => cert.expiry_state === "Expired").length;
   const expiringSoonCount = certifications.filter((cert) => cert.expiry_state === "Expiring soon").length;
@@ -477,7 +499,8 @@ export function AuditingWorkspace() {
       });
       if (!response.ok) throw new Error("Failed to apply audit decision.");
       const result = await response.json();
-      setDecisionMessage(`${result.message}: ${result.audit_decision}`);
+      setDecisionMessage(`${result.message}: ${result.audit_decision}. Review tab updated.`);
+      setActiveTab("review");
       setWorkspaceRefreshKey((current) => current + 1);
     } catch (error) {
       setDecisionError(error instanceof Error ? error.message : "Unable to apply audit decision.");
@@ -553,7 +576,6 @@ export function AuditingWorkspace() {
         <section style={styles.tabRail}>
           {AUDIT_TABS.map((tab) => (
             <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} style={{ ...styles.tab, ...(tab.id === activeTab ? styles.tabActive : {}) }}>
-              <span style={styles.tabStep}>{tab.step}</span>
               <span style={styles.tabLabel}>{tab.label}</span>
             </button>
           ))}
@@ -575,15 +597,40 @@ export function AuditingWorkspace() {
                 </div>
                 <span style={styles.pill}>{activeFilter}</span>
               </div>
-              <div style={styles.filterRail}>
-                {FILTERS.map((filter) => (
-                  <button key={filter} type="button" onClick={() => setActiveFilter(filter)} style={{ ...styles.filterChip, ...(activeFilter === filter ? styles.filterChipActive : {}) }}>{filter}</button>
-                ))}
+              <div style={styles.queueToolbar}>
+                <input
+                  type="search"
+                  value={queueSearch}
+                  onChange={(event) => setQueueSearch(event.target.value)}
+                  placeholder="Search supplier, country, tier, audit type, status..."
+                  style={styles.searchInput}
+                  aria-label="Search audit queue suppliers"
+                />
+                {queueSearch ? (
+                  <button type="button" onClick={() => setQueueSearch("")} style={styles.clearSearchButton}>
+                    Clear
+                  </button>
+                ) : null}
+                <div style={styles.filterRail}>
+                  {FILTERS.map((filter) => (
+                    <button key={filter} type="button" onClick={() => setActiveFilter(filter)} style={{ ...styles.filterChip, ...(activeFilter === filter ? styles.filterChipActive : {}) }}>{filter}</button>
+                  ))}
+                </div>
               </div>
               <div style={styles.queueTable}>
                 <div style={{ ...styles.queueRow, ...styles.queueHeader }}><span>Supplier</span><span>Type</span><span>Audit Date</span><span>Score</span><span>Non-compliance</span><span>Status</span></div>
+                {visibleRows.length === 0 ? <p style={styles.infoText}>No audits match this search and filter.</p> : null}
                 {visibleRows.map((row) => (
-                  <button key={row.audit_id} type="button" onClick={() => setSelectedAuditId(row.audit_id)} style={{ ...styles.queueRow, ...(row.audit_id === selectedAudit.audit_id ? styles.queueRowActive : {}) }}>
+                  <button
+                    key={row.audit_id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedAuditId(row.audit_id);
+                      setActiveTab("review");
+                    }}
+                    style={{ ...styles.queueRow, ...(row.audit_id === selectedAudit.audit_id ? styles.queueRowActive : {}) }}
+                    aria-label={`Review audit ${row.audit_id} for ${row.supplier_name}`}
+                  >
                     <div style={styles.queuePrimary}>
                       <strong style={styles.queueName}>{row.supplier_name}</strong>
                       <span style={styles.queueMeta}>{row.country ?? "Unknown"} | #{row.supplier_id} | {row.tier ?? "Tier n/a"}</span>
@@ -613,7 +660,7 @@ export function AuditingWorkspace() {
                     <h2 style={styles.sectionTitle}>Selected audit</h2>
                     <p style={styles.sectionText}>The selected audit record is loaded from the backend workspace endpoint.</p>
                   </div>
-                  <span style={styles.pill}>{selectedAudit.status}</span>
+                  <span style={styles.pill}>{savedAuditStatus}</span>
                 </div>
                 <div style={styles.summaryGrid}>
                   <ReviewItem label="Audit ID" value={`#${selectedAudit.audit_id}`} />
@@ -624,7 +671,7 @@ export function AuditingWorkspace() {
                   <ReviewItem label="Non-compliance" value={String(selectedAudit.non_compliance)} />
                   <ReviewItem label="Priority" value={selectedAudit.priority} />
                   <ReviewItem label="EUDR relevant" value={selectedAudit.eudr_relevant ?? "Unknown"} />
-                  <ReviewItem label="Decision" value={selectedAudit.decision ?? selectedAuditContext?.audit_decision ?? "Pending"} />
+                  <ReviewItem label="Decision" value={savedAuditDecision} />
                   <ReviewItem label="CAPA status" value={selectedAudit.capa_status ?? selectedAuditContext?.capa_status ?? "Not set"} />
                 </div>
                 <div style={styles.noteCard}>
@@ -655,17 +702,20 @@ export function AuditingWorkspace() {
                   <h2 style={styles.sectionTitle}>Audit workflow state</h2>
                   <p style={styles.sectionText}>Persistent audit workflow fields from `audits_v2.csv`, ready for decisioning and CAPA in the next steps.</p>
                 </div>
-                <span style={styles.pillAlt}>{selectedAuditContext?.audit_status ?? selectedAudit.status}</span>
+                <span style={styles.pillAlt}>{savedAuditStatus}</span>
               </div>
-              <div style={styles.summaryGrid}>
-                <ReviewItem label="Audit status" value={selectedAuditContext?.audit_status ?? selectedAudit.status} />
-                <ReviewItem label="Audit priority" value={selectedAuditContext?.audit_priority ?? selectedAudit.priority} />
-                <ReviewItem label="Audit decision" value={selectedAuditContext?.audit_decision ?? selectedAudit.decision ?? "Pending"} />
-                <ReviewItem label="Decision date" value={selectedAuditContext?.decision_date || selectedAudit.decision_date || "Not decided"} />
-                <ReviewItem label="CAPA required" value={selectedAuditContext?.capa_required || selectedAudit.capa_required || "Not set"} />
-                <ReviewItem label="CAPA due date" value={selectedAuditContext?.capa_due_date || selectedAudit.capa_due_date || "Not set"} />
-                <ReviewItem label="CAPA status" value={selectedAuditContext?.capa_status || selectedAudit.capa_status || "Not set"} />
-                <ReviewItem label="Decision notes" value={selectedAuditContext?.decision_notes || "No notes captured"} />
+              <div style={styles.workflowGrid}>
+                <WorkflowItem label="Audit status" value={savedAuditStatus} />
+                <WorkflowItem label="Audit priority" value={selectedAuditContext?.audit_priority ?? selectedAudit.priority} />
+                <WorkflowItem label="Audit decision" value={savedAuditDecision} />
+                <WorkflowItem label="Decision date" value={selectedAuditContext?.decision_date || selectedAudit.decision_date || "Not decided"} />
+                <WorkflowItem label="CAPA required" value={selectedAuditContext?.capa_required || selectedAudit.capa_required || "Not set"} />
+                <WorkflowItem label="CAPA due date" value={selectedAuditContext?.capa_due_date || selectedAudit.capa_due_date || "Not set"} />
+                <WorkflowItem label="CAPA status" value={selectedAuditContext?.capa_status || selectedAudit.capa_status || "Not set"} />
+                <div style={styles.workflowNotes}>
+                  <span style={styles.workflowLabel}>Decision notes</span>
+                  <p style={styles.workflowNoteText}>{selectedAuditContext?.decision_notes || "No notes captured"}</p>
+                </div>
               </div>
             </section>
             <section style={styles.panel}>
@@ -777,7 +827,7 @@ export function AuditingWorkspace() {
                   <ReviewItem label="Needs review" value={String(evidenceSummary.needs_review_count)} />
                   <ReviewItem label="Latest upload" value={evidenceSummary.latest_upload_date ?? "None"} />
                 </div>
-                <div style={styles.uploadSurface}>
+                <div style={styles.auditUploadPanel}>
                   <span style={styles.uploadTitle}>Upload audit evidence</span>
                   <span style={styles.uploadText}>Audit reports, non-compliance evidence, CAPA proof, or supplier responses are stored against this audit.</span>
                   <div style={styles.formGrid}>
@@ -789,9 +839,20 @@ export function AuditingWorkspace() {
                         <option>Supplier Response</option>
                       </select>
                     </Field>
-                    <Field label="Document">
-                      <input type="file" accept="application/pdf" style={styles.input} disabled={auditEvidenceLoading} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadAuditEvidence(file); }} />
-                    </Field>
+                    <div style={styles.field}>
+                      <span style={styles.fieldLabel}>Document</span>
+                      <label style={{ ...styles.uploadSurface, ...(auditEvidenceLoading ? styles.uploadSurfaceDisabled : {}) }}>
+                        <span style={styles.uploadTitle}>Select audit evidence PDF</span>
+                        <span style={styles.uploadText}>PDF upload only. Extraction runs as soon as you pick a file.</span>
+                        <input
+                          type="file"
+                          accept="application/pdf"
+                          style={styles.hiddenInput}
+                          disabled={auditEvidenceLoading}
+                          onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadAuditEvidence(file); }}
+                        />
+                      </label>
+                    </div>
                   </div>
                   {auditEvidenceLoading ? <p style={styles.infoText}>Uploading and extracting audit evidence...</p> : null}
                   {auditEvidenceMessage ? <p style={styles.successText}>{auditEvidenceMessage}</p> : null}
@@ -840,7 +901,7 @@ export function AuditingWorkspace() {
               <BannerItem label="Certification health" value={certificationHealth} />
               <BannerItem label="Suggested decision" value={auditDecision?.recommendation ?? fallbackDecision(followUpUrgency, certificationHealth)} />
             </section>
-            <section style={styles.reviewGrid}>
+            <section style={styles.stack}>
               <div style={styles.panel}>
                 <div style={styles.sectionHead}>
                   <div>
@@ -860,35 +921,37 @@ export function AuditingWorkspace() {
                   <InsightCard title="Reviewer focus" items={auditInsights?.reviewer_focus ?? [selectedAudit.non_compliance >= 4 ? "Validate whether the non-compliance count reflects a repeated pattern." : "Confirm this audit remains consistent with prior performance.", expiredCount > 0 ? "Review expired certifications first." : "Use certification context to support the audit review.", previousAudit ? `Compare against the previous ${previousAudit.type.toLowerCase()} audit from ${previousAudit.audit_date}.` : "Treat this as the current baseline."]} />
                 </div>
               </div>
-              <div style={styles.sideStack}>
-                <div style={styles.panel}>
-                  <div style={styles.sectionHead}><div><h2 style={styles.sectionTitle}>Suggested next actions</h2><p style={styles.sectionText}>Action guidance for the internal audit user.</p></div></div>
-                  <div style={styles.actionList}>
-                    {(auditInsights?.next_actions ?? fallbackActions(followUpUrgency, certificationHealth, trendLabel)).map((action: string) => (
-                      <div key={action} style={styles.actionItem}><span style={styles.actionDot} /><span>{action}</span></div>
-                    ))}
-                  </div>
+
+              <div style={styles.panel}>
+                <div style={styles.sectionHead}><div><h2 style={styles.sectionTitle}>AI audit decision</h2><p style={styles.sectionText}>Structured recommendation from the audit, CAPA, evidence, certification, and supplier context.</p></div><span style={styles.pillAlt}>{auditDecision?.source ?? "derived"}</span></div>
+                <div style={styles.decisionHorizontal}>
+                  <ReviewItem label="Recommendation" value={auditDecision?.recommendation ?? fallbackDecision(followUpUrgency, certificationHealth)} />
+                  <ReviewItem label="Decision confidence" value={auditDecision?.confidence ?? "derived"} />
+                  <ReviewItem label="Follow-up urgency" value={followUpUrgency} />
+                  <ReviewItem label="Closure blockers" value={String(auditDecision?.closure_blockers?.length ?? 0)} />
                 </div>
-                <div style={styles.panel}>
-                  <div style={styles.sectionHead}><div><h2 style={styles.sectionTitle}>AI audit decision</h2><p style={styles.sectionText}>Structured recommendation from the audit, CAPA, evidence, certification, and supplier context.</p></div><span style={styles.pillAlt}>{auditDecision?.source ?? "derived"}</span></div>
-                  <div style={styles.summaryGrid}>
-                    <ReviewItem label="Recommendation" value={auditDecision?.recommendation ?? fallbackDecision(followUpUrgency, certificationHealth)} />
-                    <ReviewItem label="Decision confidence" value={auditDecision?.confidence ?? "derived"} />
-                    <ReviewItem label="Follow-up urgency" value={followUpUrgency} />
-                    <ReviewItem label="Closure blockers" value={String(auditDecision?.closure_blockers?.length ?? 0)} />
-                  </div>
-                  {decisionLoading ? <p style={styles.infoText}>Generating AI audit decision...</p> : null}
-                  {decisionError ? <p style={styles.errorText}>{decisionError}</p> : null}
-                  {decisionMessage ? <p style={styles.successText}>{decisionMessage}</p> : null}
-                  {closeMessage ? <p style={closeBlockers.length ? styles.errorText : styles.successText}>{closeMessage}</p> : null}
+                {decisionLoading ? <p style={styles.infoText}>Generating AI audit decision...</p> : null}
+                {decisionError ? <p style={styles.errorText}>{decisionError}</p> : null}
+                {decisionMessage ? <p style={styles.successText}>{decisionMessage}</p> : null}
+                {closeMessage ? <p style={closeBlockers.length ? styles.errorText : styles.successText}>{closeMessage}</p> : null}
+                <div style={styles.decisionHorizontal}>
                   <InsightCard title="Decision reasons" items={auditDecision?.reasons ?? [`Non-compliance count: ${selectedAudit.non_compliance}`, `Certification health: ${certificationHealth}`]} />
                   <InsightCard title="Required actions" items={auditDecision?.required_actions ?? fallbackActions(followUpUrgency, certificationHealth, trendLabel)} />
                   {(auditDecision?.closure_blockers?.length ?? 0) > 0 ? <InsightCard title="Closure blockers" items={auditDecision?.closure_blockers ?? []} /> : null}
                   {closeBlockers.length > 0 ? <InsightCard title="Close guard blockers" items={closeBlockers} /> : null}
-                  <div style={styles.actions}>
-                    <button type="button" onClick={() => void applyAuditDecision()} disabled={!auditDecision || decisionLoading} style={{ ...styles.primaryButton, ...((!auditDecision || decisionLoading) ? styles.buttonDisabled : {}) }}>Apply Decision</button>
-                    <button type="button" onClick={() => void closeAudit()} disabled={closeLoading} style={{ ...styles.secondaryButton, ...(closeLoading ? styles.buttonDisabled : {}) }}>{closeLoading ? "Checking..." : "Close Audit"}</button>
-                  </div>
+                </div>
+                <div style={styles.actions}>
+                  <button type="button" onClick={() => void applyAuditDecision()} disabled={!auditDecision || decisionLoading} style={{ ...styles.primaryButton, ...((!auditDecision || decisionLoading) ? styles.buttonDisabled : {}) }}>Apply Decision</button>
+                  <button type="button" onClick={() => void closeAudit()} disabled={closeLoading} style={{ ...styles.secondaryButton, ...(closeLoading ? styles.buttonDisabled : {}) }}>{closeLoading ? "Checking..." : "Close Audit"}</button>
+                </div>
+              </div>
+
+              <div style={styles.panel}>
+                <div style={styles.sectionHead}><div><h2 style={styles.sectionTitle}>Suggested next actions</h2><p style={styles.sectionText}>Action guidance for the internal audit user.</p></div></div>
+                <div style={styles.actionListHorizontal}>
+                  {(auditInsights?.next_actions ?? fallbackActions(followUpUrgency, certificationHealth, trendLabel)).map((action: string) => (
+                    <div key={action} style={styles.actionItemHorizontal}><span style={styles.actionDot} /><span>{action}</span></div>
+                  ))}
                 </div>
               </div>
             </section>
@@ -940,80 +1003,95 @@ export function AuditingWorkspace() {
 }
 
 const styles: Record<string, CSSProperties> = {
-  stack: { display: "grid", gap: "22px" },
-  tabRail: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" },
-  tab: { display: "grid", gap: "6px", padding: "16px 18px", borderRadius: "18px", border: "1px solid rgba(17,22,18,0.1)", background: "rgba(255,255,255,0.8)", textAlign: "left", cursor: "pointer" },
-  tabActive: { background: "linear-gradient(135deg, #166534, #14532d)", borderColor: "#166534", boxShadow: "0 14px 28px rgba(22,101,52,0.2)", color: "#fff" },
-  tabStep: { fontSize: "11px", letterSpacing: "0.18em", textTransform: "uppercase" },
-  tabLabel: { fontSize: "15px", fontWeight: 600 },
-  bannerGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" },
-  bannerItem: { display: "grid", gap: "4px", padding: "16px 18px", borderRadius: "20px", background: "linear-gradient(180deg, rgba(255,255,255,0.94), rgba(246,250,246,0.98))", border: "1px solid rgba(17,22,18,0.08)", boxShadow: "0 8px 20px rgba(17,22,18,0.05)" },
-  bannerLabel: { fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.14em", color: "#73826f" },
-  bannerValue: { color: "#152117", fontSize: "1rem" },
-  panel: { display: "grid", gap: "18px", width: "100%", minWidth: 0, padding: "24px", borderRadius: "28px", background: "rgba(255,255,255,0.92)", border: "1px solid rgba(17,22,18,0.08)", boxShadow: "0 10px 28px rgba(17,22,18,0.06)" },
-  reviewGrid: { display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) minmax(320px, 0.9fr)", gap: "18px", alignItems: "start" },
-  sideStack: { display: "grid", gap: "18px", alignContent: "start" },
+  stack: { display: "grid", gap: "18px" },
+  tabRail: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", alignItems: "center", gap: "8px", width: "100%", padding: "8px", borderRadius: "8px", border: "1px solid #dfe7dd", background: "#ffffff", boxShadow: "0 1px 2px rgba(17,22,18,0.04)" },
+  tab: { display: "flex", alignItems: "center", justifyContent: "center", width: "100%", minHeight: "38px", padding: "8px 14px", borderRadius: "6px", border: "1px solid transparent", background: "transparent", color: "#40503d", textAlign: "center", cursor: "pointer" },
+  tabActive: { background: "#166534", borderColor: "#166534", boxShadow: "none", color: "#ffffff" },
+  tabLabel: { fontSize: "13px", fontWeight: 800, whiteSpace: "nowrap" },
+  bannerGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "10px" },
+  bannerItem: { display: "grid", gap: "5px", padding: "14px 16px", borderRadius: "8px", background: "#ffffff", border: "1px solid #e1e8df", boxShadow: "0 1px 2px rgba(17,22,18,0.04)" },
+  bannerLabel: { fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#657663", fontWeight: 700 },
+  bannerValue: { color: "#111c15", fontSize: "1rem", lineHeight: 1.3 },
+  panel: { display: "grid", gap: "16px", width: "100%", minWidth: 0, padding: "20px", borderRadius: "8px", background: "#ffffff", border: "1px solid #e1e8df", boxShadow: "0 1px 2px rgba(17,22,18,0.04)" },
+  reviewGrid: { display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(300px, 0.85fr)", gap: "16px", alignItems: "start" },
+  sideStack: { display: "grid", gap: "16px", alignContent: "start" },
   sectionHead: { display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" },
-  sectionTitle: { margin: 0, fontSize: "1.3rem", color: "#101913" },
-  smallTitle: { margin: 0, fontSize: "1rem", color: "#101913" },
-  sectionText: { margin: 0, maxWidth: "760px", color: "#566753", lineHeight: 1.6 },
-  pill: { padding: "8px 12px", borderRadius: "999px", background: "#ecfdf3", color: "#166534", border: "1px solid #bbf7d0", fontSize: "12px", fontWeight: 700 },
-  pillAlt: { padding: "8px 12px", borderRadius: "999px", background: "#f8fafc", color: "#334155", border: "1px solid #e2e8f0", fontSize: "12px", fontWeight: 700 },
-  filterRail: { display: "flex", flexWrap: "wrap", gap: "10px" },
-  filterChip: { padding: "9px 14px", borderRadius: "999px", border: "1px solid rgba(17,22,18,0.1)", background: "#fff", color: "#2b372c", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
-  filterChipActive: { background: "#f0fdf4", borderColor: "#86efac", color: "#166534" },
-  queueTable: { display: "grid", gap: "10px" },
-  queueHeader: { background: "transparent", border: "none", boxShadow: "none", color: "#73826f", fontSize: "12px", letterSpacing: "0.08em", textTransform: "uppercase", cursor: "default" },
-  queueRow: { display: "grid", gridTemplateColumns: "minmax(180px, 2fr) repeat(5, minmax(90px, 1fr))", gap: "14px", alignItems: "center", width: "100%", padding: "16px 18px", borderRadius: "20px", border: "1px solid rgba(17,22,18,0.08)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,250,247,0.96))", textAlign: "left", color: "#1c261e", boxShadow: "0 6px 18px rgba(17,22,18,0.04)", cursor: "pointer" },
-  queueRowActive: { borderColor: "rgba(22,101,52,0.2)", boxShadow: "0 10px 24px rgba(22,101,52,0.08)", background: "linear-gradient(180deg, rgba(240,253,244,0.95), rgba(255,255,255,0.98))" },
-  queuePrimary: { display: "grid", gap: "4px" },
-  queueName: { fontSize: "15px", color: "#101913" },
-  queueMeta: { fontSize: "12px", color: "#6a7a67" },
-  summaryGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "12px" },
-  summaryCard: { display: "grid", gap: "4px", padding: "14px 16px", borderRadius: "16px", background: "#fff", border: "1px solid rgba(17,22,18,0.08)" },
-  summaryLabel: { fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.12em", color: "#71816d" },
-  summaryValue: { color: "#152117", fontSize: "15px" },
-  noteCard: { display: "grid", gap: "8px", padding: "18px", borderRadius: "20px", background: "linear-gradient(180deg, rgba(240,253,244,0.92), rgba(255,255,255,0.98))", border: "1px solid rgba(134,239,172,0.8)" },
-  noteTitle: { color: "#14532d", fontSize: "15px" },
-  noteText: { margin: 0, color: "#45624a", lineHeight: 1.6 },
-  badge: { display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "7px 10px", borderRadius: "999px", fontSize: "12px", fontWeight: 700, whiteSpace: "nowrap", border: "1px solid transparent" },
-  badgeHigh: { background: "#fef2f2", borderColor: "#fecaca", color: "#b91c1c" },
-  badgeMedium: { background: "#fffbeb", borderColor: "#fde68a", color: "#b45309" },
+  sectionTitle: { margin: 0, fontSize: "1.08rem", color: "#111c15", lineHeight: 1.25 },
+  smallTitle: { margin: 0, fontSize: "0.92rem", color: "#111c15", lineHeight: 1.3 },
+  sectionText: { margin: "4px 0 0", maxWidth: "780px", color: "#5c6c59", fontSize: "13px", lineHeight: 1.5 },
+  pill: { padding: "6px 10px", borderRadius: "999px", background: "#edf7ee", color: "#166534", border: "1px solid #cbe7cf", fontSize: "12px", fontWeight: 800 },
+  pillAlt: { padding: "6px 10px", borderRadius: "999px", background: "#f5f7f5", color: "#334155", border: "1px solid #dfe7dd", fontSize: "12px", fontWeight: 800 },
+  queueToolbar: { display: "grid", gridTemplateColumns: "minmax(260px, 1fr) auto auto", gap: "10px", alignItems: "center", width: "100%" },
+  filterRail: { display: "flex", flexWrap: "wrap", gap: "6px", justifyContent: "flex-end" },
+  filterChip: { padding: "8px 11px", borderRadius: "8px", border: "1px solid #dfe7dd", background: "#fff", color: "#31402f", fontSize: "12px", fontWeight: 700, cursor: "pointer" },
+  filterChipActive: { background: "#173b25", borderColor: "#173b25", color: "#fff" },
+  searchInput: { width: "100%", minWidth: "220px", padding: "11px 13px", borderRadius: "8px", border: "1px solid #cfd9cc", background: "#fff", color: "#111c15", fontSize: "14px", outline: "none" },
+  clearSearchButton: { padding: "10px 12px", borderRadius: "8px", border: "1px solid #d7dfd4", background: "#f7faf7", color: "#334155", fontSize: "12px", fontWeight: 800, cursor: "pointer" },
+  queueTable: { display: "grid", gap: "6px", overflowX: "auto" },
+  queueHeader: { background: "#f7faf7", border: "1px solid #e1e8df", boxShadow: "none", color: "#657663", fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", cursor: "default", fontWeight: 800 },
+  queueRow: { display: "grid", gridTemplateColumns: "minmax(230px, 2fr) repeat(5, minmax(96px, 1fr))", gap: "12px", alignItems: "center", width: "100%", minWidth: "840px", padding: "13px 14px", borderRadius: "8px", border: "1px solid #e1e8df", background: "#ffffff", textAlign: "left", color: "#1c261e", boxShadow: "0 1px 2px rgba(17,22,18,0.035)", cursor: "pointer" },
+  queueRowActive: { borderColor: "#7eb08a", boxShadow: "inset 3px 0 0 #166534, 0 1px 2px rgba(17,22,18,0.04)", background: "#fbfefb" },
+  queuePrimary: { display: "grid", gap: "3px", minWidth: 0 },
+  queueName: { fontSize: "14px", color: "#111c15", lineHeight: 1.35 },
+  queueMeta: { fontSize: "12px", color: "#677662", lineHeight: 1.4 },
+  summaryGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "10px" },
+  summaryCard: { display: "grid", gap: "5px", padding: "12px 14px", borderRadius: "8px", background: "#f9fbf9", border: "1px solid #e1e8df", minWidth: 0 },
+  summaryLabel: { fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6a7967", fontWeight: 800 },
+  summaryValue: { color: "#111c15", fontSize: "14px", lineHeight: 1.35, overflowWrap: "anywhere" },
+  workflowGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "10px", alignItems: "start" },
+  workflowItem: { display: "grid", gap: "6px", minHeight: "76px", padding: "12px 14px", borderRadius: "8px", background: "#f9fbf9", border: "1px solid #e1e8df" },
+  workflowLabel: { fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6a7967", fontWeight: 900 },
+  workflowValue: { color: "#111c15", fontSize: "14px", fontWeight: 800, lineHeight: 1.35, overflowWrap: "anywhere" },
+  workflowNotes: { gridColumn: "1 / -1", display: "grid", gap: "8px", padding: "14px 16px", borderRadius: "8px", background: "#ffffff", border: "1px solid #dfe7dd" },
+  workflowNoteText: { margin: 0, color: "#31402f", fontSize: "13px", lineHeight: 1.55, maxWidth: "980px" },
+  noteCard: { display: "grid", gap: "7px", padding: "14px 16px", borderRadius: "8px", background: "#f3faf4", border: "1px solid #cfe8d3" },
+  noteTitle: { color: "#14532d", fontSize: "14px" },
+  noteText: { margin: 0, color: "#415541", fontSize: "13px", lineHeight: 1.55 },
+  badge: { display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "5px 9px", borderRadius: "999px", fontSize: "11px", fontWeight: 800, whiteSpace: "nowrap", border: "1px solid transparent" },
+  badgeHigh: { background: "#fff1f2", borderColor: "#fecdd3", color: "#be123c" },
+  badgeMedium: { background: "#fff7ed", borderColor: "#fed7aa", color: "#c2410c" },
   badgeLow: { background: "#ecfdf3", borderColor: "#bbf7d0", color: "#166534" },
-  certList: { display: "grid", gap: "10px" },
-  certListItem: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", padding: "14px 16px", borderRadius: "16px", background: "#fff", border: "1px solid rgba(17,22,18,0.08)" },
-  certActionStack: { display: "grid", gap: "8px" },
-  inlineAction: { justifySelf: "flex-start", padding: "8px 12px", borderRadius: "999px", border: "1px solid rgba(22,101,52,0.18)", background: "#f0fdf4", color: "#166534", fontSize: "12px", fontWeight: 700, cursor: "pointer" },
-  uploadSurface: { display: "grid", gap: "6px", padding: "18px", borderRadius: "18px", border: "1px dashed rgba(22,101,52,0.3)", background: "rgba(240,253,244,0.45)", cursor: "pointer" },
-  uploadTitle: { color: "#14532d", fontSize: "14px", fontWeight: 700 },
-  uploadText: { color: "#5d6d59", fontSize: "13px" },
+  certList: { display: "grid", gap: "8px" },
+  certListItem: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", alignItems: "center", gap: "12px", padding: "13px 14px", borderRadius: "8px", background: "#fbfdfb", border: "1px solid #e1e8df" },
+  certActionStack: { display: "grid", gap: "8px", minWidth: 0 },
+  inlineAction: { justifySelf: "flex-start", padding: "7px 10px", borderRadius: "8px", border: "1px solid #bbd8c1", background: "#f0f8f2", color: "#166534", fontSize: "12px", fontWeight: 800, cursor: "pointer" },
+  auditUploadPanel: { display: "grid", gap: "12px", padding: "16px", borderRadius: "8px", border: "1px solid #e1e8df", background: "#fbfdfb" },
+  uploadSurface: { display: "grid", gap: "10px", width: "100%", minWidth: 0, padding: "22px 20px", borderRadius: "8px", border: "1px dashed #76b889", background: "#fbfffc", cursor: "pointer" },
+  uploadSurfaceDisabled: { opacity: 0.62, cursor: "not-allowed" },
+  uploadTitle: { color: "#14532d", fontSize: "16px", fontWeight: 800 },
+  uploadText: { color: "#5f705c", fontSize: "15px", lineHeight: 1.45, wordBreak: "break-word" },
   hiddenInput: { display: "none" },
-  previewBox: { display: "grid", gap: "8px", padding: "16px", borderRadius: "16px", background: "#fff", border: "1px solid rgba(17,22,18,0.08)" },
-  previewTitle: { color: "#101913", fontSize: "13px" },
-  previewText: { margin: 0, color: "#4d5e4c", fontSize: "13px", lineHeight: 1.6 },
-  formGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" },
-  field: { display: "grid", gap: "8px" },
-  fieldLabel: { fontSize: "12px", letterSpacing: "0.08em", textTransform: "uppercase", color: "#71816d" },
-  input: { width: "100%", padding: "12px 14px", borderRadius: "14px", border: "1px solid rgba(17,22,18,0.12)", background: "#fff", color: "#152117", fontSize: "14px" },
-  textArea: { width: "100%", minHeight: "92px", padding: "12px 14px", borderRadius: "14px", border: "1px solid rgba(17,22,18,0.12)", background: "#fff", color: "#152117", fontSize: "14px", resize: "vertical", fontFamily: "inherit" },
-  actions: { display: "flex", flexWrap: "wrap", gap: "10px" },
-  primaryButton: { padding: "11px 16px", borderRadius: "999px", border: "1px solid #166534", background: "#166534", color: "#fff", fontSize: "13px", fontWeight: 700, cursor: "pointer" },
-  secondaryButton: { padding: "11px 16px", borderRadius: "999px", border: "1px solid rgba(17,22,18,0.12)", background: "#fff", color: "#1c261e", fontSize: "13px", fontWeight: 700, cursor: "pointer" },
+  previewBox: { display: "grid", gap: "8px", padding: "14px", borderRadius: "8px", background: "#f9fbf9", border: "1px solid #e1e8df" },
+  previewTitle: { color: "#111c15", fontSize: "13px", fontWeight: 800 },
+  previewText: { margin: 0, color: "#4d5e4c", fontSize: "13px", lineHeight: 1.55 },
+  formGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "10px" },
+  field: { display: "grid", gap: "7px", minWidth: 0 },
+  fieldLabel: { fontSize: "10px", letterSpacing: "0.08em", textTransform: "uppercase", color: "#687865", fontWeight: 800 },
+  input: { width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cfd9cc", background: "#fff", color: "#111c15", fontSize: "14px" },
+  textArea: { width: "100%", minHeight: "88px", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cfd9cc", background: "#fff", color: "#111c15", fontSize: "14px", resize: "vertical", fontFamily: "inherit" },
+  actions: { display: "flex", flexWrap: "wrap", gap: "8px" },
+  primaryButton: { padding: "10px 14px", borderRadius: "8px", border: "1px solid #166534", background: "#166534", color: "#fff", fontSize: "13px", fontWeight: 800, cursor: "pointer" },
+  secondaryButton: { padding: "10px 14px", borderRadius: "8px", border: "1px solid #cfd9cc", background: "#fff", color: "#1c261e", fontSize: "13px", fontWeight: 800, cursor: "pointer" },
   buttonDisabled: { opacity: 0.55, cursor: "not-allowed" },
-  successText: { margin: 0, color: "#166534", fontSize: "14px" },
-  errorText: { margin: 0, color: "#b91c1c", fontSize: "14px" },
-  historyList: { display: "grid", gap: "10px" },
-  historyRow: { display: "grid", gridTemplateColumns: "minmax(180px, 2fr) repeat(2, minmax(120px, 0.8fr))", gap: "14px", alignItems: "center", padding: "16px 18px", borderRadius: "18px", border: "1px solid rgba(17,22,18,0.08)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,250,247,0.96))" },
-  capaList: { display: "grid", gap: "12px" },
-  capaCard: { display: "grid", gap: "12px", padding: "16px 18px", borderRadius: "18px", border: "1px solid rgba(17,22,18,0.08)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,250,247,0.96))" },
-  actionList: { display: "grid", gap: "10px" },
-  actionItem: { display: "flex", alignItems: "flex-start", gap: "10px", padding: "14px 0", borderBottom: "1px solid rgba(17,22,18,0.06)", color: "#415240" },
-  actionDot: { width: "10px", height: "10px", marginTop: "5px", borderRadius: "999px", background: "#16a34a", flexShrink: 0 },
-  infoText: { margin: 0, color: "#1d4ed8", fontSize: "14px" },
-  drawerBackdrop: { position: "fixed", inset: 0, background: "rgba(7, 12, 8, 0.32)", backdropFilter: "blur(6px)", display: "flex", justifyContent: "flex-end", padding: "24px", zIndex: 60 },
-  drawerShell: { width: "min(520px, 100%)", maxHeight: "100%", overflowY: "auto", display: "grid", alignContent: "start", gap: "18px", padding: "28px", borderRadius: "30px", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(246,250,246,0.98))", border: "1px solid rgba(17,22,18,0.08)", boxShadow: "0 24px 60px rgba(17,22,18,0.18)" },
+  successText: { margin: 0, padding: "10px 12px", borderRadius: "8px", background: "#ecfdf3", border: "1px solid #bbf7d0", color: "#166534", fontSize: "13px" },
+  errorText: { margin: 0, padding: "10px 12px", borderRadius: "8px", background: "#fff1f2", border: "1px solid #fecdd3", color: "#be123c", fontSize: "13px" },
+  historyList: { display: "grid", gap: "8px" },
+  historyRow: { display: "grid", gridTemplateColumns: "minmax(180px, 2fr) repeat(2, minmax(120px, 0.8fr))", gap: "12px", alignItems: "center", padding: "13px 14px", borderRadius: "8px", border: "1px solid #e1e8df", background: "#fbfdfb" },
+  capaList: { display: "grid", gap: "10px" },
+  capaCard: { display: "grid", gap: "10px", padding: "14px", borderRadius: "8px", border: "1px solid #e1e8df", background: "#fbfdfb" },
+  actionList: { display: "grid", gap: "0" },
+  actionItem: { display: "flex", alignItems: "flex-start", gap: "10px", padding: "11px 0", borderBottom: "1px solid #edf2eb", color: "#415240", fontSize: "13px", lineHeight: 1.5 },
+  actionListHorizontal: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" },
+  actionItemHorizontal: { display: "flex", alignItems: "flex-start", gap: "10px", minHeight: "64px", padding: "13px 14px", borderRadius: "8px", border: "1px solid #e1e8df", background: "#f9fbf9", color: "#415240", fontSize: "13px", lineHeight: 1.45 },
+  actionDot: { width: "8px", height: "8px", marginTop: "6px", borderRadius: "999px", background: "#16a34a", flexShrink: 0 },
+  decisionHorizontal: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "10px", alignItems: "stretch" },
+  insightCard: { display: "grid", gap: "10px", padding: "14px", borderRadius: "8px", background: "#f9fbf9", border: "1px solid #e1e8df" },
+  insightList: { margin: 0, paddingLeft: "18px", color: "#4d5e4c", fontSize: "13px", lineHeight: 1.55 },
+  infoText: { margin: 0, padding: "10px 12px", borderRadius: "8px", background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8", fontSize: "13px" },
+  drawerBackdrop: { position: "fixed", inset: 0, background: "rgba(7, 12, 8, 0.32)", backdropFilter: "blur(6px)", display: "flex", justifyContent: "flex-end", padding: "18px", zIndex: 60 },
+  drawerShell: { width: "min(540px, 100%)", maxHeight: "100%", overflowY: "auto", display: "grid", alignContent: "start", gap: "16px", padding: "22px", borderRadius: "10px", background: "#ffffff", border: "1px solid #dfe7dd", boxShadow: "0 24px 60px rgba(17,22,18,0.18)" },
   drawerHeader: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px" },
-  drawerClose: { padding: "10px 14px", borderRadius: "999px", border: "1px solid rgba(17,22,18,0.12)", background: "#fff", color: "#1c261e", fontSize: "13px", fontWeight: 700, cursor: "pointer" },
+  drawerClose: { padding: "9px 12px", borderRadius: "8px", border: "1px solid #cfd9cc", background: "#fff", color: "#1c261e", fontSize: "12px", fontWeight: 800, cursor: "pointer" },
 };
 
 function priorityStyle(priority: string) {
@@ -1064,8 +1142,12 @@ function ReviewItem({ label, value }: { label: string; value: string }) {
   return <div style={styles.summaryCard}><span style={styles.summaryLabel}>{label}</span><strong style={styles.summaryValue}>{value}</strong></div>;
 }
 
+function WorkflowItem({ label, value }: { label: string; value: string }) {
+  return <div style={styles.workflowItem}><span style={styles.workflowLabel}>{label}</span><strong style={styles.workflowValue}>{value}</strong></div>;
+}
+
 function InsightCard({ title, items }: { title: string; items: string[] }) {
-  return <div style={styles.panel}><h3 style={styles.smallTitle}>{title}</h3><ul style={{ margin: 0, paddingLeft: "18px", color: "#4d5e4c", lineHeight: 1.6 }}>{items.map((item) => <li key={item}>{item}</li>)}</ul></div>;
+  return <div style={styles.insightCard}><h3 style={styles.smallTitle}>{title}</h3><ul style={styles.insightList}>{items.map((item) => <li key={item}>{item}</li>)}</ul></div>;
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {

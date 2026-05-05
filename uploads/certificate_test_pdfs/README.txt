@@ -9,6 +9,7 @@ Verified examples:
 06_iso14001_facility_verified.pdf
 07_iso22000_food_safety_verified.pdf
 08_haccp_food_safety_verified.pdf
+12_gmp_food_manufacturing_verified.pdf
 
 Needs review examples:
 09_rspo_expired_needs_review.pdf - expired certificate

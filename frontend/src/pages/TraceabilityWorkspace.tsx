@@ -2,9 +2,9 @@ import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 
 const TRACE_TABS = [
-  { id: "overview", step: "01", label: "Trace Overview" },
-  { id: "trace-view", step: "02", label: "Supplier / Commodity Trace" },
-  { id: "insights", step: "03", label: "AI Trace Insights" },
+  { id: "overview", label: "Trace Overview" },
+  { id: "trace-view", label: "Supplier / Commodity Trace" },
+  { id: "insights", label: "AI Trace Insights" },
 ] as const;
 
 const TRACE_FILTERS = ["All suppliers", "High-risk commodities", "Gaps to review"] as const;
@@ -593,7 +593,6 @@ export function TraceabilityWorkspace() {
                   ...(active ? styles.tabActive : {}),
                 }}
               >
-                <span style={styles.tabStep}>{tab.step}</span>
                 <span style={styles.tabLabel}>{tab.label}</span>
               </button>
             );
@@ -613,11 +612,10 @@ export function TraceabilityWorkspace() {
 const styles: Record<string, CSSProperties> = {
   stack: { display: "grid", gap: "22px" },
   embeddedFrame: { display: "grid", gap: "16px", padding: "0" },
-  tabRail: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" },
-  tab: { display: "grid", gap: "6px", padding: "16px 18px", borderRadius: "18px", border: "1px solid rgba(17, 22, 18, 0.1)", background: "rgba(255,255,255,0.8)", textAlign: "left", cursor: "pointer" },
-  tabActive: { background: "linear-gradient(135deg, #166534, #14532d)", borderColor: "#166534", boxShadow: "0 14px 28px rgba(22, 101, 52, 0.2)", color: "#fff" },
-  tabStep: { fontSize: "11px", letterSpacing: "0.18em", textTransform: "uppercase" },
-  tabLabel: { fontSize: "15px", fontWeight: 600 },
+  tabRail: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", alignItems: "center", gap: "8px", width: "100%", padding: "8px", borderRadius: "8px", border: "1px solid #dfe7dd", background: "#ffffff", boxShadow: "0 1px 2px rgba(17,22,18,0.04)" },
+  tab: { display: "flex", alignItems: "center", justifyContent: "center", width: "100%", minHeight: "38px", padding: "8px 14px", borderRadius: "6px", border: "1px solid transparent", background: "transparent", color: "#40503d", textAlign: "center", cursor: "pointer" },
+  tabActive: { background: "#166534", borderColor: "#166534", boxShadow: "none", color: "#ffffff" },
+  tabLabel: { fontSize: "13px", fontWeight: 800, whiteSpace: "nowrap" },
   flowBanner: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" },
   flowBannerItem: { display: "grid", gap: "4px", padding: "16px 18px", borderRadius: "20px", background: "linear-gradient(180deg, rgba(255,255,255,0.94), rgba(246,250,246,0.98))", border: "1px solid rgba(17, 22, 18, 0.08)", boxShadow: "0 8px 20px rgba(17, 22, 18, 0.05)" },
   flowBannerLabel: { fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.14em", color: "#73826f" },

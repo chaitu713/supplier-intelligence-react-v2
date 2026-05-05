@@ -59,7 +59,7 @@ export function AppShell({ children }: AppShellProps) {
             <div className="leading-tight">
               <div className="flex items-start gap-2 text-sm font-bold tracking-[-0.025em] text-[var(--text)]">
                 <span>
-                  TCS ENVIROZONE
+                  Ozone
                   <sup className="ml-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-[var(--primary)]">
                     AI
                   </sup>

@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { AuditingWorkspace } from "./AuditingWorkspaceV2";
 import OnboardingPage from "./OnboardingPageComponent";
@@ -28,11 +28,6 @@ const engagementTabs = [
 
 export function SupplierEngagementPage() {
   const [activeTab, setActiveTab] = useState<(typeof engagementTabs)[number]["id"]>("onboarding");
-
-  const activeModule = useMemo(
-    () => engagementTabs.find((tab) => tab.id === activeTab) ?? engagementTabs[0],
-    [activeTab],
-  );
 
   return (
     <div style={styles.page}>
@@ -63,18 +58,15 @@ export function SupplierEngagementPage() {
         </div>
       </section>
 
-      {activeTab === "onboarding" ? (
+      <section style={activeTab === "onboarding" ? styles.modulePaneActive : styles.modulePaneHidden}>
         <OnboardingPage embedded />
-      ) : activeTab === "auditing" ? (
+      </section>
+      <section style={activeTab === "auditing" ? styles.modulePaneActive : styles.modulePaneHidden}>
         <AuditingWorkspace />
-      ) : activeTab === "traceability" ? (
+      </section>
+      <section style={activeTab === "traceability" ? styles.modulePaneActive : styles.modulePaneHidden}>
         <TraceabilityWorkspace />
-      ) : (
-        <section style={styles.placeholder}>
-          <h2 style={styles.placeholderTitle}>{activeModule.title}</h2>
-          <p style={styles.placeholderText}>{activeModule.description}</p>
-        </section>
-      )}
+      </section>
     </div>
   );
 }
@@ -107,32 +99,41 @@ const styles: Record<string, CSSProperties> = {
     fontSize: "0.92rem",
   },
   tabRail: {
-    display: "flex",
-    justifyContent: "center",
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
     alignItems: "center",
-    gap: "18px",
+    gap: "8px",
     width: "100%",
-    borderBottom: "1px solid rgba(17, 22, 18, 0.1)",
-    paddingBottom: "4px",
-    flexWrap: "wrap",
+    padding: "8px",
+    borderRadius: "8px",
+    border: "1px solid #dfe7dd",
+    background: "#ffffff",
+    boxShadow: "0 1px 2px rgba(17,22,18,0.04)",
   },
   tab: {
-    padding: "8px 12px 12px",
-    borderRadius: 0,
-    border: "none",
-    borderBottom: "2px solid transparent",
+    minHeight: "38px",
+    padding: "8px 14px",
+    borderRadius: "6px",
+    border: "1px solid transparent",
     background: "transparent",
-    color: "#778a71",
-    fontSize: "15px",
-    fontWeight: 600,
+    color: "#40503d",
+    fontSize: "13px",
+    fontWeight: 800,
     cursor: "pointer",
     textAlign: "center",
     boxShadow: "none",
-    transition: "color 0.16s ease, border-color 0.16s ease",
+    transition: "background 0.16s ease, color 0.16s ease, border-color 0.16s ease",
   },
   tabActive: {
-    color: "#166534",
-    borderBottomColor: "#166534",
+    color: "#ffffff",
+    background: "#166534",
+    borderColor: "#166534",
+  },
+  modulePaneActive: {
+    display: "block",
+  },
+  modulePaneHidden: {
+    display: "none",
   },
   placeholder: {
     display: "grid",

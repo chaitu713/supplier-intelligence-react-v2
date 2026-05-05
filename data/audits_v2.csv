@@ -1,5 +1,5 @@
 audit_id,supplier_id,audit_date,type,score,non_compliance,audit_priority,audit_status,audit_decision,decision_notes,decision_date,capa_required,capa_due_date,capa_status
-1,2001,2024-06-06,External,80.1361315970301,4,High,CAPA open,Pending,,,Yes,2026-10-21,In Progress
+1,2001,2024-06-06,External,80.1361315970301,4,High,CAPA closed,Corrective Action Required,The supplier is EUDR-relevant and currently lacks verified geolocation or polygon evidence required for compliance. Major CAPA (CAPA_id 2) remains in 'Open' status regarding critical labor and geolocation findings. Recent evidence submissions (uploaded 2026-05-04 and 2026-05-05) are currently in 'Needs Review' status with validation notes indicating unresolved gaps.,2026-05-05,Yes,,Closed
 2,2001,2023-04-27,Internal,84.31097966643264,2,High,Evidence review required,Pending,,,Yes,,Not Started
 3,2001,2023-09-22,Internal,80.18474952208206,3,High,Evidence review required,Pending,,,Yes,,Not Started
 4,2001,2023-06-26,External,99.36764303811964,3,High,Evidence review required,Pending,,,Yes,,Not Started

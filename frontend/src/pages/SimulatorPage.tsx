@@ -323,31 +323,29 @@ export function SimulatorPage() {
             </p>
           </div>
 
-          <div className="border-b" style={{ borderColor: "var(--border)" }}>
-            <div className="flex flex-wrap justify-center gap-6">
+          <div
+            className="grid w-full grid-cols-5 items-center gap-2 rounded-lg border bg-white p-2 shadow-[0_1px_2px_rgba(17,22,18,0.04)]"
+            style={{ borderColor: "#dfe7dd" }}
+          >
             {scenarioOptions.map((option) => {
               const isActive = option.value === scenarioType;
               return (
                 <button
                   key={option.value}
                   type="button"
-                  className="relative border-b-2 px-1 pb-3 pt-1 text-left transition"
+                  className="flex min-h-[38px] w-full items-center justify-center rounded-md border px-3 py-2 text-center text-[13px] font-extrabold transition"
                   style={{
-                    borderBottomColor: isActive ? "var(--primary)" : "transparent",
+                    background: isActive ? "#166534" : "transparent",
+                    borderColor: isActive ? "#166534" : "transparent",
+                    color: isActive ? "#ffffff" : "#40503d",
                   }}
                   onClick={() => setScenarioType(option.value)}
                 >
-                  <p
-                    className="text-base font-semibold transition"
-                    style={{ color: isActive ? "var(--text)" : "var(--muted)" }}
-                  >
-                    {option.label}
-                  </p>
+                  {option.label}
                 </button>
               );
             })}
             </div>
-          </div>
 
           <div className="mt-4 rounded-[1.6rem] border bg-[rgba(243,247,244,0.55)] px-5 py-4" style={{ borderColor: "var(--border)" }}>
             <p className="text-sm leading-6 text-[var(--text-secondary)]">
