@@ -29,6 +29,76 @@ type TraceCertification = {
   expiryState: string;
 };
 
+type TraceSite = {
+  siteId: string;
+  siteName: string;
+  siteType: string;
+  country: string;
+  region: string;
+  geoEvidenceStatus: string;
+  polygonEvidenceStatus: string;
+  deforestationRiskStatus: string;
+};
+
+type TraceLot = {
+  lotId: string;
+  commodityName: string;
+  lotCode: string;
+  quantity?: number | null;
+  unit: string;
+  productionDate: string;
+  shipmentReference: string;
+  currentStatus: string;
+  evidenceStatus: string;
+  eventCount: number;
+};
+
+type TraceEvent = {
+  eventId: string;
+  lotId: string;
+  eventType: string;
+  eventDate: string;
+  country: string;
+  evidenceType: string;
+  evidenceStatus: string;
+};
+
+type TraceGapAction = {
+  gapId: string;
+  gapType: string;
+  severity: string;
+  status: string;
+  owner: string;
+  dueDate: string;
+  description: string;
+  recommendedAction: string;
+};
+
+type TraceabilityScore = {
+  value: number;
+  level: string;
+};
+
+type EudrReadiness = {
+  required: boolean;
+  status: string;
+  missingGeoEvidence: boolean;
+  missingPolygonEvidence: boolean;
+  missingChainOfCustody: boolean;
+  openHighSeverityGap: boolean;
+};
+
+type EvidenceCoverage = {
+  status: string;
+  coveragePercent: number;
+  lotCount: number;
+  eventCount: number;
+  siteCount: number;
+  missingGeoEvidenceCount: number;
+  missingPolygonEvidenceCount: number;
+  certificationGapCount: number;
+};
+
 type TraceRow = {
   supplierId: number;
   supplierName: string;
@@ -38,6 +108,13 @@ type TraceRow = {
   upstreamChain?: ChainNode[];
   commodities: TraceCommodity[];
   certifications: TraceCertification[];
+  sites?: TraceSite[];
+  lots?: TraceLot[];
+  events?: TraceEvent[];
+  gapActions?: TraceGapAction[];
+  traceabilityScore?: TraceabilityScore;
+  eudrReadiness?: EudrReadiness;
+  evidenceCoverage?: EvidenceCoverage;
 };
 
 const SAMPLE_SUPPLIER_TRACE_ROWS: TraceRow[] = [
@@ -73,6 +150,29 @@ const SAMPLE_SUPPLIER_TRACE_ROWS: TraceRow[] = [
       { name: "GMP", expiryState: "Expired" },
       { name: "Fairtrade", expiryState: "Expired" },
     ],
+    sites: [],
+    lots: [],
+    events: [],
+    gapActions: [],
+    traceabilityScore: { value: 54, level: "Weak" },
+    eudrReadiness: {
+      required: true,
+      status: "Needs Evidence",
+      missingGeoEvidence: false,
+      missingPolygonEvidence: true,
+      missingChainOfCustody: true,
+      openHighSeverityGap: false,
+    },
+    evidenceCoverage: {
+      status: "Gap",
+      coveragePercent: 40,
+      lotCount: 0,
+      eventCount: 0,
+      siteCount: 0,
+      missingGeoEvidenceCount: 0,
+      missingPolygonEvidenceCount: 1,
+      certificationGapCount: 3,
+    },
   },
 ];
 
@@ -124,9 +224,10 @@ export function TraceabilityWorkspace() {
     }
     if (activeFilter === "Gaps to review") {
       return traceRows.filter((row) =>
-        row.certifications.some(
-          (cert) => cert.expiryState === "Expired" || cert.expiryState === "Pending",
-        ),
+        row.certifications.some((cert) => cert.expiryState === "Expired" || cert.expiryState === "Pending") ||
+        (row.gapActions?.some((gap) => gap.status !== "Closed") ?? false) ||
+        row.eudrReadiness?.status === "Blocked" ||
+        row.eudrReadiness?.status === "Needs Evidence",
       );
     }
     return traceRows;
@@ -181,6 +282,29 @@ export function TraceabilityWorkspace() {
     (commodity) => commodity.riskLevel === "High",
   ).length;
   const upstreamSourceCountry = chainNodes[0]?.country || selectedSupplier.country;
+  const sites = selectedSupplier.sites ?? [];
+  const lots = selectedSupplier.lots ?? [];
+  const events = selectedSupplier.events ?? [];
+  const gapActions = selectedSupplier.gapActions ?? [];
+  const traceabilityScore = selectedSupplier.traceabilityScore ?? { value: 0, level: "Not scored" };
+  const eudrReadiness = selectedSupplier.eudrReadiness ?? {
+    required: false,
+    status: "Not Required",
+    missingGeoEvidence: false,
+    missingPolygonEvidence: false,
+    missingChainOfCustody: false,
+    openHighSeverityGap: false,
+  };
+  const evidenceCoverage = selectedSupplier.evidenceCoverage ?? {
+    status: "Gap",
+    coveragePercent: 0,
+    lotCount: lots.length,
+    eventCount: events.length,
+    siteCount: sites.length,
+    missingGeoEvidenceCount: 0,
+    missingPolygonEvidenceCount: 0,
+    certificationGapCount: expiredCount + pendingCount,
+  };
 
   function renderOverview() {
     return (
@@ -248,7 +372,8 @@ export function TraceabilityWorkspace() {
             <div style={styles.traceCardMeta}>
               <span>{selectedSupplier.tier ?? "Tier 1"}</span>
               <span>{chainNodes.length} chain levels</span>
-              <span>{selectedSupplier.certifications.length} certifications</span>
+              <span>{traceabilityScore.value} trace score</span>
+              <span>{eudrReadiness.status} EUDR</span>
             </div>
             <div style={styles.traceChipRail}>
               {selectedSupplier.commodities.map((commodity) => (
@@ -295,9 +420,9 @@ export function TraceabilityWorkspace() {
       <div style={styles.stack}>
         <section style={styles.flowBanner}>
           <MetricCard label="Selected supplier" value={selectedSupplier.supplierName} />
-          <MetricCard label="Tier position" value={selectedSupplier.tier ?? "Tier 1"} />
-          <MetricCard label="Country" value={selectedSupplier.country} />
-          <MetricCard label="Chain depth" value={`${chainNodes.length} levels`} />
+          <MetricCard label="Traceability score" value={`${traceabilityScore.value} / ${traceabilityScore.level}`} />
+          <MetricCard label="EUDR readiness" value={eudrReadiness.status} />
+          <MetricCard label="Evidence coverage" value={`${evidenceCoverage.coveragePercent}%`} />
         </section>
 
         <section style={styles.reviewGrid}>
@@ -316,9 +441,10 @@ export function TraceabilityWorkspace() {
               <ReviewItem label="Supplier" value={selectedSupplier.supplierName} />
               <ReviewItem label="Tier" value={selectedSupplier.tier ?? "Tier 1"} />
               <ReviewItem label="Country" value={selectedSupplier.country} />
-              <ReviewItem label="Commodity count" value={String(selectedSupplier.commodities.length)} />
-              <ReviewItem label="Expired certificates" value={String(expiredCount)} />
-              <ReviewItem label="Upstream levels" value={String(chainNodes.length)} />
+              <ReviewItem label="Sites" value={String(sites.length)} />
+              <ReviewItem label="Lots" value={String(lots.length)} />
+              <ReviewItem label="Events" value={String(events.length)} />
+              <ReviewItem label="Open trace gaps" value={String(gapActions.filter((gap) => gap.status !== "Closed").length)} />
             </div>
 
             <div style={styles.noteCard}>
@@ -383,9 +509,61 @@ export function TraceabilityWorkspace() {
                 }))}
               />
             </div>
+
+            <div style={styles.sectionHead}>
+              <div>
+                <h2 style={styles.sectionTitle}>Lot movement timeline</h2>
+                <p style={styles.sectionText}>
+                  Batch and shipment records now sit inside the same supplier trace.
+                </p>
+              </div>
+            </div>
+
+            <div style={styles.historyList}>
+              {lots.length ? lots.map((lot) => (
+                <div key={lot.lotId} style={styles.historyRow}>
+                  <div style={styles.historyPrimary}>
+                    <strong style={styles.queueName}>{lot.lotCode || lot.lotId}</strong>
+                    <span style={styles.queueMeta}>{lot.commodityName} | {lot.productionDate || "No production date"}</span>
+                  </div>
+                  <span style={styles.historyMetric}>{lot.quantity ?? "-"} {lot.unit}</span>
+                  <span style={styles.historyMetric}>{lot.eventCount} events</span>
+                  <span style={{ ...styles.statusBadge, ...getEvidenceBadgeStyle(lot.evidenceStatus) }}>{lot.evidenceStatus}</span>
+                </div>
+              )) : (
+                <div style={styles.emptyState}>No lot records are linked to this supplier yet.</div>
+              )}
+            </div>
           </div>
 
           <div style={styles.sideStack}>
+            <div style={styles.sidePanel}>
+              <div style={styles.sectionHead}>
+                <div>
+                  <h2 style={styles.sectionTitle}>Sites and plots</h2>
+                  <p style={styles.sectionText}>
+                    Location evidence, polygon status, and deforestation checks by site.
+                  </p>
+                </div>
+              </div>
+
+              <div style={styles.detailList}>
+                {sites.length ? sites.map((site) => (
+                  <div key={site.siteId} style={styles.siteListItem}>
+                    <div>
+                      <strong style={styles.certListName}>{site.siteName}</strong>
+                      <div style={styles.certListMeta}>{site.siteType} | {site.region || site.country}</div>
+                    </div>
+                    <span style={{ ...styles.statusBadge, ...getEvidenceBadgeStyle(site.polygonEvidenceStatus) }}>
+                      {site.polygonEvidenceStatus}
+                    </span>
+                  </div>
+                )) : (
+                  <div style={styles.emptyState}>No site records linked.</div>
+                )}
+              </div>
+            </div>
+
             <div style={styles.sidePanel}>
               <div style={styles.sectionHead}>
                 <div>
@@ -446,6 +624,31 @@ export function TraceabilityWorkspace() {
                 ))}
               </div>
             </div>
+
+            <div style={styles.sidePanel}>
+              <div style={styles.sectionHead}>
+                <div>
+                  <h2 style={styles.sectionTitle}>Trace gap actions</h2>
+                  <p style={styles.sectionText}>
+                    Persistent trace-specific actions for missing or weak evidence.
+                  </p>
+                </div>
+              </div>
+
+              <div style={styles.detailList}>
+                {gapActions.length ? gapActions.map((gap) => (
+                  <div key={gap.gapId} style={styles.gapListItem}>
+                    <div>
+                      <strong style={styles.certListName}>{gap.gapType}</strong>
+                      <div style={styles.certListMeta}>{gap.owner || "Unassigned"} | due {gap.dueDate || "TBD"}</div>
+                    </div>
+                    <span style={{ ...styles.statusBadge, ...getGapBadgeStyle(gap.severity) }}>{gap.severity}</span>
+                  </div>
+                )) : (
+                  <div style={styles.emptyState}>No trace gap actions are open.</div>
+                )}
+              </div>
+            </div>
           </div>
         </section>
       </div>
@@ -492,8 +695,8 @@ export function TraceabilityWorkspace() {
       <div style={styles.stack}>
         <section style={styles.flowBanner}>
           <MetricCard label="Chain depth" value={`${chainNodes.length} levels`} />
-          <MetricCard label="Expired support" value={String(expiredCount)} />
-          <MetricCard label="Pending support" value={String(pendingCount)} />
+          <MetricCard label="Evidence coverage" value={`${evidenceCoverage.coveragePercent}%`} />
+          <MetricCard label="Open trace gaps" value={String(gapActions.length)} />
           <MetricCard label="Suggested decision" value={suggestedDecision} />
         </section>
 
@@ -567,8 +770,9 @@ export function TraceabilityWorkspace() {
               <div style={styles.summaryGrid}>
                 <ReviewItem label="Suggested decision" value={suggestedDecision} />
                 <ReviewItem label="High-risk commodities" value={String(highRiskCommodityCount)} />
-                <ReviewItem label="Expired certifications" value={String(expiredCount)} />
-                <ReviewItem label="Chain levels" value={String(chainNodes.length)} />
+                <ReviewItem label="Trace score" value={`${traceabilityScore.value} / ${traceabilityScore.level}`} />
+                <ReviewItem label="EUDR readiness" value={eudrReadiness.status} />
+                <ReviewItem label="Coverage status" value={evidenceCoverage.status} />
               </div>
             </div>
           </div>
@@ -673,6 +877,9 @@ const styles: Record<string, CSSProperties> = {
   detailList: { display: "grid", gap: "12px", alignContent: "space-evenly", minHeight: 0 },
   certListItem: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", minHeight: "104px", padding: "18px 18px", borderRadius: "18px", background: "linear-gradient(180deg, rgba(255,255,255,1), rgba(252,247,247,0.96))", border: "1px solid rgba(248, 113, 113, 0.18)" },
   commodityListItem: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", minHeight: "104px", padding: "18px 18px", borderRadius: "18px", background: "linear-gradient(180deg, rgba(248,250,248,1), rgba(240,253,244,0.92))", border: "1px solid rgba(22, 101, 52, 0.12)" },
+  siteListItem: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", minHeight: "92px", padding: "16px 18px", borderRadius: "18px", background: "linear-gradient(180deg, rgba(248,250,252,1), rgba(239,246,255,0.92))", border: "1px solid rgba(37, 99, 235, 0.12)" },
+  gapListItem: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", minHeight: "92px", padding: "16px 18px", borderRadius: "18px", background: "linear-gradient(180deg, rgba(255,255,255,1), rgba(255,251,235,0.92))", border: "1px solid rgba(245, 158, 11, 0.18)" },
+  emptyState: { padding: "18px", borderRadius: "18px", background: "#f8fafc", border: "1px dashed rgba(17, 22, 18, 0.16)", color: "#64748b", fontSize: "13px" },
   certListName: { color: "#101913", fontSize: "14px" },
   certListMeta: { marginTop: "4px", color: "#6a7a67", fontSize: "12px" },
   historyList: { display: "grid", gap: "10px" },
@@ -740,5 +947,21 @@ function ChainStage({ index, eyebrow, tag, title, meta, chips, selected = false 
 function getRiskBadgeStyle(riskLevel: string) {
   if (riskLevel === "High") return styles.statusBadgeHigh;
   if (riskLevel === "Medium") return styles.statusBadgeSoon;
+  return styles.statusBadgeVerified;
+}
+
+function getEvidenceBadgeStyle(status: string) {
+  if (["Complete", "Available", "Clear", "Ready", "Not Required"].includes(status)) {
+    return styles.statusBadgeVerified;
+  }
+  if (["Partial", "Needs Review", "Expiring soon", "In Review"].includes(status)) {
+    return styles.statusBadgeSoon;
+  }
+  return styles.statusBadgeHigh;
+}
+
+function getGapBadgeStyle(severity: string) {
+  if (severity === "Critical" || severity === "High") return styles.statusBadgeHigh;
+  if (severity === "Medium") return styles.statusBadgeSoon;
   return styles.statusBadgeVerified;
 }
