@@ -115,7 +115,7 @@ Important frontend entry points:
 - `frontend/src/pages/OnboardingPage.jsx`: onboarding workflow.
 - `frontend/src/pages/AuditingWorkspaceV2.tsx`: auditing workflow.
 - `frontend/src/pages/TraceabilityWorkspace.tsx`: traceability workflow.
-- `frontend/src/pages/EsgMonitoringPage.tsx`: ESG monitoring.
+- `frontend/src/pages/EsgMonitoringPage.tsx`: current Continuous Monitoring placeholder page.
 - `frontend/src/pages/AnalyticsPage.tsx`: analytics.
 - `frontend/src/pages/SimulatorPage.tsx`: simulator.
 - `frontend/src/features/executive-dashboard/pages/ExecutiveDashboardPage.tsx`: executive dashboard.
@@ -1955,7 +1955,7 @@ Uploaded files are stored locally. Production would need Blob Storage or another
 
 ### ESG Monitoring
 
-ESG Monitoring is snapshot-based. True continuous monitoring would need scheduled ingestion, historical observations, external feeds, and alert lifecycle management.
+ESG Monitoring is currently a frontend placeholder for the future Continuous Monitoring redesign. A legacy backend overview endpoint still exists, but the current user-facing page is intentionally cleared. True continuous monitoring would need scheduled ingestion, historical observations, external feeds, and alert lifecycle management.
 
 ### GIS and Maps
 
@@ -2008,3 +2008,37 @@ If you later upload or paste this document into ChatGPT, ask questions like:
 - "Give me a five-minute demo script for the whole product."
 
 Because this document explains both the functional meaning and technical mapping, ChatGPT should be able to answer follow-up questions clearly.
+
+## 21. Documentation Verification Notes
+
+This guide was checked against the current codebase on 2026-05-05 so the functional story and technical mapping match the application as it exists now.
+
+Project Markdown files reviewed:
+
+- `README.md`
+- `GUARDRAILS_IMPLEMENTATION.md`
+- `docs/Ozone_AI_4_Functional_Technical_Guide.md`
+
+Generated, cache, and vendor Markdown files were not treated as product documentation. Examples include `.codex-template-analysis/.pytest_cache/README.md` and package documentation under `frontend/node_modules/**`.
+
+Application areas verified:
+
+- Frontend routing: `frontend/src/App.tsx`
+- Shared shell and navigation: `frontend/src/components/layout/AppShell.tsx`
+- Main product pages: Executive Dashboard, Analytics, Simulator, Supplier Engagement, ESG Monitoring placeholder, Due Diligence Agent, and Supplier Advisor AI
+- Backend app registration: `backend/app/main.py`
+- Backend routers: health, datasets, analytics, simulator, risk, advisor, AI review, onboarding, auditing, traceability, and ESG monitoring
+- Data files: supplier, ESG, transaction, certification, audit, traceability, monitoring seed, due diligence, alert, and evidence CSV/GeoJSON files in `data/`
+- AI governance code: guardrails, prompt registry, AI gateway, output validation, audit log, rate limiter, and review queue
+- Test coverage: `tests/test_ai_guardrails.py`
+
+Current-state corrections to remember:
+
+- `frontend/src/pages/AiReviewQueuePage.tsx` exists, but it is not currently exposed through a route in `frontend/src/App.tsx`.
+- ESG Monitoring is not an active rebuilt monitoring dashboard yet. The current frontend route shows a neutral Continuous Monitoring placeholder.
+- `GET /api/v1/esg-monitoring/overview` still exists on the backend as a legacy overview endpoint.
+- Planned Continuous Monitoring endpoints such as `/continuous-monitoring/workspace` are design notes, not implemented routes.
+
+Beginner-friendly mental model:
+
+The app is best understood as a demo platform with working supplier-risk workflows and file-backed persistence. The frontend shows the business workflows, the backend computes and persists the workflow data, the `data/` folder acts like a temporary database, and the AI layer adds guarded explanations and recommendations where configured.

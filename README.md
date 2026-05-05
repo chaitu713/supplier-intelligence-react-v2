@@ -118,7 +118,7 @@ Important frontend files:
 - `frontend/src/features/advisor-ai/pages/SupplierAdvisorAIPage`
   - Supplier Advisor AI page.
 - `frontend/src/pages/AiReviewQueuePage.tsx`
-  - AI review queue page.
+  - AI review queue page component. The file exists, but it is not currently registered as a frontend route in `frontend/src/App.tsx`.
 
 ## Backend Structure
 
@@ -1309,7 +1309,8 @@ Persistence:
 
 Continuous monitoring:
 
-- ESG Monitoring is currently snapshot-based.
+- ESG Monitoring is currently a placeholder frontend route for the future Continuous Monitoring redesign.
+- A legacy backend overview endpoint still exists at `GET /api/v1/esg-monitoring/overview`.
 - True continuous monitoring still needs scheduled jobs, historical ESG observations, persisted alert states, external data ingestion, and event processing.
 
 Document extraction:
@@ -1417,3 +1418,33 @@ Advisor AI workflow:
 2. Choose prompts based on the current lens or page.
 3. Ask for Supplier 360 summaries, due diligence priorities, audit blockers, traceability gaps, or action recommendations.
 4. Use the answer as a plain-English explanation layer over the structured application data.
+
+## Documentation Verification Notes
+
+This documentation was checked against the current application structure on 2026-05-05.
+
+Project Markdown files reviewed:
+
+- `README.md`
+- `GUARDRAILS_IMPLEMENTATION.md`
+- `docs/Ozone_AI_4_Functional_Technical_Guide.md`
+
+Markdown files under generated/cache/vendor folders, such as `.codex-template-analysis/.pytest_cache/README.md` and `frontend/node_modules/**`, are not application documentation and were not treated as product docs.
+
+What was verified against code:
+
+- Frontend routes in `frontend/src/App.tsx`.
+- Backend router registration in `backend/app/main.py`.
+- Backend route prefixes and endpoints in `backend/app/routers/*.py`.
+- Main frontend API calls in `frontend/src/pages/*` and `frontend/src/api/*`.
+- Current CSV and GeoJSON data files in `data/`.
+- Current test coverage in `tests/test_ai_guardrails.py`.
+- Frontend dependencies and scripts in `frontend/package.json`.
+- Backend dependencies in `requirements.txt`.
+
+Important current-state clarifications:
+
+- `frontend/src/pages/AiReviewQueuePage.tsx` exists, and `frontend/src/api/aiReview.ts` exists, but no `/ai-review` route is currently wired in `frontend/src/App.tsx`.
+- ESG Monitoring is intentionally a neutral Continuous Monitoring placeholder in the frontend. The old snapshot dashboard should not be described as the current frontend experience.
+- The legacy ESG Monitoring backend endpoint is still available at `GET /api/v1/esg-monitoring/overview`.
+- Operational Onboarding, Auditing, Traceability, Simulator, Analytics, Due Diligence, and Advisor AI routes are wired into the frontend navigation.
