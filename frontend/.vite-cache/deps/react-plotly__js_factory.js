@@ -1,12 +1,13 @@
 import {
   require_prop_types
-} from "./chunk-VU5D2WJC.js";
+} from "./chunk-F4QD3RXN.js";
+import "./chunk-5QIHIOCS.js";
 import {
   require_react
-} from "./chunk-LNWGNN6H.js";
+} from "./chunk-VKIUPR73.js";
 import {
   __commonJS
-} from "./chunk-WS6WXAIR.js";
+} from "./chunk-QY3AG7D4.js";
 
 // node_modules/react-plotly.js/factory.js
 var require_factory = __commonJS({

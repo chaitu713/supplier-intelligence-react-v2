@@ -34,6 +34,8 @@ class EsgWatchlistSupplier(BaseModel):
     bwsRisk: float
     hrrRisk: float
     landUseRisk: float
+    mlAnomalyScore: float
+    mlConfidence: float
     trend: str
     status: str
     primaryConcern: str

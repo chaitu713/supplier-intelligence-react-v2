@@ -1,83 +1,92 @@
 {
   "hash": "2a7194df",
-  "browserHash": "c7f42c09",
+  "browserHash": "3f24dd40",
   "optimized": {
     "react": {
       "src": "../../node_modules/react/index.js",
       "file": "react.js",
-      "fileHash": "d205bc6f",
+      "fileHash": "b826c406",
       "needsInterop": true
     },
     "react-dom": {
       "src": "../../node_modules/react-dom/index.js",
       "file": "react-dom.js",
-      "fileHash": "22e529ff",
+      "fileHash": "e2ab61d9",
       "needsInterop": true
     },
     "react/jsx-dev-runtime": {
       "src": "../../node_modules/react/jsx-dev-runtime.js",
       "file": "react_jsx-dev-runtime.js",
-      "fileHash": "dfec007a",
+      "fileHash": "5137829d",
       "needsInterop": true
     },
     "react/jsx-runtime": {
       "src": "../../node_modules/react/jsx-runtime.js",
       "file": "react_jsx-runtime.js",
-      "fileHash": "13e4357d",
+      "fileHash": "a94f2311",
       "needsInterop": true
     },
     "@tanstack/react-query": {
       "src": "../../node_modules/@tanstack/react-query/build/modern/index.js",
       "file": "@tanstack_react-query.js",
-      "fileHash": "bb862628",
+      "fileHash": "c9e68426",
       "needsInterop": false
     },
     "plotly.js-basic-dist-min": {
       "src": "../../node_modules/plotly.js-basic-dist-min/plotly-basic.min.js",
       "file": "plotly__js-basic-dist-min.js",
-      "fileHash": "29f934d4",
+      "fileHash": "9e5106e9",
       "needsInterop": true
     },
     "react-dom/client": {
       "src": "../../node_modules/react-dom/client.js",
       "file": "react-dom_client.js",
-      "fileHash": "f1e8ad6d",
+      "fileHash": "9765ef20",
       "needsInterop": true
     },
     "react-plotly.js/factory": {
       "src": "../../node_modules/react-plotly.js/factory.js",
       "file": "react-plotly__js_factory.js",
-      "fileHash": "70380cd8",
+      "fileHash": "0905046f",
       "needsInterop": true
     },
     "react-router-dom": {
       "src": "../../node_modules/react-router-dom/dist/index.js",
       "file": "react-router-dom.js",
-      "fileHash": "92e92dce",
+      "fileHash": "ae4a4e4c",
       "needsInterop": false
     },
     "react-simple-maps": {
       "src": "../../node_modules/react-simple-maps/dist/index.es.js",
       "file": "react-simple-maps.js",
-      "fileHash": "364faecf",
+      "fileHash": "30dc5eb0",
+      "needsInterop": false
+    },
+    "recharts": {
+      "src": "../../node_modules/recharts/es6/index.js",
+      "file": "recharts.js",
+      "fileHash": "bf9787b7",
       "needsInterop": false
     }
   },
   "chunks": {
-    "chunk-VU5D2WJC": {
-      "file": "chunk-VU5D2WJC.js"
+    "chunk-SFMRM745": {
+      "file": "chunk-SFMRM745.js"
     },
-    "chunk-DWI44AE7": {
-      "file": "chunk-DWI44AE7.js"
+    "chunk-WDFG6VQ3": {
+      "file": "chunk-WDFG6VQ3.js"
     },
-    "chunk-U5ZAPKHE": {
-      "file": "chunk-U5ZAPKHE.js"
+    "chunk-F4QD3RXN": {
+      "file": "chunk-F4QD3RXN.js"
     },
-    "chunk-LNWGNN6H": {
-      "file": "chunk-LNWGNN6H.js"
+    "chunk-5QIHIOCS": {
+      "file": "chunk-5QIHIOCS.js"
     },
-    "chunk-WS6WXAIR": {
-      "file": "chunk-WS6WXAIR.js"
+    "chunk-VKIUPR73": {
+      "file": "chunk-VKIUPR73.js"
+    },
+    "chunk-QY3AG7D4": {
+      "file": "chunk-QY3AG7D4.js"
     }
   }
 }

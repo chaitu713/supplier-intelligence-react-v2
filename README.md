@@ -112,7 +112,7 @@ Important frontend files:
 - `frontend/src/pages/TraceabilityWorkspace.tsx`
   - Traceability workspace.
 - `frontend/src/pages/EsgMonitoringPage.tsx`
-  - Continuous Monitoring placeholder page. The previous snapshot ESG dashboard was intentionally cleared so the module can be rebuilt around a proper continuous monitoring workflow.
+  - Visual-first Phase 1 Continuous ESG Monitoring command center with ML anomaly scoring, ESG health visuals, supplier anomaly field, attribute heatmap, alert stream, and supplier focus cards.
 - `frontend/src/features/risk-monitoring/pages/DueDiligencePage`
   - Due Diligence Agent page.
 - `frontend/src/features/advisor-ai/pages/SupplierAdvisorAIPage`
@@ -192,11 +192,9 @@ Risk and due diligence:
 
 Continuous ESG Monitoring:
 
-- Current legacy backend endpoint still exists: `GET /api/v1/esg-monitoring/overview`
-- Planned workspace endpoint: `GET /continuous-monitoring/workspace`
-- Planned rule run endpoint: `POST /continuous-monitoring/run-rules`
-- Planned alert update endpoint: `PATCH /continuous-monitoring/alerts/{alert_id}`
-- Planned decision endpoint: `POST /continuous-monitoring/decision`
+- `GET /api/v1/esg-monitoring/overview`
+  - Returns Phase 1 monitoring KPIs, ESG indicator summaries, ML-ranked supplier watchlist, alert items, health trend buckets, and ML anomaly insight details.
+- Planned later when alert lifecycle is persisted: rule execution, alert update, monthly snapshot, and monitoring decision endpoints.
 
 Onboarding:
 
@@ -899,36 +897,73 @@ uploads/traceability/sample_pdfs/02_geolocation_polygon_blueriver.pdf
 
 ## Continuous ESG Monitoring Module
 
-The previous snapshot-style ESG Monitoring frontend was intentionally cleared. The route still exists, but `frontend/src/pages/EsgMonitoringPage.tsx` now shows a neutral `Continuous Monitoring workspace` placeholder so the module can be redesigned properly.
+Continuous ESG Monitoring is now implemented as a Phase 1 ML-assisted visual command center. It is not the old static ESG snapshot dashboard. The current module uses the existing ESG, risk, audit, certification, commodity, alert, and supplier context to create a visual monitoring cockpit.
 
-The required demo data model has now been created. Backend and frontend Continuous Monitoring logic is still pending.
+The frontend route is:
 
-Continuous ESG Monitoring should be an operational monitoring command center, not just an ESG score dashboard. It should answer:
+```text
+/esg-monitoring
+```
+
+The active frontend files are:
+
+- `frontend/src/pages/EsgMonitoringPage.tsx`
+- `frontend/src/api/esgMonitoring.ts`
+- `frontend/src/features/esg-monitoring/hooks/useEsgMonitoring.ts`
+
+The backend endpoint is:
+
+```text
+GET /api/v1/esg-monitoring/overview
+```
+
+The backend implementation is:
+
+- `backend/app/routers/esg_monitoring.py`
+- `backend/app/services/esg_monitoring_service.py`
+- `backend/app/schemas/esg_monitoring.py`
+
+The module answers:
 
 - Which suppliers are deteriorating right now?
-- Which ESG indicators changed since the last review?
-- Which alerts are new, open, worsening, or resolved?
-- Which suppliers need evidence refresh, audit follow-up, traceability follow-up, due diligence, or escalation?
-- Which suppliers are stable and can remain in normal monitoring?
+- Which suppliers look anomalous compared with peers?
+- Which ESG indicators are driving network pressure?
+- Which suppliers need monitoring, evidence refresh, audit follow-up, traceability follow-up, due diligence, or escalation?
+- Which alerts should reviewers see first?
 
-Recommended frontend sections:
+Implemented frontend visuals:
 
-- Monitoring Overview
-  - Suppliers monitored, new alerts, critical alerts, deteriorating suppliers, suppliers needing follow-up, and average ESG health.
-- Signal Feed
-  - Timeline/table of supplier monitoring signals with pillar, severity, previous value, current value, change, trigger date, status, and recommended action.
-- Supplier Monitoring Watchlist
-  - Suppliers ranked by urgency using ESG health, trend direction, open alerts, evidence freshness, audit/trace blockers, and recommended route.
-- Indicator Trends
-  - Dated trend views for carbon, water, waste, land use, deforestation, labor, child risk, working hours, wage, compliance, transparency, and reporting.
-- Alert Rules
-  - Rule definitions such as carbon increase, water stress threshold, labor deterioration, certification expiry, stale evidence, overdue CAPA, or traceability blocker.
-- Action Routing
-  - Recommended route per alert: request evidence, start revalidation, create audit/CAPA, open trace gap, run due diligence, escalate supplier, or continue monitoring.
-- Monitoring Decision
-  - Supplier-level outcome: `Stable`, `Watch`, `Evidence Required`, `Enhanced Monitoring`, `Escalate`, or `Block / Suspend`.
+- ESG health ring
+- E/S/G radar chart
+- Supplier anomaly scatter/bubble field
+- ESG attribute heatmap across all available ESG fields
+- Compact AI alert stream
+- Selected supplier driver bars
+- Visual supplier watchlist cards
 
-Implemented CSV data model for the demo:
+Current ML approach:
+
+- Uses `IsolationForest` from scikit-learn.
+- Uses an unsupervised Phase 1 anomaly score because there are not yet enough labeled historical deterioration outcomes.
+- Includes ESG pillar scores, composite ESG risk, BWS, HRR, land-use risk, alert severity, certification gap, audit non-compliance, commodity exposure, country risk, and all available raw ESG attributes.
+- Returns supplier-level `mlAnomalyScore` and `mlConfidence` in the watchlist response.
+
+Current ESG attributes included:
+
+- Environmental: carbon, energy, renewable, water, waste, recycle, pollution, land, deforestation, fines.
+- Social: labor, injury, turnover, diversity, child, hours, audit, complaints, wage, satisfaction.
+- Governance: corruption, compliance, board, transparency, legal, tax, disclosure, data, policy, reporting.
+
+Backend response includes:
+
+- Monitoring KPIs
+- Indicator summaries
+- ML-ranked supplier watchlist
+- Alerts
+- Health trend counts
+- ML insight summary and flagged supplier details
+
+Existing CSV data model available for current and future monitoring:
 
 - `data/monitoring_observations_v2.csv`
   - Dated ESG observations per supplier and indicator.
@@ -970,27 +1005,19 @@ Existing data to reuse:
 - `data/traceability_decisions_v2.csv`
 - `data/due_diligence_cases_v2.csv`
 
-Recommended backend shape:
+Phase 1 limitations:
 
-- `backend/app/services/continuous_monitoring_service.py`
-- `backend/app/routers/continuous_monitoring.py`
-- `backend/app/schemas/continuous_monitoring.py`
+- The ML model is unsupervised and intended for demo-grade anomaly prioritization.
+- Core ESG files are mostly current-state snapshots, not monthly time-series records.
+- True deterioration forecasting still needs monthly snapshots, more dated observations, alert outcomes, and labeled supplier deterioration events.
+- Alert lifecycle actions are visualized from the current overview response; persisted alert updates and monitoring decisions are future work.
 
-Recommended endpoints:
+Recommended next backend additions:
 
-```text
-GET /continuous-monitoring/workspace
-POST /continuous-monitoring/run-rules
-PATCH /continuous-monitoring/alerts/{alert_id}
-POST /continuous-monitoring/decision
-```
-
-AI behavior:
-
-- Any monitoring summary or decision must use `backend/app/services/ai_gateway.py`.
-- Add a `continuous_monitoring` prompt definition to `backend/app/ai/prompt_registry.py`.
-- Use deterministic rule output first, then guarded LLM explanation/summary.
-- If AI provider fails, return deterministic fallback.
+- Monthly supplier monitoring snapshot builder.
+- Persisted alert lifecycle and action status updates.
+- Monitoring decision endpoint with deterministic fallback.
+- Optional guarded AI summary through `backend/app/services/ai_gateway.py`.
 
 Production Azure services to document for later:
 
@@ -1005,85 +1032,18 @@ Production Azure services to document for later:
 - Azure Maps for future geospatial/deforestation visualization.
 - Azure SQL Database or PostgreSQL when moving from CSV to production persistence.
 
-Implementation prompt for ChatGPT:
+Future implementation notes:
 
 ```text
-You are working in the Ozone AI 4.0 supplier-risk-intelligence-react repository.
+Phase 1 is implemented at /esg-monitoring with visual ML monitoring.
 
-Implement the Continuous ESG Monitoring module in the same style as the existing enhanced Onboarding, Auditing, Traceability, Due Diligence, and Advisor AI modules.
-
-Do not rebuild the old snapshot ESG dashboard. Build an operational Continuous Monitoring workspace.
-
-Current app context:
-- Frontend: React + Vite + TypeScript.
-- Backend: FastAPI.
-- Current persistence: CSV files in data/.
-- Current placeholder page: frontend/src/pages/EsgMonitoringPage.tsx.
-- LLM/AI calls must go only through backend/app/services/ai_gateway.py.
-- Add prompt policy through backend/app/ai/prompt_registry.py.
-- Use deterministic fallback if AI provider fails.
-
-Implement:
-1. CSV files:
-   - data/monitoring_observations_v2.csv
-   - data/monitoring_alerts_v2.csv
-   - data/monitoring_rules_v2.csv
-   - data/monitoring_actions_v2.csv
-   - data/supplier_evidence_refresh_v2.csv
-   - data/external_esg_signals_v2.csv
-
-2. Backend:
-   - backend/app/services/continuous_monitoring_service.py
-   - backend/app/routers/continuous_monitoring.py
-   - backend/app/schemas/continuous_monitoring.py
-   - Register router in backend/app/main.py.
-
-3. Endpoints:
-   - GET /continuous-monitoring/workspace
-   - POST /continuous-monitoring/run-rules
-   - PATCH /continuous-monitoring/alerts/{alert_id}
-   - POST /continuous-monitoring/decision
-
-4. Workspace response should include:
-   - monitoring KPIs
-   - signal feed
-   - supplier watchlist
-   - indicator trends
-   - alert rules
-   - monitoring actions
-   - monitoring decisions
-
-5. Frontend:
-   - Replace the placeholder in frontend/src/pages/EsgMonitoringPage.tsx.
-   - Build sections:
-     - Monitoring Overview
-     - Signal Feed
-     - Supplier Monitoring Watchlist
-     - Indicator Trends
-     - Alert Rules
-     - Action Routing
-     - Monitoring Decision
-   - Keep UI restrained, operational, and consistent with Traceability/Auditing.
-   - Do not create a marketing page.
-
-6. Rule logic:
-   - Generate alerts for indicator deterioration, high severity observations, certification expiry, stale evidence, overdue CAPA, open traceability gaps, and high-risk due diligence decisions.
-   - Route each alert to one action: Request Evidence, Start Revalidation, Create Audit/CAPA, Open Trace Gap, Run Due Diligence, Escalate Supplier, or Continue Monitoring.
-
-7. AI:
-   - Add continuous_monitoring prompt definition.
-   - Generate guarded monitoring summary/decision with allowed outcomes:
-     Stable, Watch, Evidence Required, Enhanced Monitoring, Escalate, Block / Suspend.
-   - If LLM fails, use deterministic fallback.
-
-8. Documentation:
-   - Update README.md.
-   - Update docs/Ozone_AI_4_Functional_Technical_Guide.md.
-
-Verify:
-- Backend imports.
-- Frontend npm run build.
-- No LLM call bypasses ai_gateway.
+Next increments should add:
+- Monthly supplier monitoring snapshots.
+- Persisted alert lifecycle updates.
+- Rule execution from monitoring_rules_v2.csv.
+- Monitoring action update endpoints.
+- Supplier-level monitoring decision endpoint.
+- Guarded AI explanation through backend/app/services/ai_gateway.py only.
 ```
 
 ## Executive Dashboard
@@ -1309,9 +1269,10 @@ Persistence:
 
 Continuous monitoring:
 
-- ESG Monitoring is currently a placeholder frontend route for the future Continuous Monitoring redesign.
-- A legacy backend overview endpoint still exists at `GET /api/v1/esg-monitoring/overview`.
-- True continuous monitoring still needs scheduled jobs, historical ESG observations, persisted alert states, external data ingestion, and event processing.
+- ESG Monitoring is implemented as a Phase 1 visual ML command center at `/esg-monitoring`.
+- The current endpoint is `GET /api/v1/esg-monitoring/overview`.
+- The ML model is unsupervised and useful for anomaly prioritization, not supervised deterioration prediction.
+- True continuous monitoring still needs scheduled jobs, monthly supplier snapshots, historical ESG observations, persisted alert states, external data ingestion, and event processing.
 
 Document extraction:
 
@@ -1445,6 +1406,6 @@ What was verified against code:
 Important current-state clarifications:
 
 - `frontend/src/pages/AiReviewQueuePage.tsx` exists, and `frontend/src/api/aiReview.ts` exists, but no `/ai-review` route is currently wired in `frontend/src/App.tsx`.
-- ESG Monitoring is intentionally a neutral Continuous Monitoring placeholder in the frontend. The old snapshot dashboard should not be described as the current frontend experience.
-- The legacy ESG Monitoring backend endpoint is still available at `GET /api/v1/esg-monitoring/overview`.
+- ESG Monitoring is now a Phase 1 visual ML monitoring command center. The old snapshot dashboard should not be described as the current frontend experience.
+- The ESG Monitoring backend endpoint is available at `GET /api/v1/esg-monitoring/overview`.
 - Operational Onboarding, Auditing, Traceability, Simulator, Analytics, Due Diligence, and Advisor AI routes are wired into the frontend navigation.
