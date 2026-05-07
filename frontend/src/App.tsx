@@ -5,7 +5,6 @@ import { SupplierAdvisorAIPage } from "./features/advisor-ai/pages/SupplierAdvis
 import { ExecutiveDashboardPage } from "./features/executive-dashboard/pages/ExecutiveDashboardPage";
 import { DueDiligencePage } from "./features/risk-monitoring/pages/DueDiligencePage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
-import { EsgMonitoringPage } from "./pages/EsgMonitoringPage";
 import { SimulatorPage } from "./pages/SimulatorPage";
 import { SupplierEngagementPage } from "./pages/SupplierEngagementPage";
 
@@ -18,7 +17,6 @@ export default function App() {
         <Route path="/simulator" element={<SimulatorPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="/supplier-engagement" element={<SupplierEngagementPage />} />
-        <Route path="/esg-monitoring" element={<EsgMonitoringPage />} />
         <Route path="/due-diligence-agent" element={<DueDiligencePage />} />
         <Route path="/advisor-ai" element={<SupplierAdvisorAIPage />} />
         <Route path="/onboarding" element={<Navigate to="/supplier-engagement" replace />} />
