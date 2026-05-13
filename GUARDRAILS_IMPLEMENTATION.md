@@ -85,14 +85,14 @@ They do not make AI perfect. They make AI use more controlled, traceable, and re
 | OpenAI support | Yes | Yes | Implemented |
 | Azure OpenAI support | Yes | Yes | Implemented |
 | Server-side model parameters | Yes | Yes | Implemented |
-| AI audit logging | Yes | Yes | Implemented with JSONL |
-| Human review queue | Yes | Yes | Implemented with JSON |
+| AI audit logging | Yes | Yes | Implemented with SQLite |
+| Human review queue | Yes | Yes | Implemented with SQLite |
 | Review queue frontend | No app-specific UI | Partial | Page/API client exist, but route wiring is pending |
-| Output validation | Yes | Yes | Implemented for audit/onboarding; partial elsewhere |
+| Output validation | Yes | Yes | Implemented for audit, onboarding, traceability, and due diligence summaries |
 | Prompt registry | Not fully, only prompt customization guidance | Yes | Implemented |
 | Rate limiting | Mentioned/configurable | Yes | Implemented in memory |
-| Auth/RBAC | Yes | No | Pending for production |
-| SSE observability | Yes | No | Optional future addition |
+| Auth/RBAC | Yes | Yes | Implemented for protected AI/review actions; local dev mode remains enabled by default |
+| SSE observability | Yes | Yes | Implemented for live AI guardrail/provider events |
 | RAG metadata guardrails | Yes | No | Not applicable until RAG exists |
 | SQL/Alembic audit tables | Yes | No | Not applicable while app is file-backed |
 | LangGraph workflow | Yes | No | Not necessary currently |
@@ -532,7 +532,11 @@ File:
 Current validators:
 
 - `validate_audit_insights(...)`
+- `validate_audit_decision(...)`
 - `validate_onboarding_assistance(...)`
+- `validate_onboarding_decision(...)`
+- `validate_trace_decision(...)`
+- `validate_due_diligence_summary(...)`
 
 Audit validation checks:
 
@@ -611,11 +615,11 @@ Reference template:
 
 Our app:
 
-- Implemented it for audit insights and onboarding assistance.
+- Implemented it for audit insights, audit decisions, onboarding assistance, onboarding decisions, traceability decisions, and due diligence AI summaries.
 
-Current partial gap:
+Remaining improvement:
 
-- Traceability and due diligence have service-level validation/fallbacks, but not centralized validators in `output_validation.py`.
+- Add more red-team output examples as new AI workflows are added.
 
 ### 4.11 AI Audit Logging
 
@@ -625,15 +629,16 @@ File:
 
 - `backend/app/services/ai_audit_log.py`
 
-Runtime output:
+Runtime storage:
 
-- `data/ai_audit_events.jsonl`
+- SQLite table `ai_audit_events`
 
-This file is ignored by git.
+The older JSONL path is no longer the active guardrail persistence path.
 
 What is logged:
 
 - timestamp
+- trace ID
 - feature
 - status
 - reason
@@ -659,7 +664,7 @@ Reference template:
 
 Our app:
 
-- Uses JSONL because the current project is file/CSV-backed.
+- Uses SQLite through the current local persistence layer.
 
 ### 4.12 Human Review Queue
 
@@ -682,11 +687,11 @@ Current frontend routing status:
 - The backend endpoints exist under `/api/v1/ai-review`.
 - The page is not currently exposed through `frontend/src/App.tsx`, so users cannot reach it from the normal application routes until a route or navigation entry is added.
 
-Runtime output:
+Runtime storage:
 
-- `data/ai_review_queue.json`
+- SQLite table `ai_review_queue`
 
-This file is ignored by git.
+The older JSON file is no longer the active guardrail persistence path.
 
 API endpoints:
 
@@ -710,10 +715,10 @@ Example review item:
 }
 ```
 
-Frontend location:
+Frontend route status:
 
 ```text
-Supplier Engagement → AI Review
+Not exposed in navigation by request.
 ```
 
 Why this matters:
@@ -728,9 +733,9 @@ Reference template:
 
 Our app:
 
-- Has backend review queue and a frontend review tab.
+- Has backend review queue and a frontend review page component.
 
-The frontend tab is an app-specific improvement.
+The frontend route/nav is intentionally not required for closing the backend guardrails path.
 
 ### 4.13 Frontend-Safe Blocked Messages
 
@@ -1219,7 +1224,7 @@ Validated output:
 }
 ```
 
-### 8.2 Add Trace IDs
+### 8.2 Trace IDs
 
 Trace ID means a unique ID for each AI request.
 
@@ -1244,21 +1249,17 @@ Reference template:
 
 Our app:
 
-- currently uses prompt hashes and logs, but not a full trace ID chain.
+- creates a trace ID for every AI gateway call.
+- includes the trace ID in `AiTextResponse`.
+- stores the trace ID in AI audit records.
+- stores the trace ID in review queue records.
+- emits the trace ID in SSE observability events.
 
-Recommended addition:
+### 8.3 SSE Observability
 
-Add `trace_id` to:
+Status:
 
-- `AiTextRequest`
-- `AiTextResponse`
-- audit logs
-- review queue payloads
-- frontend error display where useful
-
-### 8.3 Add SSE Observability
-
-Recommended only if users need live AI progress.
+Implemented for backend AI guardrail/provider lifecycle events.
 
 Example:
 
@@ -1271,29 +1272,136 @@ Done
 
 This is not required for correctness, but it improves transparency.
 
-### 8.4 Add Real Auth/RBAC
+Endpoints:
 
-Recommended for production.
+```text
+GET /api/v1/observability/ai-events
+GET /api/v1/observability/ai-events/stream
+```
 
-Protect:
+### 8.4 Auth/RBAC
 
-- AI Review queue
-- supplier activation
-- audit decision application
-- model configuration
-- future prompt editing
+Status:
+
+Implemented for the current application.
+
+Files:
+
+- `backend/app/security/auth.py`
+- `backend/app/security/rbac.py`
+- `backend/app/core/config.py`
+- `backend/app/routers/ai_review.py`
+- `backend/app/routers/advisor.py`
+- `backend/app/routers/auditing.py`
+- `backend/app/routers/onboarding_router.py`
+- `backend/app/routers/traceability.py`
+
+What Auth means:
+
+Auth answers this question:
+
+```text
+Who is using the system?
+```
+
+What RBAC means:
+
+RBAC means role-based access control.
+
+It answers this question:
+
+```text
+Is this user allowed to do this action?
+```
 
 Example:
 
 ```text
-reviewer role can approve/reject AI review items
-model_admin role can change model provider
-data_admin role can approve supplier data changes
+User A has reviewer role.
+User A can approve an AI review queue item.
+
+User B only has ai_user role.
+User B can ask the AI assistant questions.
+User B cannot approve AI review queue items.
 ```
 
-Do not add fake RBAC.
+Current roles:
 
-Add this only when login/auth is real.
+- `ai_user`: can use AI assistant and AI decision-support endpoints.
+- `reviewer`: can view and resolve AI review queue items.
+- `supplier_operator`: reserved for supplier evidence/data operations.
+- `compliance_manager`: can apply important audit, onboarding, and traceability decisions.
+- `model_admin`: reserved for AI/provider administration.
+
+Local development behavior:
+
+By default:
+
+```text
+AUTH_ENABLED=false
+```
+
+That means the backend uses a local development user:
+
+```text
+user_id: local_developer
+roles: ai_user, reviewer, supplier_operator, compliance_manager, model_admin
+```
+
+This keeps the app easy to run locally.
+
+Strict behavior:
+
+Set:
+
+```text
+AUTH_ENABLED=true
+```
+
+Then the backend requires identity information.
+
+For local testing, pass trusted headers:
+
+```text
+X-User-Id: reviewer-123
+X-User-Roles: reviewer
+```
+
+Example:
+
+```bash
+curl http://localhost:8000/api/v1/ai-review/queue \
+  -H "X-User-Id: reviewer-123" \
+  -H "X-User-Roles: reviewer"
+```
+
+For local frontend testing with strict auth enabled, set:
+
+```text
+VITE_DEV_USER_ID=reviewer-123
+VITE_DEV_USER_ROLES=ai_user,reviewer
+```
+
+Important guardrail:
+
+The AI review endpoint now uses the authenticated user ID as the reviewer ID.
+
+It does not trust a reviewer ID sent by the frontend.
+
+Why this matters:
+
+Without this check, someone could send:
+
+```json
+{
+  "decision": "approved",
+  "reviewer_id": "somebody_else"
+}
+```
+
+and pretend another reviewer approved the item.
+
+Now the backend records the reviewer from Auth/RBAC instead.
 
 ### 8.5 Add Larger Red-Team Test Suite
 
@@ -1420,18 +1528,17 @@ Implemented:
 - server-side model parameters
 - rate limiting
 - prompt registry
-- audit logging
-- review queue
+- SQLite-backed audit logging
+- SQLite-backed review queue
+- trace IDs through gateway, audit log, review queue, and SSE events
+- SSE observability for AI guardrail/provider flow
+- Auth/RBAC for review and sensitive AI actions
 - frontend AI Review page component and API client, with route wiring still pending
-- output validation for audit and onboarding
-- service-level validation/fallback for traceability and due diligence
+- output validation for audit, onboarding, traceability, and due diligence summaries
 
 Still recommended:
 
-- central validators for traceability and due diligence
-- trace IDs
-- SSE observability
-- real auth/RBAC
+- production identity-provider integration for Auth/RBAC
 - larger red-team test suite
 
 Not applicable until architecture changes:

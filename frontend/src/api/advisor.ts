@@ -4,6 +4,10 @@ export interface AdvisorMessage {
   role: "user" | "assistant";
   content: string;
   createdAt: string;
+  source?: string | null;
+  provider?: string | null;
+  model?: string | null;
+  trace_id?: string | null;
 }
 
 export type AdvisorLens =

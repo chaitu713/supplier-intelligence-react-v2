@@ -1,7 +1,9 @@
-from fastapi import APIRouter, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from pydantic import BaseModel
 
 from ..core.exceptions import AppError
+from ..security.auth import User
+from ..security.rbac import require_any_role, require_role
 from ..services.traceability_service import traceability_service
 
 router = APIRouter(prefix="/traceability", tags=["traceability"])
@@ -65,7 +67,10 @@ def update_trace_gap_action(gap_id: str, request: TraceGapActionUpdateRequest) -
 
 
 @router.post("/decision")
-def generate_trace_decision(request: TraceDecisionRequest) -> dict:
+def generate_trace_decision(
+    request: TraceDecisionRequest,
+    user: User = Depends(require_role("ai_user")),
+) -> dict:
     try:
         return traceability_service.generate_trace_decision(request.supplier_id)
     except Exception as exc:
@@ -73,7 +78,10 @@ def generate_trace_decision(request: TraceDecisionRequest) -> dict:
 
 
 @router.post("/evidence/review")
-def review_trace_evidence(request: TraceEvidenceReviewRequest) -> dict:
+def review_trace_evidence(
+    request: TraceEvidenceReviewRequest,
+    user: User = Depends(require_any_role(("reviewer", "compliance_manager"))),
+) -> dict:
     try:
         return traceability_service.review_trace_evidence(
             evidence_id=request.evidence_id,

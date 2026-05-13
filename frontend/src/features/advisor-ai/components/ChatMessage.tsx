@@ -1,4 +1,5 @@
 import type { AdvisorMessage } from "../../../api/advisor";
+import { AiProvenanceBadge } from "../../../components/common/AiProvenanceBadge";
 import { StructuredContent } from "../../../components/common/StructuredContent";
 import { formatDateTime } from "../../../utils/formatting";
 
@@ -24,13 +25,16 @@ export function ChatMessage({ message }: ChatMessageProps) {
         }`}
       >
         <div className="mb-3 flex items-center justify-between gap-4">
-          <p
-            className={`text-[11px] font-semibold uppercase tracking-[0.16em] ${
-              isUser ? "text-slate-300" : "text-slate-500"
-            }`}
-          >
-            {isUser ? "Your Question" : "Supplier Advisor AI"}
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p
+              className={`text-[11px] font-semibold uppercase tracking-[0.16em] ${
+                isUser ? "text-slate-300" : "text-slate-500"
+              }`}
+            >
+              {isUser ? "Your Question" : "Supplier Advisor AI"}
+            </p>
+            {!isUser ? <AiProvenanceBadge provenance={message} compact /> : null}
+          </div>
           <p className={`text-xs ${isUser ? "text-slate-300" : "text-slate-400"}`}>
             {formatDateTime(message.createdAt)}
           </p>

@@ -22,9 +22,6 @@ export async function resolveAiReviewItem(
 ): Promise<AiReviewItem> {
   return apiRequest<AiReviewItem>(`/ai-review/queue/${itemId}`, {
     method: "POST",
-    json: {
-      decision,
-      reviewer_id: "local_reviewer",
-    },
+    json: { decision },
   });
 }

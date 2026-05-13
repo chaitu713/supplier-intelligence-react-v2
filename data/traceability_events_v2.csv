@@ -1,9 +1,0 @@
-event_id,lot_id,supplier_id,event_type,event_date,from_site_id,to_site_id,country,evidence_type,evidence_status,notes
-EVT-2001-001,LOT-2001-PO-001,2001,Harvest,2026-03-12,SITE-2001-01,SITE-2001-01,Indonesia,Farm Trace Log,Available,Harvest record covers farm block but polygon is missing.
-EVT-2001-002,LOT-2001-PO-001,2047,Aggregation,2026-03-15,SITE-2001-01,SITE-2047-01,Indonesia,Chain of Custody Manifest,Available,Collection center confirms inbound lot reference.
-EVT-2001-003,LOT-2001-PO-001,2001,Shipment,2026-03-20,SITE-2047-01,SITE-2001-02,Indonesia,Shipment Document,Available,Shipment reference SHP-BR-2026-118.
-EVT-2001-004,LOT-2001-CO-001,2001,Harvest,2026-03-19,SITE-2001-01,SITE-2001-01,Indonesia,Farm Trace Log,Available,Farm trace log and lot code aligned.
-EVT-2003-001,LOT-2003-CO-001,2003,Harvest,2026-02-26,SITE-2003-01,SITE-2003-01,Brazil,Farm Trace Log,Missing,Origin plot evidence not available.
-EVT-2003-002,LOT-2003-CO-001,2003,Shipment,2026-03-04,SITE-2003-01,,Brazil,Shipment Document,Available,Shipment exists but upstream plot evidence is missing.
-EVT-2004-001,LOT-2004-RB-001,2004,Processing,2026-04-02,SITE-2004-01,SITE-2004-01,India,Processing Record,Available,Processing record linked to export lot.
-EVT-2036-001,LOT-2036-WD-001,2036,Receipt,2026-03-30,SITE-2036-01,SITE-2036-01,USA,Warehouse Receipt,Available,Receipt supports lot custody.

@@ -22,6 +22,22 @@ class GuardrailViolation(Exception):
         self.result = result
 
 
+SAFE_BLOCK_MESSAGES = {
+    "empty_message": "Please enter a supplier, audit, onboarding, traceability, or due diligence question.",
+    "message_too_large": "This request is too large to process safely. Please shorten it or split it into smaller questions.",
+    "missing_grounding_context": "I need application context before using AI for this workflow. Please select or load the relevant supplier, audit, onboarding, or traceability record first.",
+    "injection_detected": "I cannot process requests that try to override instructions, reveal hidden prompts, or disable safety controls. Please ask a normal supplier-risk question using the available app data.",
+    "secret_detected": "This request appears to include a password, API key, token, or other credential. Please remove secrets before sending anything to AI.",
+    "supplier_policy_violation": "I cannot fabricate supplier evidence, bypass review, alter records, or make final compliance approvals without supporting data. Please ask for an evidence-based summary, risk explanation, or reviewer next actions.",
+    "rate_limit_exceeded": "Too many AI requests were sent in a short time. Please wait briefly and try again.",
+}
+
+
+def safe_guardrail_message(result: GuardrailResult | None = None, reason: str = "") -> str:
+    reason_key = reason or (result.reason if result else "")
+    return SAFE_BLOCK_MESSAGES.get(reason_key, SAFE_BLOCK_MESSAGE)
+
+
 INJECTION_PATTERNS = [
     r"ignore\s+(all\s+)?(previous|prior|above)\s+instructions",
     r"disregard\s+(all\s+)?(previous|prior|above)\s+instructions",

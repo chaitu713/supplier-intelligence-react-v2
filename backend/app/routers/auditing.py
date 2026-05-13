@@ -1,4 +1,4 @@
-from fastapi import APIRouter, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from ..schemas.auditing import (
     AuditCertificationExtractResponse,
@@ -18,6 +18,8 @@ from ..schemas.auditing import (
     AuditInsightsResponse,
     AuditWorkspaceResponse,
 )
+from ..security.auth import User
+from ..security.rbac import require_any_role, require_role
 from ..services.auditing_service import auditing_service
 
 router = APIRouter(prefix="/auditing", tags=["auditing"])
@@ -29,17 +31,26 @@ def get_audit_workspace(audit_id: int | None = None) -> AuditWorkspaceResponse:
 
 
 @router.post("/insights", response_model=AuditInsightsResponse)
-def get_audit_insights(payload: AuditInsightsRequest) -> AuditInsightsResponse:
+def get_audit_insights(
+    payload: AuditInsightsRequest,
+    user: User = Depends(require_role("ai_user")),
+) -> AuditInsightsResponse:
     return AuditInsightsResponse(**auditing_service.get_audit_insights(payload.audit_id))
 
 
 @router.post("/decision", response_model=AuditDecisionResponse)
-def get_audit_decision(payload: AuditDecisionRequest) -> AuditDecisionResponse:
+def get_audit_decision(
+    payload: AuditDecisionRequest,
+    user: User = Depends(require_role("ai_user")),
+) -> AuditDecisionResponse:
     return AuditDecisionResponse(**auditing_service.generate_audit_decision(payload.audit_id))
 
 
 @router.post("/decision/apply", response_model=AuditDecisionApplyResponse)
-def apply_audit_decision(payload: AuditDecisionApplyRequest) -> AuditDecisionApplyResponse:
+def apply_audit_decision(
+    payload: AuditDecisionApplyRequest,
+    user: User = Depends(require_any_role(("reviewer", "compliance_manager"))),
+) -> AuditDecisionApplyResponse:
     return AuditDecisionApplyResponse(
         **auditing_service.apply_audit_decision(
             audit_id=payload.audit_id,
@@ -50,7 +61,10 @@ def apply_audit_decision(payload: AuditDecisionApplyRequest) -> AuditDecisionApp
 
 
 @router.post("/close", response_model=AuditCloseResponse)
-def close_audit(payload: AuditCloseRequest) -> AuditCloseResponse:
+def close_audit(
+    payload: AuditCloseRequest,
+    user: User = Depends(require_any_role(("reviewer", "compliance_manager"))),
+) -> AuditCloseResponse:
     return AuditCloseResponse(**auditing_service.close_audit(payload.audit_id))
 
 

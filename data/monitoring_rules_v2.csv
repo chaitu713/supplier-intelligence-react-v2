@@ -1,8 +1,0 @@
-rule_id,rule_name,pillar,indicator,condition_type,threshold_value,severity,recommended_route,enabled
-MR-001,Critical indicator threshold,Any,Any,current_value_gte,75,Critical,Run Due Diligence,Yes
-MR-002,Material deterioration,Any,Any,change_gte,15,High,Enhanced Monitoring,Yes
-MR-003,Certification expired,Governance,Certification Expiry,current_value_gte,1,High,Request Evidence,Yes
-MR-004,Open traceability gap,Environmental,Traceability Gap,current_value_gte,1,High,Open Trace Gap,Yes
-MR-005,Overdue CAPA,Governance,CAPA Overdue,current_value_gte,1,Critical,Create Audit/CAPA,Yes
-MR-006,Due diligence escalation,Governance,Due Diligence Decision,current_value_gte,1,Critical,Escalate Supplier,Yes
-MR-007,Moderate watch threshold,Any,Any,current_value_gte,60,Medium,Watch,Yes

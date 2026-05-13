@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import time
+import uuid
 from dataclasses import dataclass
 from typing import Any
 
@@ -13,6 +15,7 @@ from ..ai.guardrails import (
 )
 from .ai_audit_log import log_ai_event
 from .ai_rate_limiter import check_ai_rate_limit
+from ..observability.live_flow import emit_ai_event
 
 
 class AiGatewayError(Exception):
@@ -26,6 +29,7 @@ class AiTextRequest:
     user_input: str
     context: dict[str, Any] | None = None
     response_format: str = "text"
+    trace_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -34,9 +38,12 @@ class AiTextResponse:
     provider: str
     model: str
     prompt_hash: str
+    trace_id: str
 
 
 def generate_ai_text(request: AiTextRequest) -> AiTextResponse:
+    trace_id = request.trace_id or f"ai_{uuid.uuid4().hex[:16]}"
+    emit_ai_event("ai.request_start", trace_id=trace_id, feature=request.feature)
     guardrail_result = enforce_prompt_guardrails(
         message=request.user_input or request.prompt,
         feature=request.feature,
@@ -44,14 +51,23 @@ def generate_ai_text(request: AiTextRequest) -> AiTextResponse:
         context=request.context,
     )
     if not guardrail_result.allowed:
+        emit_ai_event(
+            "ai.guardrail_block",
+            trace_id=trace_id,
+            feature=request.feature,
+            reason=guardrail_result.reason,
+            layer=guardrail_result.layer,
+        )
         log_ai_event(
             feature=request.feature,
             status="blocked",
             reason=guardrail_result.reason,
             prompt_hash=guardrail_result.prompt_hash,
+            trace_id=trace_id,
             metadata={"layer": guardrail_result.layer},
         )
         raise GuardrailViolation(guardrail_result)
+    emit_ai_event("ai.guardrail_pass", trace_id=trace_id, feature=request.feature, stage="user_input")
 
     # Run a second pass over the final prompt because uploaded documents can
     # contain prompt-injection text even when the explicit user input is clean.
@@ -62,14 +78,24 @@ def generate_ai_text(request: AiTextRequest) -> AiTextResponse:
         include_domain_policy=False,
     )
     if not final_prompt_result.allowed:
+        emit_ai_event(
+            "ai.guardrail_block",
+            trace_id=trace_id,
+            feature=request.feature,
+            reason=final_prompt_result.reason,
+            layer=final_prompt_result.layer,
+            source="final_prompt",
+        )
         log_ai_event(
             feature=request.feature,
             status="blocked",
             reason=final_prompt_result.reason,
             prompt_hash=final_prompt_result.prompt_hash,
+            trace_id=trace_id,
             metadata={"layer": final_prompt_result.layer, "source": "final_prompt"},
         )
         raise GuardrailViolation(final_prompt_result)
+    emit_ai_event("ai.guardrail_pass", trace_id=trace_id, feature=request.feature, stage="final_prompt")
 
     rate_limit_key = f"{request.feature}:local"
     if not check_ai_rate_limit(rate_limit_key):
@@ -84,12 +110,16 @@ def generate_ai_text(request: AiTextRequest) -> AiTextResponse:
             status="blocked",
             reason=rate_result.reason,
             prompt_hash=rate_result.prompt_hash,
+            trace_id=trace_id,
             metadata={"layer": rate_result.layer},
         )
+        emit_ai_event("ai.rate_limit_block", trace_id=trace_id, feature=request.feature)
         raise GuardrailViolation(rate_result)
 
     provider = os.getenv("AI_PROVIDER", "gemini").strip().lower()
+    started = time.perf_counter()
     try:
+        emit_ai_event("ai.provider_start", trace_id=trace_id, feature=request.feature, provider=provider)
         if provider == "openai":
             text, model = _call_openai(request.prompt)
         elif provider in {"azure_openai", "azure"}:
@@ -101,19 +131,37 @@ def generate_ai_text(request: AiTextRequest) -> AiTextResponse:
     except GuardrailViolation:
         raise
     except Exception as exc:
+        emit_ai_event(
+            "ai.provider_error",
+            trace_id=trace_id,
+            feature=request.feature,
+            provider=provider,
+            reason=str(exc),
+        )
         log_ai_event(
             feature=request.feature,
             status="provider_error",
             reason=str(exc),
             prompt_hash=prompt_hash(request.prompt),
+            trace_id=trace_id,
             provider=provider,
         )
         raise AiGatewayError(str(exc)) from exc
 
+    latency_ms = int((time.perf_counter() - started) * 1000)
+    emit_ai_event(
+        "ai.provider_complete",
+        trace_id=trace_id,
+        feature=request.feature,
+        provider=provider,
+        model=model,
+        latency_ms=latency_ms,
+    )
     log_ai_event(
         feature=request.feature,
         status="passed",
         prompt_hash=prompt_hash(request.prompt),
+        trace_id=trace_id,
         provider=provider,
         model=model,
     )
@@ -122,6 +170,7 @@ def generate_ai_text(request: AiTextRequest) -> AiTextResponse:
         provider=provider,
         model=model,
         prompt_hash=prompt_hash(request.prompt),
+        trace_id=trace_id,
     )
 
 

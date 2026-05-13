@@ -12,11 +12,14 @@ from .routers.auditing import router as auditing_router
 from .routers.esg_monitoring import router as esg_monitoring_router
 from .routers.health import router as health_router
 from .routers.onboarding_router import router as onboarding_router
+from .routers.observability import router as observability_router
 from .routers.risk import router as risk_router
 from .routers.simulator import router as simulator_router
 from .routers.traceability import router as traceability_router
+from .services.sqlite_data import install_pandas_sqlite_bridge
 
 configure_logging()
+install_pandas_sqlite_bridge()
 logger = get_logger(__name__)
 settings = get_settings()
 
@@ -55,6 +58,7 @@ def create_app() -> FastAPI:
     application.include_router(simulator_router)
     application.include_router(onboarding_router)
     application.include_router(traceability_router)
+    application.include_router(observability_router)
 
     logger.info("FastAPI application configured")
     return application

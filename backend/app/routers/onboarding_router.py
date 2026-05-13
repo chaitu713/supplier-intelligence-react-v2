@@ -1,7 +1,9 @@
-from fastapi import APIRouter, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from pydantic import BaseModel
 
 from ..core.exceptions import AppError
+from ..security.auth import User
+from ..security.rbac import require_any_role, require_role
 
 from ..services.onboarding_service import onboarding_service
 
@@ -204,7 +206,10 @@ async def upload_onboarding_evidence(
 
 
 @router.post("/decision")
-async def generate_onboarding_decision(request: OnboardingDecisionRequest) -> dict:
+async def generate_onboarding_decision(
+    request: OnboardingDecisionRequest,
+    user: User = Depends(require_role("ai_user")),
+) -> dict:
     try:
         return onboarding_service.generate_onboarding_decision(request.payload)
     except Exception as exc:
@@ -212,7 +217,10 @@ async def generate_onboarding_decision(request: OnboardingDecisionRequest) -> di
 
 
 @router.post("/activate")
-async def activate_onboarded_supplier(request: ActivateSupplierRequest) -> dict:
+async def activate_onboarded_supplier(
+    request: ActivateSupplierRequest,
+    user: User = Depends(require_any_role(("reviewer", "compliance_manager"))),
+) -> dict:
     try:
         return onboarding_service.activate_supplier(request.supplier_id)
     except Exception as exc:
@@ -220,7 +228,10 @@ async def activate_onboarded_supplier(request: ActivateSupplierRequest) -> dict:
 
 
 @router.post("/revalidate")
-async def revalidate_active_supplier(request: RevalidateSupplierRequest) -> dict:
+async def revalidate_active_supplier(
+    request: RevalidateSupplierRequest,
+    user: User = Depends(require_any_role(("reviewer", "compliance_manager"))),
+) -> dict:
     try:
         return onboarding_service.revalidate_active_supplier(
             supplier_id=request.supplier_id,

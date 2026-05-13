@@ -4,6 +4,10 @@ export const API_BASE_URL =
   (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
     ?.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL;
 
+const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
+const DEV_USER_ID = env?.VITE_DEV_USER_ID;
+const DEV_USER_ROLES = env?.VITE_DEV_USER_ROLES;
+
 export class ApiError extends Error {
   readonly status: number;
   readonly payload?: unknown;
@@ -34,6 +38,8 @@ export async function apiRequest<T>(
     headers: {
       Accept: "application/json",
       ...(json ? { "Content-Type": "application/json" } : {}),
+      ...(DEV_USER_ID ? { "X-User-Id": DEV_USER_ID } : {}),
+      ...(DEV_USER_ROLES ? { "X-User-Roles": DEV_USER_ROLES } : {}),
       ...headers,
     },
     body: json ? JSON.stringify(json) : rest.body,

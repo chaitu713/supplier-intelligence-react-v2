@@ -1,5 +1,0 @@
-gap_id,supplier_id,lot_id,site_id,gap_type,severity,status,owner,due_date,description,recommended_action
-GAP-2001-001,2001,LOT-2001-PO-001,SITE-2001-01,Missing polygon,High,Open,Traceability Manager,2026-05-30,Farm plot geolocation exists but polygon evidence is missing.,Request polygon file or approved deforestation-free evidence for the farm block.
-GAP-2001-002,2001,LOT-2001-PO-001,SITE-2047-01,Aggregator polygon missing,Medium,Open,Sourcing Lead,2026-06-05,Collection center has custody evidence but no polygon package for upstream farm cluster.,Link aggregation manifest to farm polygon package before final approval.
-GAP-2003-001,2003,LOT-2003-CO-001,SITE-2003-01,Missing plot data,Critical,Open,Regional Compliance,2026-05-18,Origin plot and polygon evidence are both missing for a high-risk sourcing region.,Block lot release until plot identifier and geolocation evidence are supplied.
-GAP-2003-002,2003,LOT-2003-CO-001,SITE-2003-01,Broken chain link,High,In Review,Traceability Manager,2026-05-24,Shipment record exists but harvest event evidence is missing.,Reconcile harvest log with shipment reference and supplier declaration.

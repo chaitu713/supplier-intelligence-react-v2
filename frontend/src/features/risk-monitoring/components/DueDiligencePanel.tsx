@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import type { DueDiligenceResponse, RiskSupplierItem } from "../../../api/risk";
+import { AiProvenanceBadge } from "../../../components/common/AiProvenanceBadge";
 import { StructuredContent } from "../../../components/common/StructuredContent";
 
 interface DueDiligencePanelProps {
@@ -175,9 +176,19 @@ export function DueDiligencePanel({
             </div>
 
             <div className="surface-card p-5 shadow-sm">
-              <h5 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Recommendation
-              </h5>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h5 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Recommendation
+                </h5>
+                <AiProvenanceBadge
+                  provenance={{
+                    source: result.ai_source,
+                    provider: result.ai_provider,
+                    model: result.ai_model,
+                    traceId: result.ai_trace_id,
+                  }}
+                />
+              </div>
               <div className="surface-soft mt-4 px-4 py-4">
                 <StructuredContent content={result.aiSummary} />
               </div>

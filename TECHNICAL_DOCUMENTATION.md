@@ -8,7 +8,7 @@ The main layers are:
 
 - React frontend for the user interface.
 - FastAPI backend for APIs and business logic.
-- CSV files as the current persistence layer.
+- SQLite as the current local persistence layer.
 - Pandas-based services for data loading, joining, scoring, and summaries.
 - AI service abstractions, prompt guardrails, and output validation for assistant-style workflows.
 
@@ -17,7 +17,7 @@ flowchart LR
     A["React + TypeScript frontend"] --> B["API client"]
     B --> C["FastAPI backend routers"]
     C --> D["Service layer"]
-    D --> E["CSV files in data/"]
+    D --> E["SQLite database in data/ozone_ai.sqlite3"]
     D --> F["AI guardrails and prompt services"]
     D --> G["Uploaded evidence files"]
 ```
@@ -59,7 +59,7 @@ Important technologies from `requirements.txt`:
 | FastAPI | REST API framework |
 | Uvicorn | ASGI server for running FastAPI |
 | Pydantic | Request and response schema validation |
-| Pandas | CSV loading, joining, grouping, and calculations |
+| Pandas | Table loading, joining, grouping, and calculations |
 | NumPy | Numerical processing support |
 | scikit-learn | Machine learning and scoring utilities |
 | OpenAI | AI assistant and generation integration |
@@ -112,9 +112,9 @@ It registers:
 
 ### Data Layer
 
-The current data store is CSV-based. CSVs live in `data/`.
+The current data store is SQLite-based. The database file is `data/ozone_ai.sqlite3`.
 
-This is suitable for a prototype because it is easy to inspect and change manually. In a production version, these files would normally move to a relational database, data lake, or warehouse.
+The project previously used one CSV per dataset. Those CSVs have been migrated into SQLite tables and removed from `data/`. A lightweight Pandas compatibility bridge maps legacy CSV path reads/writes to SQLite tables while the service layer is gradually refactored toward direct table access. In a production version, the same table model can move to PostgreSQL.
 
 ## 5. Route Architecture
 
@@ -163,7 +163,7 @@ Important endpoints:
 Technical pattern:
 
 1. Router receives HTTP request.
-2. Service loads relevant CSVs using Pandas.
+2. Service loads relevant SQLite tables using Pandas.
 3. Service joins supplier, ESG, certification, commodity, and transaction data.
 4. Service calculates metrics.
 5. Pydantic schema validates response.
@@ -226,7 +226,7 @@ Technical pattern:
 3. Map extracted text to supplier fields.
 4. Validate fields.
 5. Score ESG baseline.
-6. Persist supplier, certification, evidence, ESG, traceability, and audit starter rows into CSVs.
+6. Persist supplier, certification, evidence, ESG, traceability, and audit starter rows into SQLite tables.
 7. Use AI assistance where configured, with guardrails and fallback logic.
 
 ### Auditing APIs
@@ -248,7 +248,7 @@ Endpoints:
 
 Technical pattern:
 
-1. Load audit workspace data from CSV.
+1. Load audit workspace data from SQLite.
 2. Generate insights or decision recommendation.
 3. Persist changes to audit, CAPA, certification, and evidence files.
 4. Use document extraction where relevant.
@@ -323,28 +323,28 @@ Current technical status:
 
 ## 7. Data Model Overview
 
-Important CSV files:
+Important SQLite tables:
 
 | File | Technical Role |
 | --- | --- |
-| `suppliers_v2.csv` | Main supplier master table |
-| `transactions_v2.csv` | Transaction history and volume |
-| `esg_environmental_v2.csv` | Environmental ESG indicators |
-| `esg_social_v2.csv` | Social ESG indicators |
-| `esg_governance_v2.csv` | Governance ESG indicators |
-| `certifications_v2.csv` | Certification reference list |
-| `supplier_certifications_v2.csv` | Supplier certification records |
-| `commodities_v2.csv` | Commodity reference list |
-| `supplier_commodity_map_v2.csv` | Supplier-to-commodity mappings |
-| `audits_v2.csv` | Audit records |
-| `audit_capa_v2.csv` | Corrective action records |
-| `audit_evidence_v2.csv` | Audit evidence metadata |
-| `alerts_v2.csv` | Supplier alert records |
-| `supplier_evidence_v2.csv` | Supplier evidence metadata |
-| `supplier_features_v2.csv` | Derived or model-ready supplier feature fields |
-| `traceability_*_v2.csv` | Traceability sites, lots, events, gaps, decisions, score history |
-| `monitoring_*_v2.csv` | Seed data for future monitoring |
-| `external_esg_signals_v2.csv` | External ESG signal examples |
+| `suppliers` | Main supplier master table |
+| `transactions` | Transaction history and volume |
+| `esg_environmental` | Environmental ESG indicators |
+| `esg_social` | Social ESG indicators |
+| `esg_governance` | Governance ESG indicators |
+| `certifications` | Certification reference list |
+| `supplier_certifications` | Supplier certification records |
+| `commodities` | Commodity reference list |
+| `supplier_commodity_map` | Supplier-to-commodity mappings |
+| `audits` | Audit records |
+| `audit_capa` | Corrective action records |
+| `audit_evidence` | Audit evidence metadata |
+| `alerts` | Supplier alert records |
+| `supplier_evidence` | Supplier evidence metadata |
+| `supplier_features` | Derived or model-ready supplier feature fields |
+| `traceability_*` | Traceability sites, lots, events, gaps, decisions, score history |
+| `monitoring_*` | Seed data for future monitoring |
+| `external_esg_signals` | External ESG signal examples |
 
 ## 8. Data Flow Example: Executive Dashboard
 
@@ -354,13 +354,13 @@ sequenceDiagram
     participant Frontend
     participant API
     participant Service
-    participant CSV
+    participant DB
 
     User->>Frontend: Open Executive Dashboard
     Frontend->>API: GET /api/v1/analytics/executive-dashboard
     API->>Service: get_executive_dashboard()
-    Service->>CSV: Load suppliers, transactions, ESG, audits, alerts
-    CSV-->>Service: DataFrames
+    Service->>DB: Load suppliers, transactions, ESG, audits, alerts
+    DB-->>Service: DataFrames
     Service-->>API: Dashboard response object
     API-->>Frontend: JSON
     Frontend-->>User: KPI cards, charts, supplier attention list
@@ -383,7 +383,7 @@ sequenceDiagram
     User->>Frontend: Review and submit supplier
     Frontend->>API: POST /onboarding/upload with form fields
     API->>Service: Validate and persist
-    Service->>Storage: Update CSV files and evidence metadata
+    Service->>Storage: Update SQLite tables and evidence metadata
     Service-->>Frontend: Pending supplier created
 ```
 
@@ -394,7 +394,7 @@ sequenceDiagram
 | Executive Dashboard | React, React Query, charts | Analytics router/service | Pandas aggregation across supplier data |
 | Analytics | React, Plotly, Recharts, maps | Analytics APIs | Country, commodity, ESG, certification, trend calculations |
 | Simulator | React forms and scenario UI | Simulator service | Risk frame recomputation in Pandas |
-| Onboarding | Upload UI, form workflow | Onboarding router/service | Document extraction, validation, CSV persistence |
+| Onboarding | Upload UI, form workflow | Onboarding router/service | Document extraction, validation, SQLite persistence |
 | Auditing | Workspace UI | Auditing router/service | Audit, CAPA, certification, evidence data |
 | Traceability | Workspace UI | Traceability router/service | Sites, lots, events, evidence, score calculations |
 | Due Diligence | Supplier investigation UI | Risk service | Risk driver and evidence gap generation |
@@ -827,7 +827,7 @@ Implemented:
 - Supplier Advisor AI.
 - AI review backend and page component.
 - FastAPI backend with routers and service layer.
-- CSV-backed persistence.
+- SQLite-backed persistence.
 - AI guardrails and validation.
 
 Blank by design:

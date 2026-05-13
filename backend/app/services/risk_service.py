@@ -4,6 +4,7 @@ import json
 import pandas as pd
 
 from ..ai.guardrails import GuardrailViolation
+from ..ai.output_validation import validate_due_diligence_summary
 from ..ai.prompt_registry import get_prompt_policy_block
 from ..core.exceptions import AppError
 from ..core.logging import get_logger
@@ -229,7 +230,11 @@ Grounding context:
                     context=context,
                 )
             )
-            fallback["ai_summary"] = response.text.strip() or fallback["ai_summary"]
+            fallback["ai_summary"] = validate_due_diligence_summary(response.text, fallback["ai_summary"])
+            fallback["ai_trace_id"] = response.trace_id
+            fallback["ai_source"] = "llm"
+            fallback["ai_provider"] = response.provider
+            fallback["ai_model"] = response.model
         except GuardrailViolation:
             raise
         except AiGatewayError as exc:
@@ -266,6 +271,10 @@ Grounding context:
             "overall": overall,
             "issues": issues,
             "ai_summary": summary,
+            "ai_source": "deterministic_fallback",
+            "ai_provider": None,
+            "ai_model": None,
+            "ai_trace_id": None,
         }
 
     def _build_due_diligence_signals(self, supplier_id: int) -> dict:

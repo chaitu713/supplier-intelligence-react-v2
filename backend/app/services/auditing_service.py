@@ -8,13 +8,16 @@ from pathlib import Path
 
 import pandas as pd
 
-from ..ai.guardrails import GuardrailViolation, SAFE_BLOCK_MESSAGE
-from ..ai.output_validation import validate_audit_insights
+from ..ai.guardrails import GuardrailViolation, safe_guardrail_message
+from ..ai.output_validation import validate_audit_decision, validate_audit_insights
 from ..ai.prompt_registry import get_prompt_policy_block
 from ..core.exceptions import AppError
 from .ai_gateway import AiGatewayError, AiTextRequest, generate_ai_text
 from .ai_review_queue import add_review_item
 from .onboarding_service import onboarding_service
+from .sqlite_data import csv_table_name, install_pandas_sqlite_bridge, table_exists
+
+install_pandas_sqlite_bridge()
 
 
 class AuditingService:
@@ -276,7 +279,7 @@ Rules:
             decision["model"] = response.model
             return decision
         except GuardrailViolation as exc:
-            raise AppError(SAFE_BLOCK_MESSAGE, status_code=400) from exc
+            raise AppError(safe_guardrail_message(exc.result), status_code=400) from exc
         except (AiGatewayError, json.JSONDecodeError, ValueError):
             return fallback
 
@@ -387,11 +390,16 @@ Rules:
                 return fallback
 
             validated = validate_audit_insights(parsed, fallback)
+            validated["source"] = "llm"
+            validated["provider"] = response.provider
+            validated["model"] = response.model
+            validated["trace_id"] = response.trace_id
             if validated["confidence"] == "low":
                 add_review_item(
                     feature="auditing",
                     reason="low_confidence_ai_output",
                     prompt_hash=response.prompt_hash,
+                    trace_id=response.trace_id,
                     payload={
                         "audit_id": audit_id,
                         "suggested_decision": validated["suggested_decision"],
@@ -399,7 +407,7 @@ Rules:
                 )
             return validated
         except GuardrailViolation as exc:
-            raise AppError(SAFE_BLOCK_MESSAGE, status_code=400) from exc
+            raise AppError(safe_guardrail_message(exc.result), status_code=400) from exc
         except (AiGatewayError, json.JSONDecodeError, ValueError):
             return fallback
 
@@ -783,31 +791,7 @@ Rules:
         return ["Create CAPA actions and monitor completion before closure."]
 
     def _validate_audit_decision(self, parsed: dict, fallback: dict) -> dict:
-        allowed = {"Pass", "Pass with Conditions", "Corrective Action Required", "Escalate", "Suspend / Block"}
-        recommendation = str(parsed.get("recommendation") or "").strip()
-        if recommendation not in allowed:
-            recommendation = fallback["recommendation"]
-        confidence = str(parsed.get("confidence") or "medium").strip().lower()
-        if confidence not in {"low", "medium", "high"}:
-            confidence = "medium"
-
-        def list_of_text(key: str, fallback_value: list[str]) -> list[str]:
-            value = parsed.get(key)
-            if not isinstance(value, list):
-                return fallback_value
-            cleaned = [str(item).strip() for item in value if str(item).strip()]
-            return cleaned[:5] or fallback_value
-
-        return {
-            "recommendation": recommendation,
-            "confidence": confidence,
-            "reasons": list_of_text("reasons", fallback["reasons"]),
-            "required_actions": list_of_text("required_actions", fallback["required_actions"]),
-            "closure_blockers": list_of_text("closure_blockers", fallback["closure_blockers"]),
-            "source": fallback["source"],
-            "provider": fallback["provider"],
-            "model": fallback["model"],
-        }
+        return validate_audit_decision(parsed, fallback)
 
     def _status_from_decision(self, decision: str) -> str:
         return {
@@ -838,7 +822,8 @@ Rules:
         return blockers
 
     def _read_optional_csv(self, path: Path) -> pd.DataFrame:
-        if not path.exists():
+        table_name = csv_table_name(path)
+        if not path.exists() and not (table_name and table_exists(table_name)):
             return pd.DataFrame()
         return pd.read_csv(path)
 
@@ -876,7 +861,8 @@ Rules:
             "created_date",
             "closed_date",
         ]
-        if not path.exists():
+        table_name = csv_table_name(path)
+        if not path.exists() and not (table_name and table_exists(table_name)):
             df = pd.DataFrame(columns=columns)
             df.to_csv(path, index=False)
             return df
@@ -902,7 +888,8 @@ Rules:
             "validation_notes",
             "extracted_text_preview",
         ]
-        if not path.exists():
+        table_name = csv_table_name(path)
+        if not path.exists() and not (table_name and table_exists(table_name)):
             df = pd.DataFrame(columns=columns)
             df.to_csv(path, index=False)
             return df
@@ -1072,6 +1059,10 @@ Rules:
             ],
             "suggested_decision": decision,
             "confidence": "medium" if len(history) > 1 else "low",
+            "source": "deterministic_fallback",
+            "provider": None,
+            "model": None,
+            "trace_id": None,
         }
 
     def _derive_expiry_state(self, status: str, expiry_date_text: str) -> str:

@@ -1,6 +1,0 @@
-lot_id,supplier_id,commodity_id,site_id,lot_code,quantity,unit,production_date,shipment_reference,current_status,evidence_status
-LOT-2001-PO-001,2001,1,SITE-2001-01,BR-PO-2026-001,82.5,MT,2026-03-12,SHP-BR-2026-118,In Transit,Partial
-LOT-2001-CO-001,2001,2,SITE-2001-01,BR-CO-2026-041,44.2,MT,2026-03-19,SHP-BR-2026-121,Received,Complete
-LOT-2003-CO-001,2003,2,SITE-2003-01,TS-CO-2026-014,61.8,MT,2026-02-26,SHP-TS-2026-077,On Hold,Gap
-LOT-2004-RB-001,2004,4,SITE-2004-01,CG-RB-2026-022,38.0,MT,2026-04-02,SHP-CG-2026-091,Received,Complete
-LOT-2036-WD-001,2036,5,SITE-2036-01,SL-WD-2026-009,21.6,MT,2026-03-30,SHP-SL-2026-064,Received,Complete

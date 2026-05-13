@@ -9,7 +9,7 @@ import pandas as pd
 
 from ..core.exceptions import AppError
 from ..core.logging import get_logger
-from ..ai.guardrails import GuardrailViolation, SAFE_BLOCK_MESSAGE
+from ..ai.guardrails import GuardrailViolation, safe_guardrail_message
 from ..ai.prompt_registry import get_prompt_policy_block
 from .ai_gateway import AiGatewayError
 from .ai_gateway import AiTextRequest, generate_ai_text
@@ -77,15 +77,19 @@ class AdvisorService:
                 raise AppError("Advisor session not found", status_code=404)
             session["messages"].append(user_message)
 
-        reply_text = self._generate_reply(
+        reply = self._generate_reply(
             question=payload.message,
             lens=payload.lens,
             simulator_context=payload.simulatorContext,
         )
         assistant_message = {
             "role": "assistant",
-            "content": reply_text,
+            "content": reply["content"],
             "createdAt": _utcnow(),
+            "source": reply["source"],
+            "provider": reply.get("provider"),
+            "model": reply.get("model"),
+            "trace_id": reply.get("trace_id"),
         }
 
         with self._lock:
@@ -103,7 +107,7 @@ class AdvisorService:
         question: str,
         lens: AdvisorLens,
         simulator_context: AdvisorSimulatorContext | None,
-    ) -> str:
+    ) -> dict[str, Any]:
         context = self._build_advisor_context(lens=lens, simulator_context=simulator_context)
         specialized_handler = self._specialized_handlers.get(lens, self._answer_general)
         deterministic_brief = specialized_handler(question, context)
@@ -118,16 +122,28 @@ class AdvisorService:
                 )
             )
             if response.text:
-                return response.text
-        except GuardrailViolation:
+                return {
+                    "content": response.text,
+                    "source": "llm",
+                    "provider": response.provider,
+                    "model": response.model,
+                    "trace_id": response.trace_id,
+                }
+        except GuardrailViolation as exc:
             logger.warning("Advisor prompt blocked by AI guardrails")
-            raise AppError(SAFE_BLOCK_MESSAGE, status_code=400)
+            raise AppError(safe_guardrail_message(exc.result), status_code=400)
         except AiGatewayError as exc:
             logger.warning("Advisor AI provider failed, using deterministic fallback: %s", exc)
         except Exception as exc:
             logger.warning("Advisor AI generation failed, using deterministic fallback: %s", exc)
 
-        return deterministic_brief
+        return {
+            "content": deterministic_brief,
+            "source": "deterministic_fallback",
+            "provider": None,
+            "model": None,
+            "trace_id": None,
+        }
 
     def _build_advisor_prompt(
         self,

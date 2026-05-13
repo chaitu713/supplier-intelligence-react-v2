@@ -11,6 +11,16 @@ class Settings:
     app_name: str = "Supplier AI Intelligence API"
     app_version: str = "1.0.0"
     debug: bool = False
+    auth_enabled: bool = False
+    auth_trust_bearer_jwt: bool = False
+    dev_user_id: str = "local_developer"
+    dev_user_roles: tuple[str, ...] = (
+        "ai_user",
+        "reviewer",
+        "supplier_operator",
+        "compliance_manager",
+        "model_admin",
+    )
 
     @property
     def project_root(self) -> Path:
@@ -19,6 +29,10 @@ class Settings:
     @property
     def data_dir(self) -> Path:
         return self.project_root / "data"
+
+    @property
+    def database_file(self) -> Path:
+        return self.project_root / "data" / "ozone_ai.sqlite3"
 
     @property
     def uploads_dir(self) -> Path:
@@ -79,4 +93,15 @@ def get_settings() -> Settings:
         app_name=os.getenv("APP_NAME", "Supplier AI Intelligence API"),
         app_version=os.getenv("APP_VERSION", "1.0.0"),
         debug=os.getenv("DEBUG", "false").lower() == "true",
+        auth_enabled=os.getenv("AUTH_ENABLED", "false").lower() == "true",
+        auth_trust_bearer_jwt=os.getenv("AUTH_TRUST_BEARER_JWT", "false").lower() == "true",
+        dev_user_id=os.getenv("DEV_USER_ID", "local_developer"),
+        dev_user_roles=tuple(
+            role.strip()
+            for role in os.getenv(
+                "DEV_USER_ROLES",
+                "ai_user,reviewer,supplier_operator,compliance_manager,model_admin",
+            ).split(",")
+            if role.strip()
+        ),
     )

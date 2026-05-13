@@ -5,8 +5,10 @@ import pandas as pd
 from ..core.config import get_settings
 from ..core.exceptions import AppError
 from ..core.logging import get_logger
+from .sqlite_data import csv_table_name, install_pandas_sqlite_bridge, read_table, table_exists
 
 logger = get_logger(__name__)
+install_pandas_sqlite_bridge()
 
 
 class DatasetService:
@@ -14,6 +16,17 @@ class DatasetService:
         self.settings = get_settings()
 
     def _read_csv(self, file_path: Path, dataset_name: str) -> pd.DataFrame:
+        table_name = csv_table_name(file_path)
+        if table_name and table_exists(table_name):
+            try:
+                data_frame = read_table(table_name)
+                data_frame = data_frame.where(pd.notna(data_frame), None)
+                logger.info("Loaded %s SQLite table with %s rows", table_name, len(data_frame))
+                return data_frame
+            except Exception as exc:
+                logger.exception("Failed to load %s SQLite table", table_name, exc_info=exc)
+                raise AppError(f"Unable to load {dataset_name} dataset", status_code=500) from exc
+
         if not file_path.exists():
             raise AppError(f"{dataset_name} dataset not found", status_code=500)
 
@@ -81,6 +94,9 @@ class DatasetService:
         return self._load_esg_frame()
 
     def load_optional_csv(self, file_path: Path, dataset_name: str) -> pd.DataFrame:
+        table_name = csv_table_name(file_path)
+        if table_name and table_exists(table_name):
+            return self._read_csv(file_path, dataset_name)
         if not file_path.exists():
             logger.warning("Optional dataset %s was not found at %s", dataset_name, file_path)
             return pd.DataFrame()

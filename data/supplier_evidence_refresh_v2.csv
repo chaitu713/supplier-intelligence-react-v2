@@ -1,8 +1,0 @@
-refresh_id,supplier_id,evidence_type,last_received_date,refresh_due_date,freshness_status,linked_evidence_id,recommended_action
-REF-2001-001,2001,Geolocation / Polygon Evidence,,2026-05-30,Missing,,Request polygon evidence and link to open trace gap
-REF-2001-002,2001,Labor Questionnaire,,2026-05-19,Requested,,Request labor questionnaire response for complaint indicator
-REF-2003-001,2003,Farm / Plot Traceability,,2026-05-18,Missing,,Request plot identifier and origin evidence
-REF-2003-002,2003,Chain of Custody Evidence,,2026-05-24,Needs Review,,Reconcile harvest log with shipment reference
-REF-2005-001,2005,Certification Evidence,2025-03-01,2026-05-18,Expired,,Request refreshed certificate evidence
-REF-2007-001,2007,Certification Evidence,2025-04-01,2026-05-18,Expired,,Request refreshed certificate evidence
-REF-2007-002,2007,Deforestation-Free Declaration,2025-07-15,2026-05-22,Stale,,Request updated deforestation-free declaration

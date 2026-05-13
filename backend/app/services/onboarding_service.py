@@ -14,10 +14,13 @@ from azure.ai.formrecognizer import DocumentAnalysisClient
 from azure.core.credentials import AzureKeyCredential
 
 from ..ai.guardrails import GuardrailViolation
-from ..ai.output_validation import validate_onboarding_assistance
+from ..ai.output_validation import validate_onboarding_assistance, validate_onboarding_decision
 from ..ai.prompt_registry import get_prompt_policy_block
 from .ai_gateway import AiGatewayError, AiTextRequest, generate_ai_text
 from .ai_review_queue import add_review_item
+from .sqlite_data import csv_table_name, install_pandas_sqlite_bridge, table_exists
+
+install_pandas_sqlite_bridge()
 
 SUPPORTED_COUNTRIES = [
     "India",
@@ -386,7 +389,8 @@ class OnboardingService:
             "validation_notes",
             "review_status",
         ]
-        if self.evidence_path.exists():
+        evidence_table = csv_table_name(self.evidence_path)
+        if self.evidence_path.exists() or (evidence_table and table_exists(evidence_table)):
             evidence_df = pd.read_csv(self.evidence_path)
             for column in columns:
                 if column not in evidence_df.columns:
@@ -792,11 +796,16 @@ Rules:
             if not isinstance(result, dict):
                 return None
             validated = validate_onboarding_assistance(result)
+            validated["source"] = "llm"
+            validated["provider"] = response.provider
+            validated["model"] = response.model
+            validated["trace_id"] = response.trace_id
             if validated["confidence"] == "low":
                 add_review_item(
                     feature="onboarding",
                     reason="low_confidence_ai_output",
                     prompt_hash=response.prompt_hash,
+                    trace_id=response.trace_id,
                     payload={
                         "supplier_name": data.get("supplier_name"),
                         "errors": validation.get("errors", []),
@@ -853,22 +862,36 @@ Structured onboarding data:
                 )
             )
             parsed = json.loads(self._extract_json_block(response.text.strip()))
-            recommendation = str(parsed.get("recommendation") or fallback.get("recommendation") or "Draft")
-            confidence = str(parsed.get("confidence") or fallback.get("confidence") or "Medium")
-            reasons = parsed.get("reasons") if isinstance(parsed.get("reasons"), list) else fallback.get("reasons", [])
-            next_actions = (
-                parsed.get("nextActions")
-                if isinstance(parsed.get("nextActions"), list)
-                else fallback.get("nextActions", [])
+            normalized = validate_onboarding_decision(
+                {
+                    "decision": parsed.get("recommendation"),
+                    "confidence": parsed.get("confidence"),
+                    "rationale": parsed.get("reasons"),
+                    "next_actions": parsed.get("nextActions"),
+                    "summary": parsed.get("summary"),
+                    "blockers": parsed.get("blockers"),
+                    "conditions": parsed.get("conditions"),
+                },
+                {
+                    "decision": fallback.get("recommendation", "Draft"),
+                    "confidence": fallback.get("confidence", "Low"),
+                    "rationale": fallback.get("reasons", []),
+                    "next_actions": fallback.get("nextActions", []),
+                    "summary": fallback.get("summary", ""),
+                    "blockers": fallback.get("blockers", []),
+                    "conditions": fallback.get("conditions", []),
+                    "source": "deterministic_fallback",
+                },
             )
             return {
-                "recommendation": recommendation,
-                "confidence": confidence,
-                "reasons": [str(item) for item in reasons][:5],
-                "nextActions": [str(item) for item in next_actions][:5],
+                "recommendation": normalized["decision"],
+                "confidence": normalized["confidence"],
+                "reasons": normalized["rationale"],
+                "nextActions": normalized["next_actions"],
                 "source": "llm",
                 "provider": response.provider,
                 "model": response.model,
+                "trace_id": response.trace_id,
             }
         except (GuardrailViolation, AiGatewayError, json.JSONDecodeError, ValueError):
             return {
@@ -1291,7 +1314,8 @@ Structured onboarding data:
 
     def activate_supplier(self, supplier_id: int) -> dict:
         suppliers_path = self.data_dir / "suppliers_v2.csv"
-        if not suppliers_path.exists():
+        suppliers_table = csv_table_name(suppliers_path)
+        if not suppliers_path.exists() and not (suppliers_table and table_exists(suppliers_table)):
             raise Exception("Supplier data file was not found")
 
         suppliers_df = pd.read_csv(suppliers_path)
@@ -1336,7 +1360,8 @@ Structured onboarding data:
 
     def revalidate_active_supplier(self, supplier_id: int, outcome: str, notes: str | None = None) -> dict:
         suppliers_path = self.data_dir / "suppliers_v2.csv"
-        if not suppliers_path.exists():
+        suppliers_table = csv_table_name(suppliers_path)
+        if not suppliers_path.exists() and not (suppliers_table and table_exists(suppliers_table)):
             raise Exception("Supplier data file was not found")
 
         allowed_outcomes = {

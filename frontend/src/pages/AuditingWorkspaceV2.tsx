@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { AiProvenanceBadge } from "../components/common/AiProvenanceBadge";
 
 const AUDIT_TABS = [
   { id: "queue", label: "Audit Queue" },
@@ -132,6 +133,20 @@ type AuditDecision = {
   source: string;
   provider?: string | null;
   model?: string | null;
+  trace_id?: string | null;
+};
+
+type AuditInsights = {
+  summary: string;
+  key_concerns: string[];
+  reviewer_focus: string[];
+  next_actions: string[];
+  suggested_decision: string;
+  confidence: string;
+  source?: string | null;
+  provider?: string | null;
+  model?: string | null;
+  trace_id?: string | null;
 };
 
 const emptyEvidenceSummary: EvidenceSummary = {
@@ -171,7 +186,7 @@ export function AuditingWorkspace() {
   const [capaMessage, setCapaMessage] = useState("");
   const [capaError, setCapaError] = useState("");
   const [capaLoading, setCapaLoading] = useState(false);
-  const [auditInsights, setAuditInsights] = useState<any>(null);
+  const [auditInsights, setAuditInsights] = useState<AuditInsights | null>(null);
   const [auditDecision, setAuditDecision] = useState<AuditDecision | null>(null);
   const [decisionLoading, setDecisionLoading] = useState(false);
   const [decisionError, setDecisionError] = useState("");
@@ -908,7 +923,10 @@ export function AuditingWorkspace() {
                     <h2 style={styles.sectionTitle}>AI audit summary</h2>
                     <p style={styles.sectionText}>Gemini receives the selected backend audit context first; deterministic guidance is only the fallback.</p>
                   </div>
-                  <span style={styles.pillAlt}>Confidence {auditInsights?.confidence ?? "derived"}</span>
+                  <div style={styles.provenanceRail}>
+                    <AiProvenanceBadge provenance={auditInsights} />
+                    <span style={styles.pillAlt}>Confidence {auditInsights?.confidence ?? "derived"}</span>
+                  </div>
                 </div>
                 <div style={styles.noteCard}>
                   <strong style={styles.noteTitle}>Summary</strong>
@@ -923,7 +941,7 @@ export function AuditingWorkspace() {
               </div>
 
               <div style={styles.panel}>
-                <div style={styles.sectionHead}><div><h2 style={styles.sectionTitle}>AI audit decision</h2><p style={styles.sectionText}>Structured recommendation from the audit, CAPA, evidence, certification, and supplier context.</p></div><span style={styles.pillAlt}>{auditDecision?.source ?? "derived"}</span></div>
+                <div style={styles.sectionHead}><div><h2 style={styles.sectionTitle}>AI audit decision</h2><p style={styles.sectionText}>Structured recommendation from the audit, CAPA, evidence, certification, and supplier context.</p></div><AiProvenanceBadge provenance={auditDecision} /></div>
                 <div style={styles.decisionHorizontal}>
                   <ReviewItem label="Recommendation" value={auditDecision?.recommendation ?? fallbackDecision(followUpUrgency, certificationHealth)} />
                   <ReviewItem label="Decision confidence" value={auditDecision?.confidence ?? "derived"} />
@@ -1016,6 +1034,7 @@ const styles: Record<string, CSSProperties> = {
   reviewGrid: { display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(300px, 0.85fr)", gap: "16px", alignItems: "start" },
   sideStack: { display: "grid", gap: "16px", alignContent: "start" },
   sectionHead: { display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" },
+  provenanceRail: { display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end", gap: "8px" },
   sectionTitle: { margin: 0, fontSize: "1.08rem", color: "#111c15", lineHeight: 1.25 },
   smallTitle: { margin: 0, fontSize: "0.92rem", color: "#111c15", lineHeight: 1.3 },
   sectionText: { margin: "4px 0 0", maxWidth: "780px", color: "#5c6c59", fontSize: "13px", lineHeight: 1.5 },

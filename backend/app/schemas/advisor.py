@@ -19,6 +19,10 @@ class AdvisorMessage(BaseModel):
     role: MessageRole
     content: str
     createdAt: datetime
+    source: str | None = None
+    provider: str | None = None
+    model: str | None = None
+    trace_id: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

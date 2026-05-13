@@ -11,6 +11,36 @@ ALLOWED_AUDIT_DECISIONS = {
     "Escalate",
     "Suspend / Block",
 }
+ALLOWED_AUDIT_RECOMMENDATIONS = {
+    "Pass",
+    "Pass with Conditions",
+    "Corrective Action Required",
+    "Escalate",
+    "Suspend / Block",
+}
+
+ALLOWED_TRACE_DECISIONS = {
+    "Trace Complete",
+    "Trace Complete with Conditions",
+    "Evidence Gap",
+    "High-Risk Trace",
+    "Block / Escalate",
+}
+
+ALLOWED_ONBOARDING_DECISIONS = {
+    "Draft",
+    "Evidence Requested",
+    "Evidence Under Review",
+    "Ready for Approval",
+    "Approved",
+    "Approved With Conditions",
+    "Approve",
+    "Approve with Conditions",
+    "Needs More Evidence",
+    "Reject",
+    "Rejected",
+    "Escalate",
+}
 
 ALLOWED_CONFIDENCE = {"low", "medium", "high"}
 
@@ -53,6 +83,11 @@ def _short_string(value: Any, fallback: str = "") -> str:
     return value.strip()
 
 
+def _bounded_string(value: Any, fallback: str = "", limit: int = 1200) -> str:
+    text = _short_string(value, fallback)
+    return text[:limit]
+
+
 def _string_list(value: Any, limit: int = 5) -> list[str]:
     if not isinstance(value, list):
         return []
@@ -80,6 +115,27 @@ def validate_audit_insights(parsed: dict[str, Any], fallback: dict[str, Any]) ->
         "next_actions": _string_list(parsed.get("next_actions")) or fallback["next_actions"],
         "suggested_decision": decision,
         "confidence": confidence,
+    }
+
+
+def validate_audit_decision(parsed: dict[str, Any], fallback: dict[str, Any]) -> dict[str, Any]:
+    recommendation = _short_string(parsed.get("recommendation"), fallback["recommendation"])
+    if recommendation not in ALLOWED_AUDIT_RECOMMENDATIONS:
+        recommendation = fallback["recommendation"]
+
+    confidence = _short_string(parsed.get("confidence"), fallback.get("confidence", "medium")).lower()
+    if confidence not in ALLOWED_CONFIDENCE:
+        confidence = fallback.get("confidence", "medium")
+
+    return {
+        "recommendation": recommendation,
+        "confidence": confidence,
+        "reasons": _string_list(parsed.get("reasons")) or fallback["reasons"],
+        "required_actions": _string_list(parsed.get("required_actions")) or fallback["required_actions"],
+        "closure_blockers": _string_list(parsed.get("closure_blockers")) or fallback["closure_blockers"],
+        "source": fallback.get("source", "deterministic_fallback"),
+        "provider": fallback.get("provider"),
+        "model": fallback.get("model"),
     }
 
 
@@ -121,3 +177,70 @@ def validate_onboarding_assistance(parsed: dict[str, Any]) -> dict[str, Any]:
         "actions": _string_list(parsed.get("actions")),
         "confidence": confidence,
     }
+
+
+def validate_onboarding_decision(parsed: dict[str, Any], fallback: dict[str, Any]) -> dict[str, Any]:
+    decision = _short_string(parsed.get("decision"), fallback.get("decision", "Needs More Evidence"))
+    if decision not in ALLOWED_ONBOARDING_DECISIONS:
+        decision = fallback.get("decision", "Needs More Evidence")
+
+    confidence = _short_string(parsed.get("confidence"), fallback.get("confidence", "Medium")).lower()
+    if confidence not in ALLOWED_CONFIDENCE:
+        confidence = str(fallback.get("confidence", "Medium")).lower()
+
+    blockers = _string_list(parsed.get("blockers")) or fallback.get("blockers", [])
+    conditions = _string_list(parsed.get("conditions")) or fallback.get("conditions", [])
+
+    if decision == "Approve" and blockers:
+        decision = "Approve with Conditions"
+
+    return {
+        "decision": decision,
+        "confidence": confidence.title(),
+        "summary": _bounded_string(parsed.get("summary"), fallback.get("summary", "")),
+        "rationale": _string_list(parsed.get("rationale")) or fallback.get("rationale", []),
+        "blockers": blockers,
+        "conditions": conditions,
+        "next_actions": _string_list(parsed.get("next_actions")) or fallback.get("next_actions", []),
+        "source": fallback.get("source", "deterministic_fallback"),
+        "provider": fallback.get("provider"),
+        "model": fallback.get("model"),
+    }
+
+
+def validate_trace_decision(parsed: dict[str, Any], fallback: dict[str, Any]) -> dict[str, Any]:
+    decision = _short_string(parsed.get("decision"), fallback["decision"])
+    if decision not in ALLOWED_TRACE_DECISIONS:
+        decision = fallback["decision"]
+
+    confidence = _short_string(parsed.get("confidence"), fallback.get("confidence", "medium")).lower()
+    if confidence not in ALLOWED_CONFIDENCE:
+        confidence = fallback.get("confidence", "medium")
+
+    blockers = _string_list(parsed.get("blockers")) or fallback.get("blockers", [])
+    missing_evidence = _string_list(parsed.get("missingEvidence")) or fallback.get("missingEvidence", [])
+    if decision == "Trace Complete" and (blockers or missing_evidence):
+        decision = "Trace Complete with Conditions"
+
+    return {
+        "decision": decision,
+        "confidence": confidence,
+        "rationale": _string_list(parsed.get("rationale")) or fallback["rationale"],
+        "blockers": blockers,
+        "missingEvidence": missing_evidence,
+        "nextActions": _string_list(parsed.get("nextActions")) or fallback["nextActions"],
+        "source": fallback.get("source", "deterministic_fallback"),
+        "provider": fallback.get("provider"),
+        "model": fallback.get("model"),
+    }
+
+
+def validate_due_diligence_summary(text: Any, fallback: str) -> str:
+    summary = _bounded_string(text, fallback, limit=1800)
+    if not summary:
+        return fallback
+    required_signals = ("supplier", "risk", "review")
+    lowered = summary.lower()
+    if not any(signal in lowered for signal in required_signals):
+        return fallback
+    return summary

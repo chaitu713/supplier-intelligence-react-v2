@@ -1,7 +1,0 @@
-site_id,supplier_id,site_name,site_type,country,region,latitude,longitude,geo_evidence_status,polygon_evidence_status,deforestation_risk_status,last_verified_date
-SITE-2001-01,2001,BlueRiver Kalimantan Smallholder Block,Farm Plot,Indonesia,Kalimantan,-1.6815,113.3824,Available,Missing,Needs Review,2026-04-20
-SITE-2001-02,2001,BlueRiver Surabaya Processing Hub,Processing Site,Indonesia,East Java,-7.2575,112.7521,Available,Not Required,Clear,2026-04-22
-SITE-2003-01,2003,TerraSource Para Origin Cluster,Farm Plot,Brazil,Para,-3.119, -52.442,Missing,Missing,High Risk,2026-03-18
-SITE-2004-01,2004,Cedar Grove Gujarat Export Facility,Processing Site,India,Gujarat,22.2587,71.1924,Available,Not Required,Clear,2026-04-10
-SITE-2036-01,2036,Summit Leaf North America Warehouse,Warehouse,USA,Illinois,40.6331,-89.3985,Available,Not Required,Clear,2026-04-05
-SITE-2047-01,2047,Archipelago Palm Collection Center,Collection Center,Indonesia,Sumatra,-0.5897,101.3431,Available,Missing,Needs Review,2026-04-01

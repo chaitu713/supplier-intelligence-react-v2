@@ -1,3 +1,0 @@
-capa_id,audit_id,supplier_id,issue,severity,owner,description,due_date,status,evidence_required,supplier_response,evidence_notes,created_date,closed_date
-1,1,2001,Missing geolocation and labor evidence,Major,Supplier,Supplier must provide valid geolocation or polygon evidence and close labor questionnaire findings before audit closure.,2026-10-21,Closed,Yes,,,2026-05-04,2026-05-05
-2,1,2001,Missing geolocation and labor evidence,Major,Supplier,Supplier must provide valid geolocation or polygon evidence and close labor questionnaire findings before audit closure.,2026-09-16,Closed,Yes,,,2026-05-05,2026-05-05

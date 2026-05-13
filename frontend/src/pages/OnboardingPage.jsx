@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { AiProvenanceBadge } from "../components/common/AiProvenanceBadge";
 
 const TABS = [
   { id: "document", label: "Document Upload" },
@@ -1387,9 +1388,12 @@ export default function OnboardingPage({ embedded = false } = {}) {
                     <h3 style={styles.sectionTitle}>AI remediation assist</h3>
                     <p style={styles.sectionText}>{aiAssistance.summary}</p>
                   </div>
-                  <span style={styles.pillAlt}>
-                    {String(aiAssistance.confidence || "medium").toUpperCase()} confidence
-                  </span>
+                  <div style={styles.provenanceRail}>
+                    <AiProvenanceBadge provenance={aiAssistance} />
+                    <span style={styles.pillAlt}>
+                      {String(aiAssistance.confidence || "medium").toUpperCase()} confidence
+                    </span>
+                  </div>
                 </div>
 
                 <div style={styles.previewGrid}>
@@ -2328,32 +2332,35 @@ export default function OnboardingPage({ embedded = false } = {}) {
                     AI recommends the onboarding outcome from extracted fields, evidence checks, traceability requirements, and ESG baseline.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setFormData((current) => ({
-                      ...current,
-                      approval_status: displayedDecision.recommendation,
-                      approval_blockers:
-                        displayedDecision.recommendation === "Ready for Approval"
-                          ? ""
-                          : current.approval_blockers || displayedDecision.nextActions.join("\n"),
-                      approval_conditions:
-                        current.approval_conditions || displayedDecision.nextActions.join("\n"),
-                    }))
-                  }
-                  style={styles.secondaryButton}
-                >
-                  Apply recommendation
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleGenerateAiDecision(deterministicDecision, evidenceGaps)}
-                  style={styles.secondaryButton}
-                  disabled={isDecisionLoading}
-                >
-                  {isDecisionLoading ? "Asking LLM..." : "Ask LLM"}
-                </button>
+                <div style={styles.provenanceRail}>
+                  <AiProvenanceBadge provenance={displayedDecision} />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData((current) => ({
+                        ...current,
+                        approval_status: displayedDecision.recommendation,
+                        approval_blockers:
+                          displayedDecision.recommendation === "Ready for Approval"
+                            ? ""
+                            : current.approval_blockers || displayedDecision.nextActions.join("\n"),
+                        approval_conditions:
+                          current.approval_conditions || displayedDecision.nextActions.join("\n"),
+                      }))
+                    }
+                    style={styles.secondaryButton}
+                  >
+                    Apply recommendation
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleGenerateAiDecision(deterministicDecision, evidenceGaps)}
+                    style={styles.secondaryButton}
+                    disabled={isDecisionLoading}
+                  >
+                    {isDecisionLoading ? "Asking LLM..." : "Ask LLM"}
+                  </button>
+                </div>
               </div>
 
               <div style={styles.decisionBanner}>
@@ -2461,9 +2468,12 @@ export default function OnboardingPage({ embedded = false } = {}) {
                     <h3 style={styles.sectionTitle}>AI validation guidance</h3>
                     <p style={styles.sectionText}>{aiAssistance.summary}</p>
                   </div>
-                  <span style={styles.pillAlt}>
-                    {String(aiAssistance.confidence || "medium").toUpperCase()} confidence
-                  </span>
+                  <div style={styles.provenanceRail}>
+                    <AiProvenanceBadge provenance={aiAssistance} />
+                    <span style={styles.pillAlt}>
+                      {String(aiAssistance.confidence || "medium").toUpperCase()} confidence
+                    </span>
+                  </div>
                 </div>
 
                 {Array.isArray(aiAssistance?.actions) && aiAssistance.actions.length > 0 ? (
@@ -2849,6 +2859,7 @@ const styles = {
   metricLabel: { color: "rgba(235, 245, 235, 0.76)" },
   panel: { display: "grid", gap: "18px", alignContent: "start", width: "100%", minWidth: 0, padding: "24px 36px 24px 24px", borderRadius: "28px", background: "rgba(255,255,255,0.92)", border: "1px solid rgba(17, 22, 18, 0.08)", boxShadow: "0 10px 28px rgba(17, 22, 18, 0.06)" },
   sectionHead: { display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" },
+  provenanceRail: { display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end", gap: "8px" },
   sectionTitle: { margin: 0, fontSize: "1.3rem", color: "#101913" },
   sectionText: { marginTop: "6px", maxWidth: "720px", color: "#566753" },
   pill: { padding: "8px 12px", borderRadius: "999px", background: "#ecfdf3", color: "#166534", border: "1px solid #bbf7d0", fontSize: "12px", fontWeight: 700 },

@@ -62,6 +62,10 @@ export interface DueDiligenceResponse {
   connectedSignals: Record<string, unknown>;
   issues: string[];
   aiSummary: string;
+  ai_source?: string | null;
+  ai_provider?: string | null;
+  ai_model?: string | null;
+  ai_trace_id?: string | null;
 }
 
 export async function getRiskOverview(): Promise<RiskOverview> {

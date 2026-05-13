@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { AiProvenanceBadge } from "../components/common/AiProvenanceBadge";
 
 const TRACE_TABS = [
   { id: "overview", label: "Trace Overview" },
@@ -164,6 +165,17 @@ type TraceRow = {
   latestDecision?: any;
 };
 
+type TraceDecision = {
+  decision?: string;
+  confidence?: string;
+  source?: string | null;
+  provider?: string | null;
+  model?: string | null;
+  rationale?: string[];
+  nextActions?: string[];
+  decisionDate?: string;
+};
+
 const SAMPLE_SUPPLIER_TRACE_ROWS: TraceRow[] = [
   {
     supplierId: 2001,
@@ -247,7 +259,7 @@ export function TraceabilityWorkspace() {
   });
   const [gapActionStatus, setGapActionStatus] = useState("");
   const [isSavingGap, setIsSavingGap] = useState(false);
-  const [traceDecision, setTraceDecision] = useState<any>(null);
+  const [traceDecision, setTraceDecision] = useState<TraceDecision | null>(null);
   const [decisionStatus, setDecisionStatus] = useState("");
 
   useEffect(() => {
@@ -651,14 +663,20 @@ export function TraceabilityWorkspace() {
               <h2 style={styles.sectionTitle}>Trace decision support</h2>
               <p style={styles.sectionText}>Generate a reviewer-ready recommendation from mapped sites, lot lineage, uploaded evidence, open actions, and EUDR readiness.</p>
             </div>
-            <button type="button" onClick={handleTraceDecision} style={styles.primaryButton}>Generate decision</button>
+            <div style={styles.provenanceRail}>
+              {(traceDecision || selectedSupplier.latestDecision) ? (
+                <AiProvenanceBadge provenance={traceDecision || selectedSupplier.latestDecision} />
+              ) : null}
+              <button type="button" onClick={handleTraceDecision} style={styles.primaryButton}>Generate decision</button>
+            </div>
           </div>
           {decisionStatus ? <span style={styles.uploadStatus}>{decisionStatus}</span> : null}
           {traceDecision ? (
             <div style={styles.decisionBox}>
-              <ReviewItem label="Decision" value={traceDecision.decision} />
-              <ReviewItem label="Confidence" value={traceDecision.confidence} />
-              <ReviewItem label="Source" value={traceDecision.source} />
+              <ReviewItem label="Decision" value={traceDecision.decision || "Review required"} />
+              <ReviewItem label="Confidence" value={traceDecision.confidence || "medium"} />
+              <ReviewItem label="Source" value={traceDecision.source || "deterministic_fallback"} />
+              <ReviewItem label="Provider" value={traceDecision.provider || "Rules"} />
               <div style={styles.insightCard}>
                 <strong style={styles.insightTitle}>Rationale</strong>
                 <ul style={styles.insightList}>{(traceDecision.rationale || []).map((item: string) => <li key={item}>{item}</li>)}</ul>
@@ -673,6 +691,7 @@ export function TraceabilityWorkspace() {
             <div style={styles.decisionBox}>
               <ReviewItem label="Latest saved decision" value={selectedSupplier.latestDecision.decision} />
               <ReviewItem label="Confidence" value={selectedSupplier.latestDecision.confidence} />
+              <ReviewItem label="Source" value={selectedSupplier.latestDecision.source || "deterministic_fallback"} />
               <ReviewItem label="Saved" value={selectedSupplier.latestDecision.decisionDate} />
             </div>
           ) : null}
@@ -1139,6 +1158,7 @@ const styles: Record<string, CSSProperties> = {
   flowBannerValue: { color: "#152117", fontSize: "1rem" },
   panel: { display: "grid", gap: "18px", width: "100%", minWidth: 0, padding: "24px", borderRadius: "28px", background: "rgba(255,255,255,0.92)", border: "1px solid rgba(17, 22, 18, 0.08)", boxShadow: "0 10px 28px rgba(17, 22, 18, 0.06)" },
   sectionHead: { display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" },
+  provenanceRail: { display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end", gap: "10px" },
   sectionTitle: { margin: 0, fontSize: "1.3rem", color: "#101913" },
   sectionText: { marginTop: "6px", maxWidth: "760px", color: "#566753" },
   pill: { padding: "8px 12px", borderRadius: "999px", background: "#ecfdf3", color: "#166534", border: "1px solid #bbf7d0", fontSize: "12px", fontWeight: 700 },

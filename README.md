@@ -2,7 +2,7 @@
 
 Responsible Sourcing & Supplier Intelligence
 
-Ozone AI 4.0 is a supplier intelligence application for responsible sourcing, supplier risk management, ESG monitoring, supplier onboarding, auditing, traceability, due diligence, simulation, and AI-assisted review. The app currently uses a React + Vite frontend, a FastAPI backend, and CSV-backed datasets in `data/` as the temporary persistence layer.
+Ozone AI 4.0 is a supplier intelligence application for responsible sourcing, supplier risk management, ESG monitoring, supplier onboarding, auditing, traceability, due diligence, simulation, and AI-assisted review. The app currently uses a React + Vite frontend, a FastAPI backend, and a SQLite database at `data/ozone_ai.sqlite3` as the local persistence layer.
 
 This README is intended to be a full context document. If it is given to another developer or to ChatGPT, it should explain what the application contains, what each module does, what data is used, and how the current workflows connect.
 
@@ -44,17 +44,25 @@ Backend:
 - scikit-learn
 - Azure Document Intelligence SDK
 - OpenAI / AI gateway abstractions
-- CSV files as current persistence
+- SQLite as current local persistence
+- Header/JWT-compatible Auth/RBAC guardrails for protected AI and review actions
 
 Current persistence:
 
-- CSV files in `data/`
+- SQLite database in `data/ozone_ai.sqlite3`
+- The previous CSV datasets were migrated into SQLite tables and removed from `data/`
 - Local evidence uploads under `uploads/onboarding/evidence`
 - Local audit evidence uploads under `uploads/auditing/evidence`
 - Local traceability evidence uploads under `uploads/traceability/evidence`
-- Continuous Monitoring seed data under `data/monitoring_*_v2.csv`, `data/supplier_evidence_refresh_v2.csv`, and `data/external_esg_signals_v2.csv`
+- Continuous Monitoring seed data now lives in SQLite tables such as `monitoring_observations`, `monitoring_alerts`, `monitoring_rules`, `monitoring_actions`, `supplier_evidence_refresh`, and `external_esg_signals`
 - Traceability sample PDFs under `uploads/traceability/sample_pdfs`
 - Test evidence PDFs under `uploads/certificate_test_pdfs`
+
+SQLite migration:
+
+- Migration script: `scripts/migrate_csv_to_sqlite.py`
+- Runtime bridge: `backend/app/services/sqlite_data.py`
+- Future PostgreSQL migration should use the SQLite table names as the starting schema.
 
 ## Application Navigation
 
@@ -134,6 +142,10 @@ Important backend files:
   - Pydantic response/request schemas.
 - `backend/app/ai/*`
   - AI guardrails, prompt registry, output validation, and related AI policy support.
+- `backend/app/security/auth.py`
+  - Reads the current user for RBAC. In local mode, it returns a development user. When `AUTH_ENABLED=true`, it requires trusted user headers or a trusted bearer JWT.
+- `backend/app/security/rbac.py`
+  - Defines role checks such as `require_role("reviewer")` and `require_any_role(("reviewer", "compliance_manager"))`.
 
 Registered backend routers:
 
@@ -1188,8 +1200,11 @@ The app includes AI governance components:
 - AI gateway
 - Output validation
 - Rate limiting
-- Audit logging
-- Review queue
+- SQLite-backed audit logging
+- SQLite-backed review queue
+- Trace IDs across AI gateway, audit log, and review queue
+- SSE observability endpoints for live AI guardrail/provider events
+- Auth/RBAC protection for sensitive AI and reviewer actions
 
 AI review queue endpoints:
 
@@ -1197,6 +1212,106 @@ AI review queue endpoints:
 - `POST /api/v1/ai-review/queue/{item_id}`
 
 Low-confidence or guarded outputs can be sent to the review queue.
+
+AI observability endpoints:
+
+- `GET /api/v1/observability/ai-events`
+- `GET /api/v1/observability/ai-events/stream`
+
+The event stream shows backend AI lifecycle events such as guardrail pass/block, provider start, provider completion, provider error, review queued, and review resolved.
+
+Trace IDs:
+
+- Every AI gateway call gets a `trace_id`.
+- The same `trace_id` is stored in AI audit records.
+- Review queue items created from low-confidence AI output also keep the same `trace_id`.
+- This lets a reviewer connect one frontend/backend AI action to its audit and review records.
+
+Persistence:
+
+- AI audit events are stored in the SQLite `ai_audit_events` table.
+- AI review items are stored in the SQLite `ai_review_queue` table.
+- The older JSON/JSONL files are no longer the active guardrail persistence path.
+
+Output validation now covers:
+
+- Audit insights
+- Audit decisions
+- Onboarding extraction assistance
+- Onboarding decisions
+- Traceability decisions
+- Due diligence AI summaries
+
+### Auth/RBAC Guardrail
+
+Auth means the backend knows who is calling an endpoint.
+
+RBAC means role-based access control. The backend checks whether the current user has the right role before allowing sensitive actions.
+
+Current roles:
+
+- `ai_user`: can use AI assistant and AI decision-support endpoints.
+- `reviewer`: can view and resolve AI review queue items.
+- `supplier_operator`: reserved for supplier evidence and data operations.
+- `compliance_manager`: can apply important audit, onboarding, and traceability decisions.
+- `model_admin`: reserved for AI/provider administration.
+
+Local development behavior:
+
+- By default, `AUTH_ENABLED=false`.
+- The backend uses a local development user named `local_developer`.
+- This local user has all current roles so the app keeps working during demos and local development.
+
+Strict auth behavior:
+
+- Set `AUTH_ENABLED=true`.
+- Then requests must include identity information.
+- For local/API testing, pass trusted headers:
+
+```bash
+X-User-Id: reviewer-123
+X-User-Roles: ai_user,reviewer
+```
+
+Example:
+
+```bash
+curl http://localhost:8000/api/v1/ai-review/queue \
+  -H "X-User-Id: reviewer-123" \
+  -H "X-User-Roles: reviewer"
+```
+
+For local frontend testing with `AUTH_ENABLED=true`, set these Vite variables before starting the frontend:
+
+```bash
+VITE_DEV_USER_ID=reviewer-123
+VITE_DEV_USER_ROLES=ai_user,reviewer
+```
+
+Protected endpoints now include:
+
+- `POST /api/v1/advisor/sessions`
+- `GET /api/v1/advisor/sessions/{session_id}`
+- `POST /api/v1/advisor/sessions/{session_id}/messages`
+- `POST /auditing/insights`
+- `POST /auditing/decision`
+- `POST /auditing/decision/apply`
+- `POST /auditing/close`
+- `POST /onboarding/decision`
+- `POST /onboarding/activate`
+- `POST /onboarding/revalidate`
+- `POST /traceability/decision`
+- `POST /traceability/evidence/review`
+- `GET /api/v1/ai-review/queue`
+- `POST /api/v1/ai-review/queue/{item_id}`
+- `GET /api/v1/observability/ai-events`
+- `GET /api/v1/observability/ai-events/stream`
+
+Important:
+
+- The AI review endpoint no longer trusts a reviewer ID supplied by the frontend.
+- It records the reviewer from the authenticated user instead.
+- This prevents one user from approving/rejecting AI review items while pretending to be someone else.
 
 ## Document Intelligence
 

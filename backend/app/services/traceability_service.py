@@ -11,9 +11,13 @@ import uuid
 import pandas as pd
 
 from ..ai.guardrails import GuardrailViolation
+from ..ai.output_validation import validate_trace_decision
 from ..ai.prompt_registry import get_prompt_policy_block
 from .ai_gateway import AiGatewayError, AiTextRequest, generate_ai_text
 from .onboarding_service import onboarding_service
+from .sqlite_data import csv_table_name, install_pandas_sqlite_bridge, table_exists
+
+install_pandas_sqlite_bridge()
 
 
 class TraceabilityService:
@@ -404,7 +408,8 @@ Trace package:
 
     def _read_csv(self, filename: str) -> pd.DataFrame:
         path = self.data_dir / filename
-        if not path.exists():
+        table_name = csv_table_name(path)
+        if not path.exists() and not (table_name and table_exists(table_name)):
             return pd.DataFrame()
         return pd.read_csv(path)
 
@@ -446,7 +451,8 @@ Trace package:
             "description",
             "recommended_action",
         ]
-        if self.gap_actions_path.exists():
+        gap_table = csv_table_name(self.gap_actions_path)
+        if self.gap_actions_path.exists() or (gap_table and table_exists(gap_table)):
             gap_df = pd.read_csv(self.gap_actions_path)
             for column in columns:
                 if column not in gap_df.columns:
@@ -475,7 +481,8 @@ Trace package:
             "notes",
             "action_date",
         ]
-        if self.gap_history_path.exists():
+        gap_history_table = csv_table_name(self.gap_history_path)
+        if self.gap_history_path.exists() or (gap_history_table and table_exists(gap_history_table)):
             history_df = pd.read_csv(self.gap_history_path)
             for column in columns:
                 if column not in history_df.columns:
@@ -514,7 +521,8 @@ Trace package:
             "coverage_percent",
             "trigger",
         ]
-        if self.score_history_path.exists():
+        score_history_table = csv_table_name(self.score_history_path)
+        if self.score_history_path.exists() or (score_history_table and table_exists(score_history_table)):
             history_df = pd.read_csv(self.score_history_path)
             for column in columns:
                 if column not in history_df.columns:
@@ -537,7 +545,8 @@ Trace package:
         history_df.to_csv(self.score_history_path, index=False)
 
     def _build_gap_history_for_supplier(self, supplier_id: int) -> list[dict]:
-        if not self.gap_history_path.exists():
+        gap_history_table = csv_table_name(self.gap_history_path)
+        if not self.gap_history_path.exists() and not (gap_history_table and table_exists(gap_history_table)):
             return []
         df = pd.read_csv(self.gap_history_path)
         if df.empty or "supplier_id" not in df.columns:
@@ -557,7 +566,8 @@ Trace package:
         ]
 
     def _build_score_history_for_supplier(self, supplier_id: int) -> list[dict]:
-        if not self.score_history_path.exists():
+        score_history_table = csv_table_name(self.score_history_path)
+        if not self.score_history_path.exists() and not (score_history_table and table_exists(score_history_table)):
             return []
         df = pd.read_csv(self.score_history_path)
         if df.empty or "supplier_id" not in df.columns:
@@ -592,7 +602,8 @@ Trace package:
             "provider",
             "model",
         ]
-        if self.decisions_path.exists():
+        decisions_table = csv_table_name(self.decisions_path)
+        if self.decisions_path.exists() or (decisions_table and table_exists(decisions_table)):
             decisions_df = pd.read_csv(self.decisions_path)
             for column in columns:
                 if column not in decisions_df.columns:
@@ -618,7 +629,8 @@ Trace package:
         decisions_df.to_csv(self.decisions_path, index=False)
 
     def _build_latest_decision_for_supplier(self, supplier_id: int) -> dict | None:
-        if not self.decisions_path.exists():
+        decisions_table = csv_table_name(self.decisions_path)
+        if not self.decisions_path.exists() and not (decisions_table and table_exists(decisions_table)):
             return None
         decisions_df = pd.read_csv(self.decisions_path)
         if decisions_df.empty or "supplier_id" not in decisions_df.columns:
@@ -812,23 +824,7 @@ Trace package:
         }
 
     def _validate_trace_decision(self, parsed: dict, fallback: dict) -> dict:
-        allowed = {
-            "Trace Complete",
-            "Trace Complete with Conditions",
-            "Evidence Gap",
-            "High-Risk Trace",
-            "Block / Escalate",
-        }
-        decision = self._normalize_choice(parsed.get("decision"), allowed, fallback["decision"])
-        confidence = self._normalize_choice(parsed.get("confidence"), {"low", "medium", "high"}, fallback["confidence"])
-        return {
-            "decision": decision,
-            "confidence": confidence,
-            "rationale": self._string_list(parsed.get("rationale"), fallback.get("rationale", [])),
-            "blockers": self._string_list(parsed.get("blockers"), fallback.get("blockers", [])),
-            "missingEvidence": self._string_list(parsed.get("missingEvidence"), fallback.get("missingEvidence", [])),
-            "nextActions": self._string_list(parsed.get("nextActions"), fallback.get("nextActions", [])),
-        }
+        return validate_trace_decision(parsed, fallback)
 
     def _string_list(self, value: Any, fallback: list[str]) -> list[str]:
         if not isinstance(value, list):
@@ -941,7 +937,8 @@ Trace package:
             "validation_notes",
             "review_status",
         ]
-        if self.evidence_path.exists():
+        evidence_table = csv_table_name(self.evidence_path)
+        if self.evidence_path.exists() or (evidence_table and table_exists(evidence_table)):
             evidence_df = pd.read_csv(self.evidence_path)
             for column in columns:
                 if column not in evidence_df.columns:
