@@ -50,24 +50,27 @@ export function AdvisorCompassIcon({ className }: { className?: string }) {
       className={className}
     >
       <path
-        d="M20 11.5c0 4.1-3.4 7.5-7.5 7.5-1 0-1.9-.2-2.8-.5L5 19l.9-3.4C5.3 14.5 5 13.5 5 12.5 5 8.4 8.4 5 12.5 5S20 8.4 20 11.5Z"
+        d="M12 5V3"
         stroke="currentColor"
-        strokeWidth="1.9"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M7 9.5A3.5 3.5 0 0 1 10.5 6h3A3.5 3.5 0 0 1 17 9.5v4A3.5 3.5 0 0 1 13.5 17h-3A3.5 3.5 0 0 1 7 13.5v-4Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
         strokeLinejoin="round"
       />
-      <circle cx="12.5" cy="11.5" r="3.1" stroke="currentColor" strokeWidth="1.9" />
+      <circle cx="10" cy="11" r="1" fill="currentColor" />
+      <circle cx="14" cy="11" r="1" fill="currentColor" />
       <path
-        d="M12.5 8.8v5.4M9.8 11.5h5.4"
+        d="M10 14h4"
         stroke="currentColor"
-        strokeWidth="1.9"
+        strokeWidth="1.8"
         strokeLinecap="round"
       />
-      <path
-        d="M12.5 11.5l1.9-1.9"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-      />
+      <path d="M4 12h3M17 12h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="12" cy="3" r="1" fill="currentColor" />
     </svg>
   );
 }
