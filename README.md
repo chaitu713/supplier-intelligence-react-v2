@@ -1243,6 +1243,23 @@ Output validation now covers:
 - Traceability decisions
 - Due diligence AI summaries
 
+Guardrail schema migration:
+
+- Existing PostgreSQL environments can run `python scripts/migrate_guardrails_schema.py`.
+- The migration is non-destructive for guardrail tables.
+- It creates or upgrades `ai_audit_events` and `ai_review_queue`.
+- It adds indexes for `trace_id`, review `status`, and audit feature/status lookup.
+
+Red-team tests:
+
+- `tests/test_ai_red_team_guardrails.py`
+- Covers prompt injection, secret leakage, fake evidence, bypass-review attempts, final-approval misuse, output validation bypasses, and legitimate prompts that should still pass.
+- Run with:
+
+```bash
+python -m pytest tests/test_ai_guardrails.py tests/test_ai_red_team_guardrails.py -q
+```
+
 ### Auth/RBAC Guardrail
 
 Auth means the backend knows who is calling an endpoint.

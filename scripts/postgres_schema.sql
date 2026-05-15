@@ -23,7 +23,10 @@ CREATE TABLE "ai_audit_events" (
 DROP TABLE IF EXISTS "ai_review_queue" CASCADE;
 CREATE TABLE "ai_review_queue" (
     "item_id" TEXT,
+    "trace_id" TEXT,
     "feature" TEXT,
+    "reason" TEXT,
+    "prompt_hash" TEXT,
     "status" TEXT,
     "created_at" TEXT,
     "reviewed_at" TEXT,
@@ -32,6 +35,11 @@ CREATE TABLE "ai_review_queue" (
     "decision" TEXT,
     PRIMARY KEY ("item_id")
 );
+
+CREATE INDEX IF NOT EXISTS "idx_ai_audit_events_trace_id" ON "ai_audit_events" ("trace_id");
+CREATE INDEX IF NOT EXISTS "idx_ai_audit_events_feature_status" ON "ai_audit_events" ("feature", "status");
+CREATE INDEX IF NOT EXISTS "idx_ai_review_queue_status" ON "ai_review_queue" ("status");
+CREATE INDEX IF NOT EXISTS "idx_ai_review_queue_trace_id" ON "ai_review_queue" ("trace_id");
 
 DROP TABLE IF EXISTS "alerts" CASCADE;
 CREATE TABLE "alerts" (

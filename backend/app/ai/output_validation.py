@@ -243,4 +243,15 @@ def validate_due_diligence_summary(text: Any, fallback: str) -> str:
     lowered = summary.lower()
     if not any(signal in lowered for signal in required_signals):
         return fallback
+    disallowed_clearance_phrases = (
+        "everything is approved",
+        "no review is needed",
+        "no review needed",
+        "fully approved",
+        "final legal clearance",
+        "guaranteed compliant",
+        "bypass review",
+    )
+    if any(phrase in lowered for phrase in disallowed_clearance_phrases):
+        return fallback
     return summary
