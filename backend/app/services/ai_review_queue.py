@@ -1,50 +1,42 @@
 from __future__ import annotations
 
 import json
-import sqlite3
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from ..observability.live_flow import emit_ai_event
-from .sqlite_data import database_path
+from .database import column_names, execute, execute_many, fetch_all, using_postgres
 
 
 def _ensure_review_table() -> None:
-    path = database_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(path) as connection:
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS ai_review_queue (
-                item_id TEXT PRIMARY KEY,
-                trace_id TEXT,
-                feature TEXT,
-                reason TEXT,
-                prompt_hash TEXT,
-                status TEXT,
-                created_at TEXT,
-                reviewed_at TEXT,
-                reviewer TEXT,
-                payload TEXT,
-                decision TEXT
-            )
-            """
+    execute(
+        """
+        CREATE TABLE IF NOT EXISTS ai_review_queue (
+            item_id TEXT PRIMARY KEY,
+            trace_id TEXT,
+            feature TEXT,
+            reason TEXT,
+            prompt_hash TEXT,
+            status TEXT,
+            created_at TEXT,
+            reviewed_at TEXT,
+            reviewer TEXT,
+            payload TEXT,
+            decision TEXT
         )
-        existing = {
-            row[1]
-            for row in connection.execute("PRAGMA table_info(ai_review_queue)").fetchall()
-        }
-        columns = {
-            "trace_id": "TEXT",
-            "reason": "TEXT",
-            "prompt_hash": "TEXT",
-        }
-        for column, column_type in columns.items():
-            if column not in existing:
-                connection.execute(f"ALTER TABLE ai_review_queue ADD COLUMN {column} {column_type}")
-        connection.commit()
+        """
+    )
+    existing = column_names("ai_review_queue")
+    columns = {
+        "trace_id": "TEXT",
+        "reason": "TEXT",
+        "prompt_hash": "TEXT",
+    }
+    for column, column_type in columns.items():
+        if column not in existing:
+            execute(f'ALTER TABLE ai_review_queue ADD COLUMN "{column}" {column_type}')
 
 def _queue_path() -> Path:
     data_dir = Path(__file__).resolve().parents[3] / "data"
@@ -54,16 +46,14 @@ def _queue_path() -> Path:
 
 def _load_items() -> list[dict[str, Any]]:
     _ensure_review_table()
-    with sqlite3.connect(database_path()) as connection:
-        connection.row_factory = sqlite3.Row
-        rows = connection.execute(
-            """
-            SELECT item_id, trace_id, feature, reason, prompt_hash, status,
-                   created_at, reviewed_at, reviewer, payload, decision
-            FROM ai_review_queue
-            ORDER BY created_at DESC
-            """
-        ).fetchall()
+    rows = fetch_all(
+        """
+        SELECT item_id, trace_id, feature, reason, prompt_hash, status,
+               created_at, reviewed_at, reviewer, payload, decision
+        FROM ai_review_queue
+        ORDER BY created_at DESC
+        """
+    )
     items: list[dict[str, Any]] = []
     for row in rows:
         try:
@@ -72,17 +62,17 @@ def _load_items() -> list[dict[str, Any]]:
             payload = {}
         items.append(
             {
-                "id": row["item_id"],
-                "trace_id": row["trace_id"] or "",
-                "feature": row["feature"],
-                "reason": row["reason"] or "",
-                "prompt_hash": row["prompt_hash"] or "",
+                "id": row.get("item_id"),
+                "trace_id": row.get("trace_id") or "",
+                "feature": row.get("feature"),
+                "reason": row.get("reason") or "",
+                "prompt_hash": row.get("prompt_hash") or "",
                 "payload": payload,
-                "status": row["status"],
-                "reviewer_id": row["reviewer"],
-                "created_at": row["created_at"],
-                "reviewed_at": row["reviewed_at"],
-                "decision": row["decision"],
+                "status": row.get("status"),
+                "reviewer_id": row.get("reviewer"),
+                "created_at": row.get("created_at"),
+                "reviewed_at": row.get("reviewed_at"),
+                "decision": row.get("decision"),
             }
         )
     return items
@@ -90,32 +80,33 @@ def _load_items() -> list[dict[str, Any]]:
 
 def _save_items(items: list[dict[str, Any]]) -> None:
     _ensure_review_table()
-    with sqlite3.connect(database_path()) as connection:
-        connection.execute("DELETE FROM ai_review_queue")
-        for item in items:
-            connection.execute(
-                """
-                INSERT INTO ai_review_queue (
-                    item_id, trace_id, feature, reason, prompt_hash, status,
-                    created_at, reviewed_at, reviewer, payload, decision
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    item.get("id"),
-                    item.get("trace_id", ""),
-                    item.get("feature", ""),
-                    item.get("reason", ""),
-                    item.get("prompt_hash", ""),
-                    item.get("status", "pending"),
-                    item.get("created_at"),
-                    item.get("reviewed_at"),
-                    item.get("reviewer_id"),
-                    json.dumps(item.get("payload") or {}, default=str),
-                    item.get("decision"),
-                ),
+    execute("DELETE FROM ai_review_queue")
+    placeholder = "%s" if using_postgres() else "?"
+    execute_many(
+        f"""
+        INSERT INTO ai_review_queue (
+            item_id, trace_id, feature, reason, prompt_hash, status,
+            created_at, reviewed_at, reviewer, payload, decision
+        )
+        VALUES ({", ".join([placeholder] * 11)})
+        """,
+        [
+            (
+                item.get("id"),
+                item.get("trace_id", ""),
+                item.get("feature", ""),
+                item.get("reason", ""),
+                item.get("prompt_hash", ""),
+                item.get("status", "pending"),
+                item.get("created_at"),
+                item.get("reviewed_at"),
+                item.get("reviewer_id"),
+                json.dumps(item.get("payload") or {}, default=str),
+                item.get("decision"),
             )
-        connection.commit()
+            for item in items
+        ],
+    )
 
 
 def add_review_item(

@@ -12,3 +12,4 @@ azure-identity
 azure-core
 google-genai
 pytest
+psycopg[binary]

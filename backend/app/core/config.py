@@ -21,6 +21,7 @@ class Settings:
         "compliance_manager",
         "model_admin",
     )
+    database_url: str | None = None
 
     @property
     def project_root(self) -> Path:
@@ -104,4 +105,5 @@ def get_settings() -> Settings:
             ).split(",")
             if role.strip()
         ),
+        database_url=os.getenv("DATABASE_URL") or None,
     )

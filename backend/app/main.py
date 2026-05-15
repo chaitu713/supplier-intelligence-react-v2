@@ -16,10 +16,10 @@ from .routers.observability import router as observability_router
 from .routers.risk import router as risk_router
 from .routers.simulator import router as simulator_router
 from .routers.traceability import router as traceability_router
-from .services.sqlite_data import install_pandas_sqlite_bridge
+from .services.database import install_pandas_database_bridge
 
 configure_logging()
-install_pandas_sqlite_bridge()
+install_pandas_database_bridge()
 logger = get_logger(__name__)
 settings = get_settings()
 
