@@ -64,6 +64,16 @@ class AdvisorService:
 
         return session
 
+    def delete_session(self, session_id: str) -> dict:
+        with self._lock:
+            session = self._sessions.pop(session_id, None)
+
+        if not session:
+            raise AppError("Advisor session not found", status_code=404)
+
+        logger.info("Deleted advisor session %s", session_id)
+        return {"sessionId": session_id, "deleted": True}
+
     def send_message(self, session_id: str, payload: AdvisorMessageRequest) -> dict:
         user_message = {
             "role": "user",

@@ -32,10 +32,6 @@ class Settings:
         return self.project_root / "data"
 
     @property
-    def database_file(self) -> Path:
-        return self.project_root / "data" / "ozone_ai.sqlite3"
-
-    @property
     def uploads_dir(self) -> Path:
         return self.project_root / "uploads"
 

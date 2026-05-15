@@ -8,4 +8,3 @@ frontend/*.tsbuildinfo
 .codex-template-analysis/
 data/ai_audit_events.jsonl
 data/ai_review_queue.json
-data/*.sqlite3-journal

@@ -8,7 +8,7 @@ The main layers are:
 
 - React frontend for the user interface.
 - FastAPI backend for APIs and business logic.
-- SQLite as the current local persistence layer.
+- Azure PostgreSQL as the current persistence layer.
 - Pandas-based services for data loading, joining, scoring, and summaries.
 - AI service abstractions, prompt guardrails, and output validation for assistant-style workflows.
 
@@ -17,7 +17,7 @@ flowchart LR
     A["React + TypeScript frontend"] --> B["API client"]
     B --> C["FastAPI backend routers"]
     C --> D["Service layer"]
-    D --> E["SQLite database in data/ozone_ai.sqlite3"]
+    D --> E["Azure PostgreSQL database"]
     D --> F["AI guardrails and prompt services"]
     D --> G["Uploaded evidence files"]
 ```
@@ -112,9 +112,9 @@ It registers:
 
 ### Data Layer
 
-The current data store is SQLite-based. The database file is `data/ozone_ai.sqlite3`.
+The current data store is Azure PostgreSQL, configured through `DATABASE_URL`.
 
-The project previously used one CSV per dataset. Those CSVs have been migrated into SQLite tables and removed from `data/`. A lightweight Pandas compatibility bridge maps legacy CSV path reads/writes to SQLite tables while the service layer is gradually refactored toward direct table access. In a production version, the same table model can move to PostgreSQL.
+The project previously used one CSV per dataset. Those CSVs have been migrated into PostgreSQL tables and removed from `data/`. A lightweight Pandas compatibility bridge maps legacy CSV path reads/writes to PostgreSQL tables while the service layer is gradually refactored toward direct table access.
 
 ## 5. Route Architecture
 
@@ -163,7 +163,7 @@ Important endpoints:
 Technical pattern:
 
 1. Router receives HTTP request.
-2. Service loads relevant SQLite tables using Pandas.
+2. Service loads relevant PostgreSQL tables using Pandas.
 3. Service joins supplier, ESG, certification, commodity, and transaction data.
 4. Service calculates metrics.
 5. Pydantic schema validates response.
@@ -226,7 +226,7 @@ Technical pattern:
 3. Map extracted text to supplier fields.
 4. Validate fields.
 5. Score ESG baseline.
-6. Persist supplier, certification, evidence, ESG, traceability, and audit starter rows into SQLite tables.
+6. Persist supplier, certification, evidence, ESG, traceability, and audit starter rows into PostgreSQL tables.
 7. Use AI assistance where configured, with guardrails and fallback logic.
 
 ### Auditing APIs
@@ -248,7 +248,7 @@ Endpoints:
 
 Technical pattern:
 
-1. Load audit workspace data from SQLite.
+1. Load audit workspace data from PostgreSQL.
 2. Generate insights or decision recommendation.
 3. Persist changes to audit, CAPA, certification, and evidence files.
 4. Use document extraction where relevant.
@@ -323,7 +323,7 @@ Current technical status:
 
 ## 7. Data Model Overview
 
-Important SQLite tables:
+Important PostgreSQL tables:
 
 | File | Technical Role |
 | --- | --- |
@@ -383,7 +383,7 @@ sequenceDiagram
     User->>Frontend: Review and submit supplier
     Frontend->>API: POST /onboarding/upload with form fields
     API->>Service: Validate and persist
-    Service->>Storage: Update SQLite tables and evidence metadata
+    Service->>Storage: Update PostgreSQL tables and evidence metadata
     Service-->>Frontend: Pending supplier created
 ```
 
@@ -394,7 +394,7 @@ sequenceDiagram
 | Executive Dashboard | React, React Query, charts | Analytics router/service | Pandas aggregation across supplier data |
 | Analytics | React, Plotly, Recharts, maps | Analytics APIs | Country, commodity, ESG, certification, trend calculations |
 | Simulator | React forms and scenario UI | Simulator service | Risk frame recomputation in Pandas |
-| Onboarding | Upload UI, form workflow | Onboarding router/service | Document extraction, validation, SQLite persistence |
+| Onboarding | Upload UI, form workflow | Onboarding router/service | Document extraction, validation, PostgreSQL persistence |
 | Auditing | Workspace UI | Auditing router/service | Audit, CAPA, certification, evidence data |
 | Traceability | Workspace UI | Traceability router/service | Sites, lots, events, evidence, score calculations |
 | Due Diligence | Supplier investigation UI | Risk service | Risk driver and evidence gap generation |
@@ -780,7 +780,7 @@ The current CSV approach is fine for prototype work. For production, recommended
 
 ### Scalability
 
-- Move from CSV to database.
+- Harden PostgreSQL schema, indexes, and deployment migration practices.
 - Cache dashboard aggregations.
 - Use background jobs for snapshot generation.
 - Use event-driven ingestion for external ESG signals.
@@ -827,7 +827,7 @@ Implemented:
 - Supplier Advisor AI.
 - AI review backend and page component.
 - FastAPI backend with routers and service layer.
-- SQLite-backed persistence.
+- PostgreSQL-backed persistence.
 - AI guardrails and validation.
 
 Blank by design:

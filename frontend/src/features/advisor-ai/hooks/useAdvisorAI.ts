@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   createAdvisorSession,
+  deleteAdvisorSession,
   getAdvisorSession,
   sendAdvisorMessage,
   type SendAdvisorMessagePayload,
@@ -18,6 +19,19 @@ export function useAdvisorSession(sessionId: string | null) {
 export function useCreateAdvisorSession() {
   return useMutation({
     mutationFn: createAdvisorSession,
+  });
+}
+
+export function useDeleteAdvisorSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteAdvisorSession,
+    onSuccess: async (_data, sessionId) => {
+      await queryClient.removeQueries({
+        queryKey: ["advisor", "session", sessionId],
+      });
+    },
   });
 }
 

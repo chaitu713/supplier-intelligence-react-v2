@@ -5,10 +5,16 @@ import pandas as pd
 from ..core.config import get_settings
 from ..core.exceptions import AppError
 from ..core.logging import get_logger
-from .sqlite_data import csv_table_name, install_pandas_sqlite_bridge, read_table, table_exists
+from .database import (
+    csv_table_name,
+    install_pandas_database_bridge,
+    read_table,
+    table_exists,
+    using_postgres,
+)
 
 logger = get_logger(__name__)
-install_pandas_sqlite_bridge()
+install_pandas_database_bridge()
 
 
 class DatasetService:
@@ -21,10 +27,10 @@ class DatasetService:
             try:
                 data_frame = read_table(table_name)
                 data_frame = data_frame.where(pd.notna(data_frame), None)
-                logger.info("Loaded %s SQLite table with %s rows", table_name, len(data_frame))
+                logger.info("Loaded %s PostgreSQL table with %s rows", table_name, len(data_frame))
                 return data_frame
             except Exception as exc:
-                logger.exception("Failed to load %s SQLite table", table_name, exc_info=exc)
+                logger.exception("Failed to load %s PostgreSQL table", table_name, exc_info=exc)
                 raise AppError(f"Unable to load {dataset_name} dataset", status_code=500) from exc
 
         if not file_path.exists():

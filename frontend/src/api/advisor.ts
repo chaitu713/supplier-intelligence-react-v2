@@ -56,6 +56,12 @@ export async function getAdvisorSession(sessionId: string): Promise<AdvisorSessi
   return apiRequest<AdvisorSession>(`/advisor/sessions/${sessionId}`);
 }
 
+export async function deleteAdvisorSession(sessionId: string): Promise<void> {
+  await apiRequest(`/advisor/sessions/${sessionId}`, {
+    method: "DELETE",
+  });
+}
+
 export async function sendAdvisorMessage(
   sessionId: string,
   payload: SendAdvisorMessagePayload,

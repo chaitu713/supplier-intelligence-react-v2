@@ -1,5 +1,7 @@
 from datetime import date
 import json
+import threading
+import time
 
 import pandas as pd
 
@@ -18,6 +20,9 @@ RISK_REFERENCE_DATE = pd.Timestamp("2026-04-27")
 class RiskService:
     def __init__(self) -> None:
         self.dataset_service = DatasetService()
+        self._risk_frame_cache: tuple[float, pd.DataFrame] | None = None
+        self._risk_frame_cache_seconds = 120
+        self._risk_frame_lock = threading.RLock()
 
     def get_risk_overview(self) -> dict:
         risk_frame = self._build_supplier_risk_frame()
@@ -484,6 +489,14 @@ Grounding context:
         return case_id
 
     def _build_supplier_risk_frame(self) -> pd.DataFrame:
+        now = time.monotonic()
+        with self._risk_frame_lock:
+            if (
+                self._risk_frame_cache
+                and now - self._risk_frame_cache[0] < self._risk_frame_cache_seconds
+            ):
+                return self._risk_frame_cache[1].copy(deep=True)
+
         suppliers = self.dataset_service.load_suppliers_frame()
         if suppliers.empty:
             return suppliers
@@ -665,7 +678,10 @@ Grounding context:
             self._classify_risk_level
         )
 
-        return risk_frame.where(pd.notna(risk_frame), None)
+        risk_frame = risk_frame.where(pd.notna(risk_frame), None)
+        with self._risk_frame_lock:
+            self._risk_frame_cache = (now, risk_frame.copy(deep=True))
+        return risk_frame
 
     def _build_transaction_metrics(self, transactions: pd.DataFrame) -> pd.DataFrame:
         if transactions.empty or "supplier_id" not in transactions.columns:

@@ -15,9 +15,9 @@ from ..core.exceptions import AppError
 from .ai_gateway import AiGatewayError, AiTextRequest, generate_ai_text
 from .ai_review_queue import add_review_item
 from .onboarding_service import onboarding_service
-from .sqlite_data import csv_table_name, install_pandas_sqlite_bridge, table_exists
+from .database import csv_table_name, install_pandas_database_bridge, table_exists
 
-install_pandas_sqlite_bridge()
+install_pandas_database_bridge()
 
 
 class AuditingService:

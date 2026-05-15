@@ -10,6 +10,7 @@ import { PromptSuggestions } from "./PromptSuggestions";
 import {
   useAdvisorSession,
   useCreateAdvisorSession,
+  useDeleteAdvisorSession,
   useSendAdvisorMessage,
 } from "../hooks/useAdvisorAI";
 
@@ -25,6 +26,7 @@ export function AdvisorChatOverlay({ isOpen, onClose }: AdvisorChatOverlayProps)
   const lens = useMemo(() => inferLensFromPath(location.pathname), [location.pathname]);
 
   const createSessionMutation = useCreateAdvisorSession();
+  const deleteSessionMutation = useDeleteAdvisorSession();
   const sessionQuery = useAdvisorSession(isOpen ? sessionId : null);
   const sendMessageMutation = useSendAdvisorMessage(isOpen ? sessionId : null);
 
@@ -76,8 +78,25 @@ export function AdvisorChatOverlay({ isOpen, onClose }: AdvisorChatOverlayProps)
     });
   };
 
+  const handleNewChat = async () => {
+    const currentSessionId = sessionId;
+    setSessionId(null);
+    createSessionMutation.reset();
+
+    if (currentSessionId) {
+      try {
+        await deleteSessionMutation.mutateAsync(currentSessionId);
+      } catch {
+        // A missing/expired backend session should not block starting fresh locally.
+      }
+    }
+  };
+
   const errorMessage = getErrorMessage(
-    createSessionMutation.error ?? sessionQuery.error ?? sendMessageMutation.error,
+    createSessionMutation.error ??
+      sessionQuery.error ??
+      sendMessageMutation.error ??
+      deleteSessionMutation.error,
   );
 
   if (!isOpen) {
@@ -129,29 +148,61 @@ export function AdvisorChatOverlay({ isOpen, onClose }: AdvisorChatOverlayProps)
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border text-[var(--text-secondary)] hover:bg-slate-50"
-            style={{ borderColor: "var(--border)" }}
-            aria-label="Close chat"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              aria-hidden="true"
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void handleNewChat()}
+              disabled={
+                createSessionMutation.isPending ||
+                sendMessageMutation.isPending ||
+                deleteSessionMutation.isPending
+              }
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border text-[var(--text-secondary)] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              style={{ borderColor: "var(--border)" }}
+              aria-label="Start new chat"
+              title="Start new chat"
             >
-              <path
-                d="M6 6l12 12M18 6L6 18"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+              >
+                <path
+                  d="M12 5v14M5 12h14"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border text-[var(--text-secondary)] hover:bg-slate-50"
+              style={{ borderColor: "var(--border)" }}
+              aria-label="Close chat"
+              title="Close chat"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+              >
+                <path
+                  d="M6 6l12 12M18 6L6 18"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          </div>
         </header>
 
         {errorMessage ? (

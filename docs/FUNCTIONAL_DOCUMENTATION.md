@@ -14,7 +14,7 @@ In simple terms, the application answers questions like:
 - What should the next action be for a supplier?
 - Can an AI assistant explain supplier risk in plain language?
 
-The current system is a working prototype using a SQLite database as the local data source. It has a React web application, a FastAPI backend, and multiple supplier intelligence modules.
+The current system is a working prototype using Azure PostgreSQL as the data source. It has a React web application, a FastAPI backend, and multiple supplier intelligence modules.
 
 ## 2. User Groups
 
@@ -462,7 +462,7 @@ Supplier compliance decisions can affect business, legal, and sourcing outcomes.
 
 ## 16. Data Used by the Application
 
-The system currently uses a SQLite database in `data/ozone_ai.sqlite3`. The earlier CSV datasets have been migrated into database tables.
+The system currently uses Azure PostgreSQL. The earlier CSV datasets have been migrated into database tables.
 
 Important data groups:
 

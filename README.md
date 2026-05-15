@@ -2,7 +2,7 @@
 
 Responsible Sourcing & Supplier Intelligence
 
-Ozone AI 4.0 is a supplier intelligence application for responsible sourcing, supplier risk management, ESG monitoring, supplier onboarding, auditing, traceability, due diligence, simulation, and AI-assisted review. The app currently uses a React + Vite frontend, a FastAPI backend, and a SQLite database at `data/ozone_ai.sqlite3` as the local persistence layer.
+Ozone AI 4.0 is a supplier intelligence application for responsible sourcing, supplier risk management, ESG monitoring, supplier onboarding, auditing, traceability, due diligence, simulation, and AI-assisted review. The app currently uses a React + Vite frontend, a FastAPI backend, and Azure PostgreSQL as the persistence layer.
 
 This README is intended to be a full context document. If it is given to another developer or to ChatGPT, it should explain what the application contains, what each module does, what data is used, and how the current workflows connect.
 
@@ -44,25 +44,26 @@ Backend:
 - scikit-learn
 - Azure Document Intelligence SDK
 - OpenAI / AI gateway abstractions
-- SQLite as current local persistence
+- Azure PostgreSQL as current persistence
 - Header/JWT-compatible Auth/RBAC guardrails for protected AI and review actions
 
 Current persistence:
 
-- SQLite database in `data/ozone_ai.sqlite3`
-- The previous CSV datasets were migrated into SQLite tables and removed from `data/`
+- Azure PostgreSQL database configured through `DATABASE_URL`
+- The previous CSV datasets have been migrated into PostgreSQL tables and removed from `data/`
 - Local evidence uploads under `uploads/onboarding/evidence`
 - Local audit evidence uploads under `uploads/auditing/evidence`
 - Local traceability evidence uploads under `uploads/traceability/evidence`
-- Continuous Monitoring seed data now lives in SQLite tables such as `monitoring_observations`, `monitoring_alerts`, `monitoring_rules`, `monitoring_actions`, `supplier_evidence_refresh`, and `external_esg_signals`
+- Continuous Monitoring seed data now lives in PostgreSQL tables such as `monitoring_observations`, `monitoring_alerts`, `monitoring_rules`, `monitoring_actions`, `supplier_evidence_refresh`, and `external_esg_signals`
 - Traceability sample PDFs under `uploads/traceability/sample_pdfs`
 - Test evidence PDFs under `uploads/certificate_test_pdfs`
 
-SQLite migration:
+PostgreSQL setup:
 
-- Migration script: `scripts/migrate_csv_to_sqlite.py`
-- Runtime bridge: `backend/app/services/sqlite_data.py`
-- Future PostgreSQL migration should use the SQLite table names as the starting schema.
+- Schema script: `scripts/postgres_schema.sql`
+- Runtime bridge: `backend/app/services/database.py`
+- PostgreSQL connection is required through `DATABASE_URL`.
+- Environment-to-environment migration runbook: `docs/POSTGRES_ENVIRONMENT_MIGRATION.md`
 
 ## Application Navigation
 
@@ -213,7 +214,7 @@ Onboarding:
 - `POST /onboarding/upload`
   - Used for both document extraction and final onboarding submission.
   - If a file is supplied without form fields, it processes the document and returns extracted data.
-  - If form fields are supplied, it persists the onboarding record into CSV datasets.
+  - If form fields are supplied, it persists the onboarding record into PostgreSQL tables.
 - `POST /onboarding/evidence/upload`
   - Uploads certification/evidence documents.
   - Extracts certificate fields.
@@ -1042,7 +1043,7 @@ Production Azure services to document for later:
 - Azure AI Document Intelligence for extracting monitoring evidence from supplier PDFs.
 - Azure OpenAI or configured AI provider through the guarded `ai_gateway`.
 - Azure Maps for future geospatial/deforestation visualization.
-- Azure SQL Database or PostgreSQL when moving from CSV to production persistence.
+- Azure PostgreSQL for current application persistence.
 
 Future implementation notes:
 
@@ -1200,8 +1201,8 @@ The app includes AI governance components:
 - AI gateway
 - Output validation
 - Rate limiting
-- SQLite-backed audit logging
-- SQLite-backed review queue
+- PostgreSQL-backed audit logging
+- PostgreSQL-backed review queue
 - Trace IDs across AI gateway, audit log, and review queue
 - SSE observability endpoints for live AI guardrail/provider events
 - Auth/RBAC protection for sensitive AI and reviewer actions
@@ -1229,8 +1230,8 @@ Trace IDs:
 
 Persistence:
 
-- AI audit events are stored in the SQLite `ai_audit_events` table.
-- AI review items are stored in the SQLite `ai_review_queue` table.
+- AI audit events are stored in the PostgreSQL `ai_audit_events` table.
+- AI review items are stored in the PostgreSQL `ai_review_queue` table.
 - The older JSON/JSONL files are no longer the active guardrail persistence path.
 
 Output validation now covers:
@@ -1378,9 +1379,9 @@ npm run build
 
 Persistence:
 
-- CSV files are still the persistence layer.
+- Azure PostgreSQL is the persistence layer.
 - Blob storage integration is planned but not yet wired for production evidence storage.
-- A relational database is planned later when the application shape stabilizes.
+- The application requires `DATABASE_URL` and does not use a local file-backed database fallback.
 
 Continuous monitoring:
 
@@ -1426,7 +1427,7 @@ Highest priority:
 - Add reviewer assignment and decision history when moving from demo to production workflow.
 - Create persisted requirement/evidence tables instead of only serialized JSON in `suppliers_v2.csv`.
 - Add Blob Storage for evidence documents.
-- Add database persistence after the application data model stabilizes.
+- Continue hardening PostgreSQL schema constraints, indexes, and deployment secrets as the application data model stabilizes.
 - Add production map services for full GIS interaction beyond the current embedded GeoJSON polygon renderer.
 
 Medium priority:
@@ -1459,7 +1460,7 @@ Onboarding workflow:
 8. Capture traceability requirements.
 9. Generate AI-suggested ESG baseline scores.
 10. Review and submit supplier.
-11. Persist supplier, commodity mappings, certifications, evidence, ESG baseline, and traceability fields into CSV datasets.
+11. Persist supplier, commodity mappings, certifications, evidence, ESG baseline, and traceability fields into PostgreSQL tables.
 
 Auditing workflow:
 

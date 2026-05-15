@@ -18,9 +18,9 @@ from ..ai.output_validation import validate_onboarding_assistance, validate_onbo
 from ..ai.prompt_registry import get_prompt_policy_block
 from .ai_gateway import AiGatewayError, AiTextRequest, generate_ai_text
 from .ai_review_queue import add_review_item
-from .sqlite_data import csv_table_name, install_pandas_sqlite_bridge, table_exists
+from .database import csv_table_name, install_pandas_database_bridge, table_exists
 
-install_pandas_sqlite_bridge()
+install_pandas_database_bridge()
 
 SUPPORTED_COUNTRIES = [
     "India",

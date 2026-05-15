@@ -25,6 +25,14 @@ def get_advisor_session(
     return advisor_service.get_session(session_id)
 
 
+@router.delete("/sessions/{session_id}")
+def delete_advisor_session(
+    session_id: str,
+    user: User = Depends(require_role("ai_user")),
+) -> dict:
+    return advisor_service.delete_session(session_id)
+
+
 @router.post("/sessions/{session_id}/messages", response_model=AdvisorMessageResponse)
 def send_advisor_message(
     session_id: str,

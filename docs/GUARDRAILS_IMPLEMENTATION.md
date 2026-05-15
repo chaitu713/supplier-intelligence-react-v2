@@ -85,8 +85,8 @@ They do not make AI perfect. They make AI use more controlled, traceable, and re
 | OpenAI support | Yes | Yes | Implemented |
 | Azure OpenAI support | Yes | Yes | Implemented |
 | Server-side model parameters | Yes | Yes | Implemented |
-| AI audit logging | Yes | Yes | Implemented with SQLite |
-| Human review queue | Yes | Yes | Implemented with SQLite |
+| AI audit logging | Yes | Yes | Implemented with PostgreSQL |
+| Human review queue | Yes | Yes | Implemented with PostgreSQL |
 | Review queue frontend | No app-specific UI | Partial | Page/API client exist, but route wiring is pending |
 | Output validation | Yes | Yes | Implemented for audit, onboarding, traceability, and due diligence summaries |
 | Prompt registry | Not fully, only prompt customization guidance | Yes | Implemented |
@@ -631,7 +631,7 @@ File:
 
 Runtime storage:
 
-- SQLite table `ai_audit_events`
+- PostgreSQL table `ai_audit_events`
 
 The older JSONL path is no longer the active guardrail persistence path.
 
@@ -664,7 +664,7 @@ Reference template:
 
 Our app:
 
-- Uses SQLite through the current local persistence layer.
+- Uses PostgreSQL through the current persistence layer.
 
 ### 4.12 Human Review Queue
 
@@ -689,7 +689,7 @@ Current frontend routing status:
 
 Runtime storage:
 
-- SQLite table `ai_review_queue`
+- PostgreSQL table `ai_review_queue`
 
 The older JSON file is no longer the active guardrail persistence path.
 
@@ -1042,7 +1042,7 @@ Not applicable right now
 
 Why not applicable:
 
-The current app mostly uses CSV and file-backed persistence.
+The current app uses Azure PostgreSQL-backed persistence.
 
 So we use:
 
@@ -1051,9 +1051,9 @@ data/ai_audit_events.jsonl
 data/ai_review_queue.json
 ```
 
-Future database migration:
+Current database persistence:
 
-When the app moves to PostgreSQL or another DB, these can become tables:
+The active PostgreSQL persistence model includes these tables:
 
 ```text
 ai_audit_events
@@ -1064,7 +1064,7 @@ ai_request_traces
 
 Recommended timing:
 
-Add when the app persistence model moves away from CSV/file storage.
+Continue hardening as the persistence model matures.
 
 ### 6.5 LangGraph Workflow
 
@@ -1460,7 +1460,7 @@ Not applicable because:
 
 Add when:
 
-- app moves to PostgreSQL or another database
+- app moves to another database environment
 
 ### 9.3 Azure Entra RBAC
 
@@ -1528,8 +1528,8 @@ Implemented:
 - server-side model parameters
 - rate limiting
 - prompt registry
-- SQLite-backed audit logging
-- SQLite-backed review queue
+- PostgreSQL-backed audit logging
+- PostgreSQL-backed review queue
 - trace IDs through gateway, audit log, review queue, and SSE events
 - SSE observability for AI guardrail/provider flow
 - Auth/RBAC for review and sensitive AI actions

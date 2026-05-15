@@ -23,7 +23,7 @@ The application currently covers these product areas:
 - Supplier Advisor AI: conversational assistant for asking questions about supplier intelligence.
 - AI Governance / Review Infrastructure: backend controls for AI safety, prompt management, validation, logging, and review queue support.
 
-The application is currently a prototype/demo application with real functional workflows and CSV-backed persistence. It is not yet production-grade enterprise infrastructure because it does not use a relational database, object storage, role-based access control, scheduled ingestion jobs, or production GIS map services.
+The application is currently a working supplier intelligence application with real functional workflows and Azure PostgreSQL-backed persistence. It is still being hardened for production operations, especially around deployment automation, object storage, role-based access control, scheduled ingestion jobs, and production GIS map services.
 
 ## 2. Important Domain Terms
 
@@ -103,9 +103,9 @@ The application has three main layers:
 
 - Frontend: React + Vite application.
 - Backend: FastAPI application.
-- Data: CSV files in `data/` and uploaded files in `uploads/`.
+- Data: Azure PostgreSQL tables and uploaded files in `uploads/`.
 
-The frontend provides the user interface. The backend loads CSV datasets, applies business logic, calls document extraction or AI services where configured, and returns structured responses. CSV files are used as temporary persistence for the demo.
+The frontend provides the user interface. The backend loads PostgreSQL tables, applies business logic, calls document extraction or AI services where configured, and returns structured responses. Azure PostgreSQL is the active persistence layer.
 
 Important frontend entry points:
 
@@ -132,7 +132,7 @@ Important backend areas:
 
 Current persistence:
 
-- CSV datasets in `data/`.
+- Azure PostgreSQL tables, accessed through the backend database adapter.
 - Onboarding evidence in `uploads/onboarding/evidence`.
 - Auditing evidence in `uploads/auditing/evidence`.
 - Traceability evidence in `uploads/traceability/evidence`.
@@ -611,7 +611,7 @@ The review page shows the full supplier onboarding package:
 - AI recommendation
 - Conditions and blockers
 
-Submitting persists data into CSV datasets.
+Submitting persists data into PostgreSQL tables.
 
 ### Active Supplier Revalidation
 
@@ -1169,7 +1169,7 @@ True continuous prediction still needs monthly supplier snapshots, more dated ES
 
 ### Implemented CSV Data Model
 
-For the current app style, the first Continuous Monitoring data layer has been added as CSV files.
+For the current app style, the first Continuous Monitoring data layer has been added as PostgreSQL tables.
 
 #### Monitoring Observations
 
@@ -1396,7 +1396,7 @@ For production, the recommended Azure services are:
 - Azure Maps
   - Add future geospatial deforestation, site, and region views.
 - Azure SQL Database or PostgreSQL
-  - Replace CSV persistence when moving to production.
+- Continue hardening PostgreSQL persistence for production.
 
 ### Client Demo Script
 
@@ -1804,7 +1804,7 @@ Extraction works best with structured PDFs containing clear labels. Table-heavy 
 
 ### Persistence
 
-CSV files are currently the persistence layer. This is acceptable for a demo but not for production scale.
+Azure PostgreSQL is currently the persistence layer. Production hardening should focus on schema constraints, indexes, backups, secret management, and controlled migrations.
 
 Production would need:
 
@@ -1906,4 +1906,4 @@ Current-state corrections to remember:
 
 Beginner-friendly mental model:
 
-The app is best understood as a demo platform with working supplier-risk workflows and file-backed persistence. The frontend shows the business workflows, the backend computes and persists the workflow data, the `data/` folder acts like a temporary database, and the AI layer adds guarded explanations and recommendations where configured.
+The app is best understood as a supplier-risk workflow platform backed by Azure PostgreSQL. The frontend shows the business workflows, the backend computes and persists workflow data in PostgreSQL, and the AI layer adds guarded explanations and recommendations where configured.

@@ -41,6 +41,16 @@ def _ensure_audit_table() -> None:
     for column, column_type in columns.items():
         if column not in existing:
             execute(f'ALTER TABLE ai_audit_events ADD COLUMN "{column}" {column_type}')
+    if using_postgres():
+        execute(
+            """
+            SELECT setval(
+                pg_get_serial_sequence('ai_audit_events', 'event_id'),
+                COALESCE((SELECT MAX(event_id) FROM ai_audit_events), 0) + 1,
+                false
+            )
+            """
+        )
 
 def log_ai_event(
     *,
