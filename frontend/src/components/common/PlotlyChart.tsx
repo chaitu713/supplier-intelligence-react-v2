@@ -87,6 +87,7 @@ function toEChartsOption(
   const hasHorizontalBar = data.some(
     (series) => series.type === "bar" && series.orientation === "h",
   );
+  const hasSecondaryYAxis = !hasHorizontalBar && !hasPie && !!layout.yaxis2;
   const firstCartesian = data.find((series) => series.type !== "pie") ?? {};
   const categoryAxisValues = hasHorizontalBar
     ? firstCartesian.y ?? []
@@ -133,12 +134,25 @@ function toEChartsOption(
         }),
     yAxis: hasPie
       ? undefined
-      : buildAxis({
-          type: hasHorizontalBar ? "category" : "value",
-          data: hasHorizontalBar ? categoryAxisValues : undefined,
-          source: layout.yaxis,
-          inverse: hasHorizontalBar,
-        }),
+      : hasSecondaryYAxis
+        ? [
+            buildAxis({
+              type: "value",
+              source: layout.yaxis,
+            }),
+            buildAxis({
+              type: "value",
+              source: layout.yaxis2,
+              position: "right",
+              showSplitLine: false,
+            }),
+          ]
+        : buildAxis({
+            type: hasHorizontalBar ? "category" : "value",
+            data: hasHorizontalBar ? categoryAxisValues : undefined,
+            source: layout.yaxis,
+            inverse: hasHorizontalBar,
+          }),
     series: data.map((series) => toSeries(series, hasHorizontalBar)),
   };
 }
@@ -208,6 +222,7 @@ function toSeries(series: Record<string, any>, hasHorizontalBar: boolean): Chart
             color: series.fillcolor ?? "rgba(22, 101, 52, 0.08)",
           }
         : undefined,
+      yAxisIndex: series.yaxis === "y2" ? 1 : 0,
       data: zipXY(series.x ?? [], series.y ?? []),
     };
   }
@@ -218,8 +233,11 @@ function toSeries(series: Record<string, any>, hasHorizontalBar: boolean): Chart
   return {
     type: "bar",
     name: series.name,
+    yAxisIndex: series.yaxis === "y2" ? 1 : 0,
     barMaxWidth: hasHorizontalBar ? 42 : 46,
-    barCategoryGap: hasHorizontalBar ? "30%" : "24%",
+    barWidth: series.barWidth,
+    barGap: series.barGap,
+    barCategoryGap: series.barCategoryGap ?? (hasHorizontalBar ? "30%" : "24%"),
     stack: series.stack,
     label: {
       show: series.textposition === "outside" || series.textposition === "auto",
@@ -307,17 +325,24 @@ function buildAxis({
   source,
   rotate,
   inverse,
+  position,
+  showSplitLine,
 }: {
   type: "category" | "value";
   data?: string[];
   source?: Record<string, any>;
   rotate?: number;
   inverse?: boolean;
+  position?: "left" | "right";
+  showSplitLine?: boolean;
 }) {
   return {
     type,
     data,
     inverse,
+    position,
+    min: source?.min,
+    max: source?.max,
     name: source?.title?.text,
     nameLocation: "middle",
     nameGap: 34,
@@ -336,7 +361,7 @@ function buildAxis({
       hideOverlap: true,
     },
     splitLine: {
-      show: type === "value",
+      show: showSplitLine ?? type === "value",
       lineStyle: { color: source?.gridcolor ?? riskColors.grid },
     },
   };

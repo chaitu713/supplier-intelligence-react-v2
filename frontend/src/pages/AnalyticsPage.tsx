@@ -6,6 +6,7 @@ import type {
   CountryAnalysisItem,
   EsgPillarSupplierItem,
   HistogramBin,
+  SupplierRankingsResponse,
 } from "../api/analytics";
 import { PlotlyChart } from "../components/common/PlotlyChart";
 import { useCommodityAnalysis } from "../features/analytics/hooks/useCommodityAnalysis";
@@ -18,6 +19,7 @@ import type { SupplierRankingItem } from "../api/analytics";
 
 export function AnalyticsPage() {
   const [filters, setFilters] = useState<AnalyticsFilters>({});
+  const [rankingView, setRankingView] = useState<"chart" | "table" | "compare">("chart");
   const distributionsQuery = useRiskDistributions(7, filters);
   const countryAnalysisQuery = useCountryAnalysis(filters);
   const commodityAnalysisQuery = useCommodityAnalysis(filters);
@@ -38,6 +40,22 @@ export function AnalyticsPage() {
   const supplierRankings = supplierRankingsQuery.data;
   const esgPillars = esgPillarQuery.data;
   const trendAnalysis = trendAnalysisQuery.data;
+  const activeFilterEntries = Object.entries(filters).filter(([, value]) => Boolean(value));
+  const clearFilters = () => setFilters({});
+  const topCountry = [...(countryAnalysis?.countries ?? [])].sort(
+    (a, b) => b.avgOverallRisk - a.avgOverallRisk,
+  )[0];
+  const topCommodity = [...(commodityAnalysis?.commodities ?? [])].sort(
+    (a, b) => b.avgOverallRisk - a.avgOverallRisk,
+  )[0];
+  const topSupplier = supplierRankings?.topOverallRisk?.[0];
+  const latestTrend = trendAnalysis?.operational?.[trendAnalysis.operational.length - 1];
+  const previousTrend =
+    trendAnalysis && trendAnalysis.operational.length > 1
+      ? trendAnalysis.operational[trendAnalysis.operational.length - 2]
+      : undefined;
+  const latestDelayShift =
+    latestTrend && previousTrend ? latestTrend.avgDelayDays - previousTrend.avgDelayDays : null;
   const countryOptions = uniqueSorted(countryAnalysis?.countries.map((item) => item.country) ?? []);
   const commodityOptions = uniqueSorted(
     commodityAnalysis?.commodities.map((item) => item.commodity) ?? [],
@@ -83,15 +101,27 @@ export function AnalyticsPage() {
           </div>
         ) : null}
 
-        <section className="surface-card px-8 py-6">
+        <section className="surface-card sticky top-[calc(var(--nav-h)+0.75rem)] z-30 px-6 py-4">
           <div className="flex flex-col gap-5">
-            <div>
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+              <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
                 Filters
               </p>
-              <h2 className="mt-2 text-xl font-semibold text-[var(--text)]">
+              <h2 className="mt-1 text-lg font-semibold text-[var(--text)]">
                 Refine analytics across geography, commodity, tier, and risk level
               </h2>
+              </div>
+              <ActiveFilterChips
+                entries={activeFilterEntries}
+                onRemove={(key) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    [key]: undefined,
+                  }))
+                }
+                onClear={clearFilters}
+              />
             </div>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
               <FilterSelect
@@ -123,7 +153,7 @@ export function AnalyticsPage() {
                   type="button"
                   className="rounded-2xl border px-4 py-3 text-sm font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-2)]"
                   style={{ borderColor: "var(--border)" }}
-                  onClick={() => setFilters({})}
+                  onClick={clearFilters}
                 >
                   Clear Filters
                 </button>
@@ -132,7 +162,24 @@ export function AnalyticsPage() {
           </div>
         </section>
 
-        <section className="surface-card px-8 py-8">
+        <AnalyticsInsightStrip
+          activeFilterCount={activeFilterEntries.length}
+          topCountry={topCountry}
+          topCommodity={topCommodity}
+          topSupplier={topSupplier}
+          latestTrend={latestTrend}
+          latestDelayShift={latestDelayShift}
+          isLoading={
+            countryAnalysisQuery.isLoading ||
+            commodityAnalysisQuery.isLoading ||
+            supplierRankingsQuery.isLoading ||
+            trendAnalysisQuery.isLoading
+          }
+        />
+
+        <AnalyticsSectionNav />
+
+        <section id="analytics-overview" className="surface-card scroll-mt-28 px-8 py-8">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
               Risk Distributions
@@ -153,6 +200,7 @@ export function AnalyticsPage() {
               description="Histogram-style view of combined supplier risk across the current network."
               bins={distributions?.overall ?? []}
               isLoading={distributionsQuery.isLoading}
+              onClearFilters={clearFilters}
               color="#166534"
             />
             <AnalyticsHistogramCard
@@ -160,6 +208,7 @@ export function AnalyticsPage() {
               description="Histogram-style view of delivery, quality, audit, and execution pressure."
               bins={distributions?.operational ?? []}
               isLoading={distributionsQuery.isLoading}
+              onClearFilters={clearFilters}
               color="#0f766e"
             />
             <AnalyticsHistogramCard
@@ -167,12 +216,13 @@ export function AnalyticsPage() {
               description="Histogram-style view of environmental, social, and governance exposure."
               bins={distributions?.esg ?? []}
               isLoading={distributionsQuery.isLoading}
+              onClearFilters={clearFilters}
               color="#7c3aed"
             />
           </div>
         </section>
 
-        <section className="surface-card px-8 py-8">
+        <section id="analytics-country" className="surface-card scroll-mt-28 px-8 py-8">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
               Country Analysis
@@ -186,6 +236,23 @@ export function AnalyticsPage() {
             </p>
           </div>
 
+          <KeyFindingPanel
+            eyebrow="Key Finding"
+            title={
+              topCountry
+                ? `${topCountry.country} has the highest average overall risk in this view.`
+                : "Country risk concentration will appear once data is available."
+            }
+            detail={
+              topCountry
+                ? `${topCountry.supplierCount} suppliers average ${topCountry.avgOverallRisk.toFixed(
+                    2,
+                  )} overall risk, with ${topCountry.expiredCertifications} expired certifications.`
+                : "Use the filters above to narrow the country comparison."
+            }
+            action="Inspect countries with both high risk and high supplier concentration first."
+          />
+
           <div className="mt-8">
             <CountryRiskComparisonChart
               items={countryAnalysis?.countries ?? []}
@@ -196,10 +263,11 @@ export function AnalyticsPage() {
           <CountryAnalysisTable
             items={countryAnalysis?.countries ?? []}
             isLoading={countryAnalysisQuery.isLoading}
+            onClearFilters={clearFilters}
           />
         </section>
 
-        <section className="surface-card px-8 py-8">
+        <section id="analytics-commodity" className="surface-card scroll-mt-28 px-8 py-8">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
               Commodity Analysis
@@ -212,6 +280,25 @@ export function AnalyticsPage() {
               deforestation pressure, and average mapped volume.
             </p>
           </div>
+
+          <KeyFindingPanel
+            eyebrow="Key Finding"
+            title={
+              topCommodity
+                ? `${topCommodity.commodity} is the highest-risk commodity group in this view.`
+                : "Commodity exposure will appear once data is available."
+            }
+            detail={
+              topCommodity
+                ? `${topCommodity.supplierCount} suppliers average ${topCommodity.avgOverallRisk.toFixed(
+                    2,
+                  )} overall risk, with ${topCommodity.deforestationRiskScore.toFixed(
+                    2,
+                  )} deforestation pressure.`
+                : "Use commodity filters to isolate a sourcing category."
+            }
+            action="Compare risk score with volume to separate concentrated risk from broad exposure."
+          />
 
           <div className="mt-8 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
             <CommodityRiskComparisonChart
@@ -227,10 +314,11 @@ export function AnalyticsPage() {
           <CommodityAnalysisTable
             items={commodityAnalysis?.commodities ?? []}
             isLoading={commodityAnalysisQuery.isLoading}
+            onClearFilters={clearFilters}
           />
         </section>
 
-        <section className="surface-card px-8 py-8">
+        <section id="analytics-suppliers" className="surface-card scroll-mt-28 px-8 py-8">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
               Supplier Rankings
@@ -244,40 +332,75 @@ export function AnalyticsPage() {
             </p>
           </div>
 
-          <div className="mt-8 grid gap-6 xl:grid-cols-2">
-            <SupplierRankingChart
-              title="Top Overall Risk Suppliers"
-              items={supplierRankings?.topOverallRisk ?? []}
+          <KeyFindingPanel
+            eyebrow="Key Finding"
+            title={
+              topSupplier
+                ? `${topSupplier.supplierName} is currently the highest overall-risk supplier.`
+                : "Supplier ranking insights will appear once data is available."
+            }
+            detail={
+              topSupplier
+                ? `${topSupplier.country ?? "Unknown country"} | ${topSupplier.tier ?? "Unknown tier"} | primary driver: ${topSupplier.primaryDriver}.`
+                : "Rankings respond to the active filter set."
+            }
+            action="Start with suppliers that rank high across more than one risk dimension."
+          />
+
+          <RankingViewToggle value={rankingView} onChange={setRankingView} />
+
+          {rankingView === "chart" ? (
+            <div className="mt-8 grid gap-6 xl:grid-cols-2">
+              <SupplierRankingChart
+                title="Top Overall Risk Suppliers"
+                items={supplierRankings?.topOverallRisk ?? []}
+                isLoading={supplierRankingsQuery.isLoading}
+                scoreKey="overallRiskScore"
+                gradient={["#991b1b", "#fecaca"]}
+                onClearFilters={clearFilters}
+              />
+              <SupplierRankingChart
+                title="Top Operational Risk Suppliers"
+                items={supplierRankings?.topOperationalRisk ?? []}
+                isLoading={supplierRankingsQuery.isLoading}
+                scoreKey="operationalRiskScore"
+                gradient={["#b91c1c", "#fecaca"]}
+                onClearFilters={clearFilters}
+              />
+              <SupplierRankingChart
+                title="Top ESG Risk Suppliers"
+                items={supplierRankings?.topEsgRisk ?? []}
+                isLoading={supplierRankingsQuery.isLoading}
+                scoreKey="esgRiskScore"
+                gradient={["#7f1d1d", "#fee2e2"]}
+                onClearFilters={clearFilters}
+              />
+              <SupplierRankingChart
+                title="Lowest Risk Suppliers"
+                items={supplierRankings?.lowestRisk ?? []}
+                isLoading={supplierRankingsQuery.isLoading}
+                scoreKey="overallRiskScore"
+                gradient={["#14532d", "#dcfce7"]}
+                reverseGradient
+                onClearFilters={clearFilters}
+              />
+            </div>
+          ) : rankingView === "table" ? (
+            <SupplierRankingTable
+              rankings={supplierRankings}
               isLoading={supplierRankingsQuery.isLoading}
-              scoreKey="overallRiskScore"
-              gradient={["#991b1b", "#fecaca"]}
+              onClearFilters={clearFilters}
             />
-            <SupplierRankingChart
-              title="Top Operational Risk Suppliers"
-              items={supplierRankings?.topOperationalRisk ?? []}
+          ) : (
+            <SupplierRankingCompare
+              rankings={supplierRankings}
               isLoading={supplierRankingsQuery.isLoading}
-              scoreKey="operationalRiskScore"
-              gradient={["#b91c1c", "#fecaca"]}
+              onClearFilters={clearFilters}
             />
-            <SupplierRankingChart
-              title="Top ESG Risk Suppliers"
-              items={supplierRankings?.topEsgRisk ?? []}
-              isLoading={supplierRankingsQuery.isLoading}
-              scoreKey="esgRiskScore"
-              gradient={["#7f1d1d", "#fee2e2"]}
-            />
-            <SupplierRankingChart
-              title="Lowest Risk Suppliers"
-              items={supplierRankings?.lowestRisk ?? []}
-              isLoading={supplierRankingsQuery.isLoading}
-              scoreKey="overallRiskScore"
-              gradient={["#14532d", "#dcfce7"]}
-              reverseGradient
-            />
-          </div>
+          )}
         </section>
 
-        <section className="surface-card px-8 py-8">
+        <section id="analytics-esg" className="surface-card scroll-mt-28 px-8 py-8">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
               ESG Pillar Analysis
@@ -291,6 +414,18 @@ export function AnalyticsPage() {
             </p>
           </div>
 
+          <KeyFindingPanel
+            eyebrow="Key Finding"
+            title={buildEsgFindingTitle(esgPillars?.byCountry ?? [])}
+            detail="Use the ESG pillar split to identify whether exposure is environmental, social, or governance-led."
+            action="Pair ESG pillar hotspots with supplier rankings before choosing remediation actions."
+          />
+
+          <TrendMovementPanel
+            countryMovement={getTrendMovement(trendAnalysis?.countryTrends ?? [])}
+            commodityMovement={getTrendMovement(trendAnalysis?.commodityTrends ?? [])}
+          />
+
           <div className="mt-8 grid gap-6 xl:grid-cols-[1fr_1fr]">
             <EsgPillarByCountryChart
               items={esgPillars?.byCountry ?? []}
@@ -303,7 +438,7 @@ export function AnalyticsPage() {
           </div>
         </section>
 
-        <section className="surface-card px-8 py-8">
+        <section id="analytics-trends" className="surface-card scroll-mt-28 px-8 py-8">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
               Trend Analysis
@@ -316,6 +451,23 @@ export function AnalyticsPage() {
               execution patterns move over time using the dated transaction history in the current dataset.
             </p>
           </div>
+
+          <KeyFindingPanel
+            eyebrow="Key Finding"
+            title={
+              latestTrend
+                ? `Latest delay is ${latestTrend.avgDelayDays.toFixed(2)} days for ${latestTrend.period}.`
+                : "Trend insights will appear once dated transaction history is available."
+            }
+            detail={
+              latestDelayShift === null
+                ? "Monthly movement needs at least two periods."
+                : `Delay moved ${
+                    latestDelayShift >= 0 ? "+" : ""
+                  }${latestDelayShift.toFixed(2)} days versus the previous month.`
+            }
+            action="Use the country and commodity trend charts to locate where operational movement is coming from."
+          />
 
           <div
             className="mt-8 rounded-[2rem] border px-6 py-5"
@@ -375,17 +527,231 @@ export function AnalyticsPage() {
   );
 }
 
+function AnalyticsInsightStrip({
+  activeFilterCount,
+  topCountry,
+  topCommodity,
+  topSupplier,
+  latestTrend,
+  latestDelayShift,
+  isLoading,
+}: {
+  activeFilterCount: number;
+  topCountry: CountryAnalysisItem | undefined;
+  topCommodity: CommodityAnalysisItem | undefined;
+  topSupplier: SupplierRankingItem | undefined;
+  latestTrend:
+    | {
+        period: string;
+        avgDelayDays: number;
+      }
+    | undefined;
+  latestDelayShift: number | null;
+  isLoading: boolean;
+}) {
+  const delayDetail =
+    latestDelayShift === null
+      ? "No prior period"
+      : `${latestDelayShift >= 0 ? "+" : ""}${latestDelayShift.toFixed(2)} days vs prior month`;
+
+  return (
+    <section className="visual-card p-6">
+      <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="eyebrow">Analytics Overview</p>
+          <h2 className="mt-2 text-xl font-semibold text-[var(--text)]">
+            What needs attention in the current analytical view
+          </h2>
+        </div>
+        <span className="tag tag-neutral">
+          {activeFilterCount ? `${activeFilterCount} filters active` : "Full network view"}
+        </span>
+      </div>
+
+      <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <InsightCard
+          label="Highest-Risk Country"
+          value={isLoading ? "Loading..." : topCountry?.country ?? "-"}
+          detail={
+            topCountry
+              ? `${topCountry.avgOverallRisk.toFixed(2)} avg risk | ${topCountry.supplierCount} suppliers`
+              : "No country data"
+          }
+        />
+        <InsightCard
+          label="Highest-Risk Commodity"
+          value={isLoading ? "Loading..." : topCommodity?.commodity ?? "-"}
+          detail={
+            topCommodity
+              ? `${topCommodity.avgOverallRisk.toFixed(2)} avg risk | ${topCommodity.supplierCount} suppliers`
+              : "No commodity data"
+          }
+        />
+        <InsightCard
+          label="Top Supplier"
+          value={isLoading ? "Loading..." : topSupplier?.supplierName ?? "-"}
+          detail={
+            topSupplier
+              ? `${topSupplier.overallRiskScore.toFixed(2)} overall risk | ${topSupplier.primaryDriver}`
+              : "No ranking data"
+          }
+        />
+        <InsightCard
+          label="Latest Delay"
+          value={isLoading ? "Loading..." : latestTrend ? `${latestTrend.avgDelayDays.toFixed(2)} d` : "-"}
+          detail={latestTrend ? `${latestTrend.period} | ${delayDetail}` : "No trend data"}
+        />
+      </div>
+    </section>
+  );
+}
+
+function InsightCard({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="rounded-[1.35rem] border border-[var(--border)] bg-white/80 px-4 py-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+        {label}
+      </p>
+      <p className="mt-2 truncate text-xl font-semibold text-[var(--text)]" title={value}>
+        {value}
+      </p>
+      <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--text-secondary)]">
+        {detail}
+      </p>
+    </div>
+  );
+}
+
+function AnalyticsSectionNav() {
+  const links = [
+    { label: "Overview", href: "#analytics-overview" },
+    { label: "Country", href: "#analytics-country" },
+    { label: "Commodity", href: "#analytics-commodity" },
+    { label: "Suppliers", href: "#analytics-suppliers" },
+    { label: "ESG", href: "#analytics-esg" },
+    { label: "Trends", href: "#analytics-trends" },
+  ];
+
+  return (
+    <nav className="sticky top-[calc(var(--nav-h)+8.25rem)] z-20 rounded-[1.1rem] border border-[var(--border)] bg-white/92 px-3 py-3 shadow-[var(--shadow-sm)] backdrop-blur">
+      <div className="flex gap-2 overflow-x-auto">
+        {links.map((link) => (
+          <a
+            key={link.href}
+            href={link.href}
+            className="rounded-lg px-3 py-2 text-sm font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+          >
+            {link.label}
+          </a>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+function ActiveFilterChips({
+  entries,
+  onRemove,
+  onClear,
+}: {
+  entries: Array<[string, string | undefined]>;
+  onRemove: (key: keyof AnalyticsFilters) => void;
+  onClear: () => void;
+}) {
+  if (!entries.length) {
+    return <span className="tag tag-neutral">Full network view</span>;
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {entries.map(([key, value]) => (
+        <button
+          key={key}
+          type="button"
+          className="tag tag-primary"
+          onClick={() => onRemove(key as keyof AnalyticsFilters)}
+          title="Remove filter"
+        >
+          {formatFilterLabel(key)}: {value}
+        </button>
+      ))}
+      <button type="button" className="tag tag-neutral" onClick={onClear}>
+        Clear all
+      </button>
+    </div>
+  );
+}
+
+function EmptyStateWithAction({
+  message,
+  onClearFilters,
+}: {
+  message: string;
+  onClearFilters?: () => void;
+}) {
+  return (
+    <div className="empty-state px-6 py-12 text-center text-sm">
+      <p>{message}</p>
+      {onClearFilters ? (
+        <button type="button" className="btn-secondary mt-4" onClick={onClearFilters}>
+          Clear Filters
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function KeyFindingPanel({
+  eyebrow,
+  title,
+  detail,
+  action,
+}: {
+  eyebrow: string;
+  title: string;
+  detail: string;
+  action: string;
+}) {
+  return (
+    <div className="mt-6 rounded-[1.5rem] border border-[rgba(22,101,52,0.14)] bg-[rgba(240,253,244,0.62)] px-5 py-4">
+      <div className="grid gap-4 xl:grid-cols-[1fr_0.7fr] xl:items-center">
+        <div>
+          <p className="eyebrow">{eyebrow}</p>
+          <h3 className="mt-2 text-lg font-semibold text-[var(--text)]">{title}</h3>
+          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{detail}</p>
+        </div>
+        <div className="rounded-[1rem] border border-[var(--border)] bg-white/78 px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+            Suggested Read
+          </p>
+          <p className="mt-2 text-sm font-semibold leading-5 text-[var(--text)]">{action}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AnalyticsHistogramCard({
   title,
   description,
   bins,
   isLoading,
+  onClearFilters,
   color,
 }: {
   title: string;
   description: string;
   bins: HistogramBin[];
   isLoading: boolean;
+  onClearFilters?: () => void;
   color: string;
 }) {
   const normalizedBins = bins.map((bin) => ({
@@ -393,8 +759,7 @@ function AnalyticsHistogramCard({
     count: Number(bin.count) || 0,
   }));
 
-  const tickValues = normalizedBins.map((bin) => (bin.start + bin.end) / 2);
-  const tickText = normalizedBins.map((bin) => `${bin.start.toFixed(1)}-${bin.end.toFixed(1)}`);
+  const tickText = normalizedBins.map((bin) => `${bin.start.toFixed(2)}-${bin.end.toFixed(2)}`);
 
   return (
     <section className="visual-card-soft rounded-[1.75rem] p-6">
@@ -414,39 +779,39 @@ function AnalyticsHistogramCard({
           ))}
         </div>
       ) : normalizedBins.length === 0 ? (
-        <div className="empty-state px-6 py-16 text-center text-sm">
-          No distribution data available yet.
-        </div>
+        <EmptyStateWithAction
+          message="No distribution data available for the current filters."
+          onClearFilters={onClearFilters}
+        />
       ) : (
         <PlotlyChart
           className="h-[340px]"
           data={[
             {
               type: "bar",
-              x: tickValues,
+              x: tickText,
               y: normalizedBins.map((bin) => bin.count),
               width: normalizedBins.map((bin) => Math.max(0, bin.end - bin.start)),
               marker: {
                 color,
                 line: { color, width: 0 },
               },
+              barCategoryGap: "0%",
+              barGap: "0%",
               hovertemplate: "Risk Range: %{customdata}<br>Count: %{y}<extra></extra>",
               customdata: tickText,
             },
           ]}
           layout={{
             bargap: 0,
-            margin: { l: 56, r: 20, t: 8, b: 82 },
+            margin: { l: 56, r: 20, t: 8, b: 74 },
             xaxis: {
               title: {
                 text: "Risk score range",
                 font: { size: 12, color: "#64748b" },
                 standoff: 18,
               },
-              tickmode: "array",
-              tickvals: tickValues,
-              ticktext: tickText,
-              tickangle: normalizedBins.length > 10 ? -35 : 0,
+              tickangle: normalizedBins.length > 10 ? -35 : -20,
               tickfont: { size: 11, color: "#64748b" },
               tickcolor: "#cbd5e1",
               linecolor: "#cbd5e1",
@@ -559,10 +924,25 @@ function CountryRiskComparisonChart({
 function CountryAnalysisTable({
   items,
   isLoading,
+  onClearFilters,
 }: {
   items: CountryAnalysisItem[];
   isLoading: boolean;
+  onClearFilters?: () => void;
 }) {
+  const [query, setQuery] = useState("");
+  const [sortKey, setSortKey] = useState<keyof CountryAnalysisItem>("avgOverallRisk");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const sortedItems = sortItems(
+    items.filter((item) => item.country.toLowerCase().includes(query.trim().toLowerCase())),
+    sortKey,
+    sortDirection,
+  );
+  const toggleSort = (key: keyof CountryAnalysisItem) => {
+    setSortDirection((prev) => (sortKey === key && prev === "desc" ? "asc" : "desc"));
+    setSortKey(key);
+  };
+
   return (
     <section className="mt-6 overflow-hidden rounded-[1.75rem] border border-[var(--border)] bg-white">
       <div className="border-b border-[var(--border)] px-6 py-5">
@@ -575,36 +955,46 @@ function CountryAnalysisTable({
       {isLoading ? (
         <div className="h-[260px] animate-pulse bg-slate-100" />
       ) : items.length === 0 ? (
-        <div className="px-6 py-16 text-center text-sm text-[var(--muted)]">
-          No country analysis data available yet.
+        <div className="px-6 py-6">
+          <EmptyStateWithAction
+            message="No country analysis data matches the current filters."
+            onClearFilters={onClearFilters}
+          />
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="grid gap-4 p-4">
+          <input
+            className="input-field md:max-w-sm"
+            value={query}
+            placeholder="Search country"
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-[var(--surface-2)] text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
               <tr>
-                <th className="px-6 py-4">Country</th>
-                <th className="px-4 py-4">Suppliers</th>
-                <th className="px-4 py-4">Avg Overall</th>
-                <th className="px-4 py-4">Avg Operational</th>
-                <th className="px-4 py-4">Avg ESG</th>
-                <th className="px-4 py-4">Expiring</th>
-                <th className="px-4 py-4">Expired</th>
+                <SortableHeader label="Country" active={sortKey === "country"} direction={sortDirection} onClick={() => toggleSort("country")} className="px-6 py-4" />
+                <SortableHeader label="Suppliers" active={sortKey === "supplierCount"} direction={sortDirection} onClick={() => toggleSort("supplierCount")} />
+                <SortableHeader label="Avg Overall" active={sortKey === "avgOverallRisk"} direction={sortDirection} onClick={() => toggleSort("avgOverallRisk")} />
+                <SortableHeader label="Avg Operational" active={sortKey === "avgOperationalRisk"} direction={sortDirection} onClick={() => toggleSort("avgOperationalRisk")} />
+                <SortableHeader label="Avg ESG" active={sortKey === "avgEsgRisk"} direction={sortDirection} onClick={() => toggleSort("avgEsgRisk")} />
+                <SortableHeader label="Expiring" active={sortKey === "expiringCertifications"} direction={sortDirection} onClick={() => toggleSort("expiringCertifications")} />
+                <SortableHeader label="Expired" active={sortKey === "expiredCertifications"} direction={sortDirection} onClick={() => toggleSort("expiredCertifications")} />
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
+              {sortedItems.map((item) => (
                 <tr key={item.country} className="border-t border-[var(--border)]">
                   <td className="px-6 py-4 font-semibold text-[var(--text)]">{item.country}</td>
                   <td className="px-4 py-4 text-[var(--text-secondary)]">{item.supplierCount}</td>
                   <td className="px-4 py-4 text-[var(--text-secondary)]">
-                    {item.avgOverallRisk.toFixed(1)}
+                    <RiskValue value={item.avgOverallRisk} />
                   </td>
                   <td className="px-4 py-4 text-[var(--text-secondary)]">
-                    {item.avgOperationalRisk.toFixed(1)}
+                    {item.avgOperationalRisk.toFixed(2)}
                   </td>
                   <td className="px-4 py-4 text-[var(--text-secondary)]">
-                    {item.avgEsgRisk.toFixed(1)}
+                    {item.avgEsgRisk.toFixed(2)}
                   </td>
                   <td className="px-4 py-4 text-[var(--text-secondary)]">
                     {item.expiringCertifications}
@@ -616,6 +1006,13 @@ function CountryAnalysisTable({
               ))}
             </tbody>
           </table>
+          {!sortedItems.length ? (
+            <EmptyStateWithAction
+              message="No countries match the current table search."
+              onClearFilters={onClearFilters}
+            />
+          ) : null}
+          </div>
         </div>
       )}
     </section>
@@ -768,6 +1165,8 @@ function CommodityExposureContextChart({
                 text: "Deforestation Risk",
                 font: { size: 12, color: "#64748b" },
               },
+              min: 0,
+              max: 1,
               showgrid: true,
               gridcolor: "#dbeafe",
               zeroline: false,
@@ -797,10 +1196,25 @@ function CommodityExposureContextChart({
 function CommodityAnalysisTable({
   items,
   isLoading,
+  onClearFilters,
 }: {
   items: CommodityAnalysisItem[];
   isLoading: boolean;
+  onClearFilters?: () => void;
 }) {
+  const [query, setQuery] = useState("");
+  const [sortKey, setSortKey] = useState<keyof CommodityAnalysisItem>("avgOverallRisk");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const sortedItems = sortItems(
+    items.filter((item) => item.commodity.toLowerCase().includes(query.trim().toLowerCase())),
+    sortKey,
+    sortDirection,
+  );
+  const toggleSort = (key: keyof CommodityAnalysisItem) => {
+    setSortDirection((prev) => (sortKey === key && prev === "desc" ? "asc" : "desc"));
+    setSortKey(key);
+  };
+
   return (
     <section className="mt-6 overflow-hidden rounded-[1.75rem] border border-[var(--border)] bg-white">
       <div className="border-b border-[var(--border)] px-6 py-5">
@@ -813,48 +1227,248 @@ function CommodityAnalysisTable({
       {isLoading ? (
         <div className="h-[260px] animate-pulse bg-slate-100" />
       ) : items.length === 0 ? (
-        <div className="px-6 py-16 text-center text-sm text-[var(--muted)]">
-          No commodity analysis data available yet.
+        <div className="px-6 py-6">
+          <EmptyStateWithAction
+            message="No commodity analysis data matches the current filters."
+            onClearFilters={onClearFilters}
+          />
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="grid gap-4 p-4">
+          <input
+            className="input-field md:max-w-sm"
+            value={query}
+            placeholder="Search commodity"
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-[var(--surface-2)] text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
               <tr>
-                <th className="px-6 py-4">Commodity</th>
-                <th className="px-4 py-4">Suppliers</th>
-                <th className="px-4 py-4">Avg Overall</th>
-                <th className="px-4 py-4">Avg Operational</th>
-                <th className="px-4 py-4">Avg ESG</th>
-                <th className="px-4 py-4">Deforestation</th>
-                <th className="px-4 py-4">Avg Volume</th>
+                <SortableHeader label="Commodity" active={sortKey === "commodity"} direction={sortDirection} onClick={() => toggleSort("commodity")} className="px-6 py-4" />
+                <SortableHeader label="Suppliers" active={sortKey === "supplierCount"} direction={sortDirection} onClick={() => toggleSort("supplierCount")} />
+                <SortableHeader label="Avg Overall" active={sortKey === "avgOverallRisk"} direction={sortDirection} onClick={() => toggleSort("avgOverallRisk")} />
+                <SortableHeader label="Avg Operational" active={sortKey === "avgOperationalRisk"} direction={sortDirection} onClick={() => toggleSort("avgOperationalRisk")} />
+                <SortableHeader label="Avg ESG" active={sortKey === "avgEsgRisk"} direction={sortDirection} onClick={() => toggleSort("avgEsgRisk")} />
+                <SortableHeader label="Deforestation" active={sortKey === "deforestationRiskScore"} direction={sortDirection} onClick={() => toggleSort("deforestationRiskScore")} />
+                <SortableHeader label="Avg Volume" active={sortKey === "avgVolume"} direction={sortDirection} onClick={() => toggleSort("avgVolume")} />
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
+              {sortedItems.map((item) => (
                 <tr key={item.commodity} className="border-t border-[var(--border)]">
                   <td className="px-6 py-4 font-semibold text-[var(--text)]">{item.commodity}</td>
                   <td className="px-4 py-4 text-[var(--text-secondary)]">{item.supplierCount}</td>
                   <td className="px-4 py-4 text-[var(--text-secondary)]">
-                    {item.avgOverallRisk.toFixed(1)}
+                    <RiskValue value={item.avgOverallRisk} />
                   </td>
                   <td className="px-4 py-4 text-[var(--text-secondary)]">
-                    {item.avgOperationalRisk.toFixed(1)}
+                    {item.avgOperationalRisk.toFixed(2)}
                   </td>
                   <td className="px-4 py-4 text-[var(--text-secondary)]">
-                    {item.avgEsgRisk.toFixed(1)}
+                    {item.avgEsgRisk.toFixed(2)}
                   </td>
                   <td className="px-4 py-4 text-[var(--text-secondary)]">
-                    {item.deforestationRiskScore.toFixed(3)}
+                    {item.deforestationRiskScore.toFixed(2)}
                   </td>
                   <td className="px-4 py-4 text-[var(--text-secondary)]">
-                    {item.avgVolume.toFixed(1)}
+                    {item.avgVolume.toFixed(2)}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {!sortedItems.length ? (
+            <EmptyStateWithAction
+              message="No commodities match the current table search."
+              onClearFilters={onClearFilters}
+            />
+          ) : null}
+          </div>
         </div>
+      )}
+    </section>
+  );
+}
+
+function RankingViewToggle({
+  value,
+  onChange,
+}: {
+  value: "chart" | "table" | "compare";
+  onChange: (value: "chart" | "table" | "compare") => void;
+}) {
+  const options: Array<{ value: "chart" | "table" | "compare"; label: string }> = [
+    { value: "chart", label: "Chart View" },
+    { value: "table", label: "Table View" },
+    { value: "compare", label: "Compare View" },
+  ];
+
+  return (
+    <div className="mt-6 inline-flex rounded-xl border border-[var(--border)] bg-white p-1 shadow-[var(--shadow-xs)]">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          className="rounded-lg px-3 py-2 text-sm font-semibold transition"
+          style={{
+            background: value === option.value ? "var(--primary)" : "transparent",
+            color: value === option.value ? "#fff" : "var(--text-secondary)",
+          }}
+          onClick={() => onChange(option.value)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SupplierRankingTable({
+  rankings,
+  isLoading,
+  onClearFilters,
+}: {
+  rankings: SupplierRankingsResponse | undefined;
+  isLoading: boolean;
+  onClearFilters?: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [sortKey, setSortKey] = useState<keyof SupplierRankingItem>("overallRiskScore");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const items = uniqueSuppliers([
+    ...(rankings?.topOverallRisk ?? []),
+    ...(rankings?.topOperationalRisk ?? []),
+    ...(rankings?.topEsgRisk ?? []),
+    ...(rankings?.lowestRisk ?? []),
+  ]);
+  const visibleItems = sortItems(
+    items.filter((item) =>
+      `${item.supplierName} ${item.country ?? ""} ${item.tier ?? ""} ${item.primaryDriver}`
+        .toLowerCase()
+        .includes(query.trim().toLowerCase()),
+    ),
+    sortKey,
+    sortDirection,
+  );
+  const toggleSort = (key: keyof SupplierRankingItem) => {
+    setSortDirection((prev) => (sortKey === key && prev === "desc" ? "asc" : "desc"));
+    setSortKey(key);
+  };
+
+  return (
+    <section className="mt-8 overflow-hidden rounded-[1.75rem] border border-[var(--border)] bg-white">
+      <div className="border-b border-[var(--border)] px-6 py-5">
+        <h3 className="text-lg font-semibold text-[var(--text)]">Supplier Ranking Table</h3>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          Search and sort ranked suppliers across overall, operational, and ESG risk.
+        </p>
+      </div>
+      {isLoading ? (
+        <div className="h-[260px] animate-pulse bg-slate-100" />
+      ) : !items.length ? (
+        <div className="px-6 py-6">
+          <EmptyStateWithAction
+            message="No supplier rankings match the current filters."
+            onClearFilters={onClearFilters}
+          />
+        </div>
+      ) : (
+        <div className="grid gap-4 p-4">
+          <input
+            className="input-field md:max-w-sm"
+            value={query}
+            placeholder="Search supplier, country, tier, or driver"
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-[var(--surface-2)] text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+                <tr>
+                  <SortableHeader label="Supplier" active={sortKey === "supplierName"} direction={sortDirection} onClick={() => toggleSort("supplierName")} className="px-6 py-4" />
+                  <SortableHeader label="Country" active={sortKey === "country"} direction={sortDirection} onClick={() => toggleSort("country")} />
+                  <SortableHeader label="Tier" active={sortKey === "tier"} direction={sortDirection} onClick={() => toggleSort("tier")} />
+                  <SortableHeader label="Overall" active={sortKey === "overallRiskScore"} direction={sortDirection} onClick={() => toggleSort("overallRiskScore")} />
+                  <SortableHeader label="Operational" active={sortKey === "operationalRiskScore"} direction={sortDirection} onClick={() => toggleSort("operationalRiskScore")} />
+                  <SortableHeader label="ESG" active={sortKey === "esgRiskScore"} direction={sortDirection} onClick={() => toggleSort("esgRiskScore")} />
+                  <SortableHeader label="Level" active={sortKey === "riskLevel"} direction={sortDirection} onClick={() => toggleSort("riskLevel")} />
+                  <th className="px-4 py-4">Driver</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleItems.map((item) => (
+                  <tr key={item.supplierId} className="border-t border-[var(--border)]">
+                    <td className="px-6 py-4 font-semibold text-[var(--text)]">{item.supplierName}</td>
+                    <td className="px-4 py-4 text-[var(--text-secondary)]">{item.country ?? "-"}</td>
+                    <td className="px-4 py-4 text-[var(--text-secondary)]">{item.tier ?? "-"}</td>
+                    <td className="px-4 py-4"><RiskValue value={item.overallRiskScore} /></td>
+                    <td className="px-4 py-4 text-[var(--text-secondary)]">{item.operationalRiskScore.toFixed(2)}</td>
+                    <td className="px-4 py-4 text-[var(--text-secondary)]">{item.esgRiskScore.toFixed(2)}</td>
+                    <td className="px-4 py-4"><RiskLevelBadge level={item.riskLevel} /></td>
+                    <td className="px-4 py-4 text-[var(--text-secondary)]">{item.primaryDriver}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {!visibleItems.length ? (
+              <EmptyStateWithAction
+                message="No suppliers match the current table search."
+                onClearFilters={onClearFilters}
+              />
+            ) : null}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function SupplierRankingCompare({
+  rankings,
+  isLoading,
+  onClearFilters,
+}: {
+  rankings: SupplierRankingsResponse | undefined;
+  isLoading: boolean;
+  onClearFilters?: () => void;
+}) {
+  const groups = [
+    { label: "Overall", items: rankings?.topOverallRisk ?? [], score: "overallRiskScore" as const },
+    { label: "Operational", items: rankings?.topOperationalRisk ?? [], score: "operationalRiskScore" as const },
+    { label: "ESG", items: rankings?.topEsgRisk ?? [], score: "esgRiskScore" as const },
+    { label: "Lowest Risk", items: rankings?.lowestRisk ?? [], score: "overallRiskScore" as const },
+  ];
+
+  return (
+    <section className="mt-8 grid gap-4 xl:grid-cols-4">
+      {isLoading ? (
+        Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="h-[260px] animate-pulse rounded-[1.75rem] bg-slate-100" />
+        ))
+      ) : groups.every((group) => group.items.length === 0) ? (
+        <div className="xl:col-span-4">
+          <EmptyStateWithAction
+            message="No supplier ranking comparison data matches the current filters."
+            onClearFilters={onClearFilters}
+          />
+        </div>
+      ) : (
+        groups.map((group) => (
+          <div key={group.label} className="visual-card-soft p-5">
+            <p className="eyebrow">{group.label}</p>
+            <div className="mt-4 grid gap-3">
+              {group.items.slice(0, 5).map((item, index) => (
+                <div key={`${group.label}-${item.supplierId}`} className="rounded-xl border border-[var(--border)] bg-white/75 px-3 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-[var(--text)]">{index + 1}. {item.supplierName}</p>
+                    <RiskValue value={item[group.score]} />
+                  </div>
+                  <p className="mt-1 text-xs text-[var(--muted)]">{item.primaryDriver}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))
       )}
     </section>
   );
@@ -866,6 +1480,7 @@ function SupplierRankingChart({
   isLoading,
   scoreKey,
   gradient,
+  onClearFilters,
   reverseGradient = false,
 }: {
   title: string;
@@ -873,6 +1488,7 @@ function SupplierRankingChart({
   isLoading: boolean;
   scoreKey: "overallRiskScore" | "operationalRiskScore" | "esgRiskScore";
   gradient: [string, string];
+  onClearFilters?: () => void;
   reverseGradient?: boolean;
 }) {
   const chartItems = [...items].slice(0, 8).reverse();
@@ -892,9 +1508,10 @@ function SupplierRankingChart({
       {isLoading ? (
         <div className="h-[360px] animate-pulse rounded-3xl bg-slate-100" />
       ) : chartItems.length === 0 ? (
-        <div className="px-6 py-16 text-center text-sm text-[var(--muted)]">
-          No supplier ranking data available yet.
-        </div>
+        <EmptyStateWithAction
+          message="No supplier ranking data matches the current filters."
+          onClearFilters={onClearFilters}
+        />
       ) : (
         <PlotlyChart
           className="h-[380px]"
@@ -911,7 +1528,7 @@ function SupplierRankingChart({
                   width: 0.5,
                 },
               },
-              text: chartItems.map((item) => item[scoreKey].toFixed(1)),
+              text: chartItems.map((item) => item[scoreKey].toFixed(2)),
               textposition: "outside",
               cliponaxis: false,
               hovertemplate:
@@ -1345,6 +1962,46 @@ function MultiSeriesTrendChart({
   );
 }
 
+function TrendMovementPanel({
+  countryMovement,
+  commodityMovement,
+}: {
+  countryMovement: TrendMovement;
+  commodityMovement: TrendMovement;
+}) {
+  return (
+    <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <TrendMovementCard title="Worsening Country" movement={countryMovement.worsening} />
+      <TrendMovementCard title="Improving Country" movement={countryMovement.improving} invert />
+      <TrendMovementCard title="Worsening Commodity" movement={commodityMovement.worsening} />
+      <TrendMovementCard title="Improving Commodity" movement={commodityMovement.improving} invert />
+    </div>
+  );
+}
+
+function TrendMovementCard({
+  title,
+  movement,
+  invert = false,
+}: {
+  title: string;
+  movement: TrendMovementItem | null;
+  invert?: boolean;
+}) {
+  const isGood = invert && movement && movement.delta < 0;
+  return (
+    <div className="rounded-[1.35rem] border border-[var(--border)] bg-white/80 px-4 py-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+        {title}
+      </p>
+      <p className="mt-2 text-lg font-semibold text-[var(--text)]">{movement?.name ?? "-"}</p>
+      <p className={`mt-1 text-sm font-semibold ${isGood ? "text-[var(--primary)]" : "text-rose-700"}`}>
+        {movement ? `${movement.delta >= 0 ? "+" : ""}${movement.delta.toFixed(2)} days` : "No movement data"}
+      </p>
+    </div>
+  );
+}
+
 function TrendIntroMetric({
   label,
   value,
@@ -1416,8 +2073,165 @@ function FilterSelect({
   );
 }
 
+function SortableHeader({
+  label,
+  active,
+  direction,
+  onClick,
+  className = "px-4 py-4",
+}: {
+  label: string;
+  active: boolean;
+  direction: "asc" | "desc";
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <th className={className}>
+      <button
+        type="button"
+        className="inline-flex items-center gap-1 font-semibold uppercase tracking-[0.12em] text-[var(--muted)]"
+        onClick={onClick}
+      >
+        {label}
+        <span className="text-[10px]">{active ? (direction === "asc" ? "up" : "down") : ""}</span>
+      </button>
+    </th>
+  );
+}
+
+function RiskValue({ value }: { value: number }) {
+  const high = value >= 70;
+  const medium = value >= 40 && value < 70;
+  return (
+    <span
+      className={
+        high
+          ? "tag border-rose-200 bg-rose-50 text-rose-700"
+          : medium
+            ? "tag border-amber-200 bg-amber-50 text-amber-700"
+            : "tag tag-primary"
+      }
+    >
+      {value.toFixed(2)}
+    </span>
+  );
+}
+
+function RiskLevelBadge({ level }: { level: string }) {
+  return (
+    <span
+      className={
+        level === "High"
+          ? "tag border-rose-200 bg-rose-50 text-rose-700"
+          : level === "Medium"
+            ? "tag border-amber-200 bg-amber-50 text-amber-700"
+            : "tag tag-primary"
+      }
+    >
+      {level}
+    </span>
+  );
+}
+
 function uniqueSorted(values: string[]): string[] {
   return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b));
+}
+
+function sortItems<T>(
+  items: T[],
+  key: keyof T,
+  direction: "asc" | "desc",
+): T[] {
+  const multiplier = direction === "asc" ? 1 : -1;
+  return [...items].sort((a, b) => {
+    const left = a[key];
+    const right = b[key];
+    if (typeof left === "number" && typeof right === "number") {
+      return (left - right) * multiplier;
+    }
+    return String(left ?? "").localeCompare(String(right ?? "")) * multiplier;
+  });
+}
+
+function uniqueSuppliers(items: SupplierRankingItem[]): SupplierRankingItem[] {
+  const byId = new Map<number, SupplierRankingItem>();
+  items.forEach((item) => {
+    const existing = byId.get(item.supplierId);
+    if (!existing || item.overallRiskScore > existing.overallRiskScore) {
+      byId.set(item.supplierId, item);
+    }
+  });
+  return [...byId.values()];
+}
+
+type TrendMovementItem = {
+  name: string;
+  delta: number;
+};
+
+type TrendMovement = {
+  worsening: TrendMovementItem | null;
+  improving: TrendMovementItem | null;
+};
+
+function getTrendMovement(
+  series: Array<{
+    name: string;
+    points: Array<{ period: string; value: number }>;
+  }>,
+): TrendMovement {
+  const movements = series
+    .map((item) => {
+      if (item.points.length < 2) return null;
+      const sorted = [...item.points].sort((a, b) => a.period.localeCompare(b.period));
+      const latest = sorted[sorted.length - 1];
+      const previous = sorted[sorted.length - 2];
+      return {
+        name: item.name,
+        delta: latest.value - previous.value,
+      };
+    })
+    .filter((item): item is TrendMovementItem => Boolean(item));
+
+  if (!movements.length) {
+    return { worsening: null, improving: null };
+  }
+
+  return {
+    worsening: [...movements].sort((a, b) => b.delta - a.delta)[0],
+    improving: [...movements].sort((a, b) => a.delta - b.delta)[0],
+  };
+}
+
+function formatFilterLabel(key: string): string {
+  if (key === "riskLevel") return "Risk level";
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+function buildEsgFindingTitle(
+  items: Array<{
+    country: string;
+    environmental: number;
+    social: number;
+    governance: number;
+  }>,
+): string {
+  if (!items.length) {
+    return "ESG pillar hotspots will appear once data is available.";
+  }
+
+  const strongest = items
+    .flatMap((item) => [
+      { country: item.country, pillar: "environmental", value: item.environmental },
+      { country: item.country, pillar: "social", value: item.social },
+      { country: item.country, pillar: "governance", value: item.governance },
+    ])
+    .sort((a, b) => b.value - a.value)[0];
+
+  return `${strongest.country} has the strongest ${strongest.pillar} pillar exposure at ${strongest.value.toFixed(
+    2,
+  )}.`;
 }
 
 function buildGradientColors(count: number, lightHex: string, darkHex: string): string[] {

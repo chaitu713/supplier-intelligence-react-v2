@@ -13,15 +13,24 @@ export function DueDiligencePage() {
   return (
     <div className="page-shell">
       <div className="flex w-full flex-col gap-8">
-        <header className="page-header px-8 py-8">
-          <p className="eyebrow text-sm">Due Diligence Agent</p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text)] sm:text-4xl">
-            Structured supplier investigation
-          </h1>
-          <p className="mt-4 max-w-3xl text-sm leading-6 text-[var(--text-secondary)] sm:text-base">
-            Run AI-assisted evaluation for one of the current high-risk suppliers and
-            review the output in an executive summary layout.
-          </p>
+        <header className="page-header overflow-hidden px-8 py-8">
+          <div
+            className="rounded-[2rem] border px-6 py-6 sm:px-8"
+            style={{
+              borderColor: "var(--primary-muted)",
+              background:
+                "radial-gradient(circle at top left, rgba(111, 214, 145, 0.18), transparent 36%), linear-gradient(135deg, #f8fcf7 0%, #f1f7f2 45%, #f9fcfa 100%)",
+            }}
+          >
+            <p className="eyebrow text-sm">Due Diligence Agent</p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text)] sm:text-4xl">
+              Structured supplier investigation
+            </h1>
+            <p className="mt-4 max-w-3xl text-sm leading-6 text-[var(--text-secondary)] sm:text-base">
+              Run AI-assisted evaluation for one of the current high-risk suppliers and
+              review the output in an executive summary layout.
+            </p>
+          </div>
         </header>
 
         {errorMessage ? (
@@ -32,6 +41,7 @@ export function DueDiligencePage() {
 
         <DueDiligencePanel
           suppliers={topSuppliersQuery.data ?? []}
+          suppliersLoading={topSuppliersQuery.isLoading}
           result={dueDiligenceMutation.data}
           isLoading={dueDiligenceMutation.isPending}
           onRun={(supplierId) => dueDiligenceMutation.mutate(supplierId)}

@@ -1255,7 +1255,7 @@ export function SimulatorPage() {
                   />
                   <SummaryMetric
                     label="Overall Risk Delta"
-                    value={formatDelta(simulation.data.deltas.avgOverallRisk, 1)}
+                    value={formatDelta(simulation.data.deltas.avgOverallRisk, 2)}
                   />
                   <SummaryMetric
                     label="Suppliers Affected"
@@ -1284,21 +1284,21 @@ export function SimulatorPage() {
                   before={simulation.data.before.avgOverallRisk}
                   after={simulation.data.after.avgOverallRisk}
                   delta={simulation.data.deltas.avgOverallRisk}
-                  precision={1}
+                  precision={2}
                 />
                 <SimulatorDeltaCard
                   label="Avg Operational Risk"
                   before={simulation.data.before.avgOperationalRisk}
                   after={simulation.data.after.avgOperationalRisk}
                   delta={simulation.data.deltas.avgOperationalRisk}
-                  precision={1}
+                  precision={2}
                 />
                 <SimulatorDeltaCard
                   label="Avg ESG Risk"
                   before={simulation.data.before.avgEsgRisk}
                   after={simulation.data.after.avgEsgRisk}
                   delta={simulation.data.deltas.avgEsgRisk}
-                  precision={1}
+                  precision={2}
                 />
                 <SimulatorDeltaCard
                   label="Medium Risk Suppliers"
@@ -1993,7 +1993,7 @@ function ImpactDeltaChart({
             color: labels.map((label, index) => getImpactDeltaColor(label, values[index] ?? 0)),
           },
           text: values.map((value, index) =>
-            index === 0 ? formatDelta(value, 0) : formatDelta(value, 1),
+            index === 0 ? formatDelta(value, 0) : formatDelta(value, 2),
           ),
           textposition: "outside",
           cliponaxis: false,
@@ -2217,8 +2217,8 @@ function ComparisonWinnerPanel({
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
-      <SummaryMetric label="Scenario A Score" value={leftScore.toFixed(1)} />
-      <SummaryMetric label="Scenario B Score" value={rightScore.toFixed(1)} />
+      <SummaryMetric label="Scenario A Score" value={leftScore.toFixed(2)} />
+      <SummaryMetric label="Scenario B Score" value={rightScore.toFixed(2)} />
       <SummaryMetric label="Higher Impact" value={winner} />
     </div>
   );
@@ -2244,11 +2244,11 @@ function ComparisonScenarioCard({
         />
         <SummaryMetric
           label="Overall Risk Delta"
-          value={formatDelta(data.deltas.avgOverallRisk, 1)}
+          value={formatDelta(data.deltas.avgOverallRisk, 2)}
         />
         <SummaryMetric
           label="Operational Delta"
-          value={formatDelta(data.deltas.avgOperationalRisk, 1)}
+          value={formatDelta(data.deltas.avgOperationalRisk, 2)}
         />
         <SummaryMetric
           label="Affected Suppliers"
@@ -2391,7 +2391,7 @@ function AffectedSuppliersChart({ items }: { items: SimulatorAffectedSupplierIte
           marker: {
             color: buildGradientColors(chartItems.length, "#fee2e2", "#991b1b"),
           },
-          text: chartItems.map((item) => `+${item.deltaOverallRisk.toFixed(1)}`),
+          text: chartItems.map((item) => `+${item.deltaOverallRisk.toFixed(2)}`),
           textposition: "outside",
           cliponaxis: false,
           hovertemplate:
@@ -2469,10 +2469,10 @@ function AffectedSuppliersTable({ items }: { items: SimulatorAffectedSupplierIte
               <tr key={item.supplierId}>
                 <td className="font-semibold text-[var(--text)]">{item.supplierName}</td>
                 <td>{item.country ?? "-"}</td>
-                <td>{item.beforeOverallRisk.toFixed(1)}</td>
-                <td>{item.afterOverallRisk.toFixed(1)}</td>
+                <td>{item.beforeOverallRisk.toFixed(2)}</td>
+                <td>{item.afterOverallRisk.toFixed(2)}</td>
                 <td className="font-semibold text-[var(--primary)]">
-                  +{item.deltaOverallRisk.toFixed(1)}
+                  +{item.deltaOverallRisk.toFixed(2)}
                 </td>
                 <td>
                   <span className={item.afterRiskLevel === "High" ? "tag tag-neutral border-rose-200 bg-rose-50 text-rose-700" : "tag tag-neutral"}>
@@ -2752,27 +2752,27 @@ function buildScenarioHeadline(data: {
     return `${severity[0].toUpperCase()}${severity.slice(1)} disruption on ${supplier} changes high-risk suppliers by ${formatDelta(
       data.deltas.highRiskSuppliers,
       0,
-    )} and overall risk by ${formatDelta(data.deltas.avgOverallRisk, 1)}.`;
+    )} and overall risk by ${formatDelta(data.deltas.avgOverallRisk, 2)}.`;
   }
 
   if (data.scenario.scenarioType === "country_disruption") {
     return `${capitalize(data.scenario.severity ?? "Scenario")} country disruption in ${data.scenario.country ?? data.scenario.targetValue ?? "the selected country"} changes high-risk suppliers by ${formatDelta(
       data.deltas.highRiskSuppliers,
       0,
-    )} and overall risk by ${formatDelta(data.deltas.avgOverallRisk, 1)}.`;
+    )} and overall risk by ${formatDelta(data.deltas.avgOverallRisk, 2)}.`;
   }
 
   if (data.scenario.scenarioType === "commodity_shock") {
     return `${capitalize(data.scenario.severity ?? "Scenario")} commodity shock for ${data.scenario.targetValue ?? "the selected commodity"} changes high-risk suppliers by ${formatDelta(
       data.deltas.highRiskSuppliers,
       0,
-    )} and overall risk by ${formatDelta(data.deltas.avgOverallRisk, 1)}.`;
+    )} and overall risk by ${formatDelta(data.deltas.avgOverallRisk, 2)}.`;
   }
 
   return `${capitalize(data.scenario.targetType ?? "target")} operational deterioration on ${data.scenario.targetValue ?? "selected target"} changes high-risk suppliers by ${formatDelta(
     data.deltas.highRiskSuppliers,
     0,
-  )} and overall risk by ${formatDelta(data.deltas.avgOverallRisk, 1)}.`;
+  )} and overall risk by ${formatDelta(data.deltas.avgOverallRisk, 2)}.`;
 }
 
 function capitalize(value: string): string {
