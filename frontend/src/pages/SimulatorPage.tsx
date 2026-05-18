@@ -45,31 +45,43 @@ const scenarioOptions: Array<{
   value: SimulatorMode;
   label: string;
   description: string;
+  bestFor: string;
+  marker: string;
 }> = [
   {
     value: "supplier_disruption",
     label: "Supplier Disruption",
     description: "Stress one supplier and observe direct and spillover impact.",
+    bestFor: "Single-source continuity planning",
+    marker: "S",
   },
   {
     value: "country_disruption",
     label: "Country Disruption",
     description: "Stress one sourcing country and observe direct and commodity-linked impact.",
+    bestFor: "Geopolitical or regional exposure",
+    marker: "C",
   },
   {
     value: "commodity_shock",
     label: "Commodity Shock",
     description: "Stress one commodity and observe direct supplier and country-linked impact.",
+    bestFor: "Material scarcity and price pressure",
+    marker: "M",
   },
   {
     value: "operational_deterioration",
     label: "Operational Deterioration",
     description: "Increase delay, defect, and cost pressure for a target scope.",
+    bestFor: "Service-level and quality degradation",
+    marker: "O",
   },
   {
     value: "scenario_compare",
     label: "Scenario Compare",
     description: "Run two scenarios side by side and compare which one creates the larger impact.",
+    bestFor: "Prioritizing mitigation options",
+    marker: "A/B",
   },
 ];
 
@@ -228,6 +240,47 @@ export function SimulatorPage() {
     isScenarioConfigRunnable(compareA) &&
     isScenarioConfigRunnable(compareB) &&
     !isCompareRunning;
+  const selectedScenarioOption =
+    scenarioOptions.find((option) => option.value === scenarioType) ?? scenarioOptions[0];
+  const currentScenarioReady =
+    scenarioType === "scenario_compare"
+      ? canRunCompare
+      : scenarioType === "supplier_disruption"
+        ? canRunDisruption
+        : scenarioType === "country_disruption"
+          ? canRunCountryDisruption
+          : scenarioType === "commodity_shock"
+            ? canRunCommodityShock
+            : canRunOperational;
+  const currentRunLabel =
+    scenarioType === "scenario_compare"
+      ? isCompareRunning
+        ? "Running Comparison..."
+        : "Run Comparison"
+      : simulation.isPending
+        ? "Running Simulation..."
+        : "Run Simulation";
+  const currentMissingInput = getMissingInputMessage({
+    scenarioType,
+    supplierId,
+    targetValue,
+    compareA,
+    compareB,
+    delayIncreasePct,
+    defectIncreasePct,
+    costVarianceIncreasePct,
+  });
+  const currentScenarioPreview = buildScenarioPreview({
+    scenarioType,
+    selectedScenarioLabel: selectedScenarioOption.label,
+    selectedSupplierName: selectedSupplier?.supplier_name ?? null,
+    selectedTargetLabel,
+    severity,
+    targetType,
+    delayIncreasePct,
+    defectIncreasePct,
+    costVarianceIncreasePct,
+  });
   const impactScopeBreakdown = useMemo(() => {
     if (!simulation.data) return [];
     const buckets = new Map<string, { label: string; count: number; delta: number; color: string }>();
@@ -323,33 +376,58 @@ export function SimulatorPage() {
             </p>
           </div>
 
-          <div
-            className="grid w-full grid-cols-5 items-center gap-2 rounded-lg border bg-white p-2 shadow-[0_1px_2px_rgba(17,22,18,0.04)]"
-            style={{ borderColor: "#dfe7dd" }}
-          >
+          <WorkflowSteps
+            activeStep={simulation.data || compareData ? 3 : currentScenarioReady ? 2 : 1}
+          />
+
+          <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
             {scenarioOptions.map((option) => {
               const isActive = option.value === scenarioType;
               return (
                 <button
                   key={option.value}
                   type="button"
-                  className="flex min-h-[38px] w-full items-center justify-center rounded-md border px-3 py-2 text-center text-[13px] font-extrabold transition"
+                  className="min-h-[148px] rounded-[1.15rem] border px-4 py-4 text-left transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-sm)]"
                   style={{
-                    background: isActive ? "#166534" : "transparent",
-                    borderColor: isActive ? "#166534" : "transparent",
-                    color: isActive ? "#ffffff" : "#40503d",
+                    background: isActive
+                      ? "linear-gradient(180deg, rgba(240,253,244,0.98), rgba(255,255,255,0.96))"
+                      : "rgba(255,255,255,0.72)",
+                    borderColor: isActive ? "rgba(22, 101, 52, 0.36)" : "var(--border)",
+                    boxShadow: isActive ? "0 8px 24px rgba(22, 101, 52, 0.1)" : "none",
                   }}
-                  onClick={() => setScenarioType(option.value)}
+                  onClick={() => {
+                    setScenarioType(option.value);
+                    setTargetValue("");
+                    setSupplierId(null);
+                    setCompareError(null);
+                  }}
                 >
-                  {option.label}
+                  <span
+                    className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-xs font-semibold"
+                    style={{
+                      background: isActive ? "var(--primary)" : "var(--surface-2)",
+                      color: isActive ? "#fff" : "var(--text-secondary)",
+                    }}
+                  >
+                    {option.marker}
+                  </span>
+                  <span className="mt-4 block text-sm font-semibold text-[var(--text)]">
+                    {option.label}
+                  </span>
+                  <span className="mt-2 block text-xs leading-5 text-[var(--text-secondary)]">
+                    {option.description}
+                  </span>
+                  <span className="mt-3 block text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+                    {option.bestFor}
+                  </span>
                 </button>
               );
             })}
-            </div>
+          </div>
 
           <div className="mt-4 rounded-[1.6rem] border bg-[rgba(243,247,244,0.55)] px-5 py-4" style={{ borderColor: "var(--border)" }}>
             <p className="text-sm leading-6 text-[var(--text-secondary)]">
-              {scenarioOptions.find((option) => option.value === scenarioType)?.description}
+              {selectedScenarioOption.description}
             </p>
           </div>
 
@@ -388,14 +466,6 @@ export function SimulatorPage() {
                   </div>
 
                   <div className="mt-5 flex flex-wrap items-center gap-3">
-                    <button
-                      type="button"
-                      className="btn-primary"
-                      disabled={!canRunCompare}
-                      onClick={handleRunCompare}
-                    >
-                      {isCompareRunning ? "Running Comparison..." : "Run Comparison"}
-                    </button>
                     <span className="tag tag-neutral">
                       Compare scenario impact side by side
                     </span>
@@ -491,21 +561,6 @@ export function SimulatorPage() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 pt-2">
-                      <button
-                        type="button"
-                        className="btn-primary"
-                        disabled={!canRunDisruption || simulation.isPending}
-                        onClick={() => {
-                          if (!supplierId) return;
-                          simulation.mutate({
-                            scenarioType: "supplier_disruption",
-                            supplierId,
-                            severity,
-                          });
-                        }}
-                      >
-                        {simulation.isPending ? "Running Simulation..." : "Run Simulation"}
-                      </button>
                       {selectedSupplier ? (
                         <span className="tag tag-neutral">
                           {selectedSupplier.supplier_name}
@@ -585,21 +640,6 @@ export function SimulatorPage() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 pt-2">
-                      <button
-                        type="button"
-                        className="btn-primary"
-                        disabled={!canRunCountryDisruption || simulation.isPending}
-                        onClick={() => {
-                          if (!targetValue) return;
-                          simulation.mutate({
-                            scenarioType: "country_disruption",
-                            targetValue,
-                            severity,
-                          });
-                        }}
-                      >
-                        {simulation.isPending ? "Running Simulation..." : "Run Simulation"}
-                      </button>
                       {selectedTargetLabel ? (
                         <span className="tag tag-neutral">{selectedTargetLabel}</span>
                       ) : null}
@@ -674,21 +714,6 @@ export function SimulatorPage() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 pt-2">
-                      <button
-                        type="button"
-                        className="btn-primary"
-                        disabled={!canRunCommodityShock || simulation.isPending}
-                        onClick={() => {
-                          if (!targetValue) return;
-                          simulation.mutate({
-                            scenarioType: "commodity_shock",
-                            targetValue,
-                            severity,
-                          });
-                        }}
-                      >
-                        {simulation.isPending ? "Running Simulation..." : "Run Simulation"}
-                      </button>
                       {selectedTargetLabel ? (
                         <span className="tag tag-neutral">{selectedTargetLabel}</span>
                       ) : null}
@@ -793,24 +818,6 @@ export function SimulatorPage() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 pt-2">
-                      <button
-                        type="button"
-                        className="btn-primary"
-                        disabled={!canRunOperational || simulation.isPending}
-                        onClick={() => {
-                          if (!targetValue) return;
-                          simulation.mutate({
-                            scenarioType: "operational_deterioration",
-                            targetType,
-                            targetValue,
-                            delayIncreasePct,
-                            defectIncreasePct,
-                            costVarianceIncreasePct,
-                          });
-                        }}
-                      >
-                        {simulation.isPending ? "Running Simulation..." : "Run Simulation"}
-                      </button>
                       {selectedTargetLabel ? (
                         <span className="tag tag-neutral">
                           {targetType}: {selectedTargetLabel}
@@ -905,6 +912,66 @@ export function SimulatorPage() {
                   </>
                 )}
               </div>
+            </div>
+          </div>
+
+          <div className="sticky bottom-4 z-10 mt-6 rounded-[1.35rem] border border-[var(--border)] bg-white/95 px-5 py-4 shadow-[var(--shadow)] backdrop-blur">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+                  Ready Check
+                </p>
+                <p className="mt-1 text-sm font-semibold text-[var(--text)]">
+                  {currentScenarioReady ? currentScenarioPreview : currentMissingInput}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn-primary w-full lg:w-auto"
+                disabled={!currentScenarioReady || simulation.isPending || isCompareRunning}
+                onClick={() => {
+                  if (scenarioType === "scenario_compare") {
+                    void handleRunCompare();
+                    return;
+                  }
+                  if (scenarioType === "supplier_disruption" && supplierId) {
+                    simulation.mutate({
+                      scenarioType: "supplier_disruption",
+                      supplierId,
+                      severity,
+                    });
+                    return;
+                  }
+                  if (scenarioType === "country_disruption" && targetValue) {
+                    simulation.mutate({
+                      scenarioType: "country_disruption",
+                      targetValue,
+                      severity,
+                    });
+                    return;
+                  }
+                  if (scenarioType === "commodity_shock" && targetValue) {
+                    simulation.mutate({
+                      scenarioType: "commodity_shock",
+                      targetValue,
+                      severity,
+                    });
+                    return;
+                  }
+                  if (scenarioType === "operational_deterioration" && targetValue) {
+                    simulation.mutate({
+                      scenarioType: "operational_deterioration",
+                      targetType,
+                      targetValue,
+                      delayIncreasePct,
+                      defectIncreasePct,
+                      costVarianceIncreasePct,
+                    });
+                  }
+                }}
+              >
+                {currentRunLabel}
+              </button>
             </div>
           </div>
         </section>
@@ -1196,6 +1263,7 @@ export function SimulatorPage() {
                   />
                 </div>
               </div>
+              <DecisionSummary data={simulation.data} />
             </section>
 
             <section className="visual-card p-8">
@@ -1358,8 +1426,62 @@ export function SimulatorPage() {
               <AffectedSuppliersTable items={simulation.data.affectedSuppliers} />
             </section>
           </>
-        ) : null}
+        ) : (
+          <section className="visual-card p-8">
+            <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr] xl:items-center">
+              <div>
+                <p className="eyebrow">No Simulation Run Yet</p>
+                <h2 className="mt-3 text-2xl font-semibold text-[var(--text)]">
+                  Configure a scenario to see portfolio impact, supplier movement, and recommended next steps.
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                  Results will summarize high-risk movement first, then show before-after composition,
+                  impact deltas, affected suppliers, and the detailed supplier table.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <SummaryMetric label="Primary Answer" value="Risk shift" />
+                <SummaryMetric label="Impact View" value="Supplier list" />
+                <SummaryMetric label="Decision Aid" value="Advisor handoff" />
+              </div>
+            </div>
+          </section>
+        )}
       </div>
+    </div>
+  );
+}
+
+function WorkflowSteps({ activeStep }: { activeStep: number }) {
+  const steps = ["Choose scenario", "Configure inputs", "Review impact"];
+  return (
+    <div className="grid gap-3 md:grid-cols-3">
+      {steps.map((step, index) => {
+        const stepNumber = index + 1;
+        const isActive = stepNumber === activeStep;
+        const isComplete = stepNumber < activeStep;
+        return (
+          <div
+            key={step}
+            className="flex items-center gap-3 rounded-[1rem] border px-4 py-3"
+            style={{
+              borderColor: isActive || isComplete ? "rgba(22, 101, 52, 0.28)" : "var(--border)",
+              background: isActive || isComplete ? "rgba(240, 253, 244, 0.82)" : "rgba(255,255,255,0.68)",
+            }}
+          >
+            <span
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-semibold"
+              style={{
+                background: isActive || isComplete ? "var(--primary)" : "var(--surface-2)",
+                color: isActive || isComplete ? "#fff" : "var(--muted)",
+              }}
+            >
+              {stepNumber}
+            </span>
+            <span className="text-sm font-semibold text-[var(--text)]">{step}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1395,6 +1517,37 @@ function PercentageInput({
         </div>
       </div>
     </label>
+  );
+}
+
+function DecisionSummary({ data }: { data: SimulatorScenarioResponse }) {
+  const topSupplier = [...data.affectedSuppliers].sort(
+    (a, b) => b.deltaOverallRisk - a.deltaOverallRisk,
+  )[0];
+  const movedToHigh = data.riskBandMovement
+    .filter((item) => item.toBand === "High" && item.fromBand !== "High")
+    .reduce((total, item) => total + item.supplierCount, 0);
+  const action =
+    movedToHigh > 0
+      ? "Prioritize mitigation for suppliers newly moving into High risk."
+      : data.affectedSuppliers.length > 0
+        ? "Review the most affected suppliers before the next sourcing decision."
+        : "No supplier movement surfaced, but validate assumptions before closing the scenario.";
+
+  return (
+    <div className="mt-6 grid gap-3 md:grid-cols-3">
+      <SummaryMetric
+        label="Top Impact"
+        value={topSupplier ? topSupplier.supplierName : "No supplier movement"}
+      />
+      <SummaryMetric label="Moved To High" value={`${movedToHigh}`} />
+      <div className="rounded-[1.35rem] border border-[var(--border)] bg-white/80 px-4 py-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+          Recommended Next Step
+        </p>
+        <p className="mt-2 text-sm font-semibold leading-5 text-[var(--text)]">{action}</p>
+      </div>
+    </div>
   );
 }
 
@@ -2266,40 +2419,79 @@ function AffectedSuppliersChart({ items }: { items: SimulatorAffectedSupplierIte
 }
 
 function AffectedSuppliersTable({ items }: { items: SimulatorAffectedSupplierItem[] }) {
+  const [query, setQuery] = useState("");
+  const [riskBand, setRiskBand] = useState("all");
+  const filteredItems = [...items]
+    .sort((a, b) => b.deltaOverallRisk - a.deltaOverallRisk)
+    .filter((item) => {
+      const matchesQuery = `${item.supplierName} ${item.country ?? ""} ${item.impactReason}`
+        .toLowerCase()
+        .includes(query.trim().toLowerCase());
+      const matchesBand = riskBand === "all" || item.afterRiskLevel === riskBand;
+      return matchesQuery && matchesBand;
+    });
+
   return items.length ? (
-    <div className="overflow-x-auto">
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Supplier</th>
-            <th>Country</th>
-            <th>Before</th>
-            <th>After</th>
-            <th>Delta</th>
-            <th>Band Shift</th>
-            <th>Impact Reason</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => (
-            <tr key={item.supplierId}>
-              <td className="font-semibold text-[var(--text)]">{item.supplierName}</td>
-              <td>{item.country ?? "-"}</td>
-              <td>{item.beforeOverallRisk.toFixed(1)}</td>
-              <td>{item.afterOverallRisk.toFixed(1)}</td>
-              <td className="font-semibold text-[var(--primary)]">
-                +{item.deltaOverallRisk.toFixed(1)}
-              </td>
-              <td>
-                {item.beforeRiskLevel}
-                {" -> "}
-                {item.afterRiskLevel}
-              </td>
-              <td>{item.impactReason}</td>
+    <div className="grid gap-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <input
+          className="input-field md:max-w-sm"
+          value={query}
+          placeholder="Search supplier, country, or reason"
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        <select
+          className="select-field md:max-w-[220px]"
+          value={riskBand}
+          onChange={(event) => setRiskBand(event.target.value)}
+        >
+          <option value="all">All after-risk bands</option>
+          <option value="High">High after risk</option>
+          <option value="Medium">Medium after risk</option>
+          <option value="Low">Low after risk</option>
+        </select>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Supplier</th>
+              <th>Country</th>
+              <th>Before</th>
+              <th>After</th>
+              <th>Delta</th>
+              <th>Band Shift</th>
+              <th>Impact Reason</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {filteredItems.map((item) => (
+              <tr key={item.supplierId}>
+                <td className="font-semibold text-[var(--text)]">{item.supplierName}</td>
+                <td>{item.country ?? "-"}</td>
+                <td>{item.beforeOverallRisk.toFixed(1)}</td>
+                <td>{item.afterOverallRisk.toFixed(1)}</td>
+                <td className="font-semibold text-[var(--primary)]">
+                  +{item.deltaOverallRisk.toFixed(1)}
+                </td>
+                <td>
+                  <span className={item.afterRiskLevel === "High" ? "tag tag-neutral border-rose-200 bg-rose-50 text-rose-700" : "tag tag-neutral"}>
+                    {item.beforeRiskLevel}
+                    {" -> "}
+                    {item.afterRiskLevel}
+                  </span>
+                </td>
+                <td>{item.impactReason}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!filteredItems.length ? (
+          <div className="empty-state mt-4 px-6 py-10 text-center text-sm">
+            No affected suppliers match the current filters.
+          </div>
+        ) : null}
+      </div>
     </div>
   ) : (
     <div className="empty-state px-6 py-16 text-center text-sm">
@@ -2468,10 +2660,86 @@ function formatDelta(value: number, precision: number): string {
   return value > 0 ? `+${value.toFixed(precision)}` : value.toFixed(precision);
 }
 
+function getMissingInputMessage({
+  scenarioType,
+  supplierId,
+  targetValue,
+  compareA,
+  compareB,
+  delayIncreasePct,
+  defectIncreasePct,
+  costVarianceIncreasePct,
+}: {
+  scenarioType: SimulatorMode;
+  supplierId: number | null;
+  targetValue: string;
+  compareA: CompareScenarioConfig;
+  compareB: CompareScenarioConfig;
+  delayIncreasePct: number;
+  defectIncreasePct: number;
+  costVarianceIncreasePct: number;
+}): string {
+  if (scenarioType === "scenario_compare") {
+    if (!isScenarioConfigRunnable(compareA)) return "Complete Scenario A to run the comparison.";
+    if (!isScenarioConfigRunnable(compareB)) return "Complete Scenario B to run the comparison.";
+    return "Ready to compare both scenarios.";
+  }
+  if (scenarioType === "supplier_disruption" && !supplierId) {
+    return "Select a supplier to run this disruption scenario.";
+  }
+  if (scenarioType === "country_disruption" && !targetValue) {
+    return "Select a country to run this disruption scenario.";
+  }
+  if (scenarioType === "commodity_shock" && !targetValue) {
+    return "Select a commodity to run this shock scenario.";
+  }
+  if (scenarioType === "operational_deterioration") {
+    if (!targetValue) return "Select a target scope to run operational deterioration.";
+    if (delayIncreasePct <= 0 && defectIncreasePct <= 0 && costVarianceIncreasePct <= 0) {
+      return "Increase at least one operational input above 0%.";
+    }
+  }
+  return "Ready to run.";
+}
+
+function buildScenarioPreview({
+  scenarioType,
+  selectedScenarioLabel,
+  selectedSupplierName,
+  selectedTargetLabel,
+  severity,
+  targetType,
+  delayIncreasePct,
+  defectIncreasePct,
+  costVarianceIncreasePct,
+}: {
+  scenarioType: SimulatorMode;
+  selectedScenarioLabel: string;
+  selectedSupplierName: string | null;
+  selectedTargetLabel: string | null;
+  severity: SupplierDisruptionSeverity;
+  targetType: OperationalTargetType;
+  delayIncreasePct: number;
+  defectIncreasePct: number;
+  costVarianceIncreasePct: number;
+}): string {
+  if (scenarioType === "scenario_compare") {
+    return "Ready to run both scenarios and compare which one creates the larger risk movement.";
+  }
+  if (scenarioType === "supplier_disruption") {
+    return `Ready to simulate ${severity} disruption for ${selectedSupplierName ?? "the selected supplier"}.`;
+  }
+  if (scenarioType === "country_disruption" || scenarioType === "commodity_shock") {
+    return `Ready to simulate ${severity} ${selectedScenarioLabel.toLowerCase()} for ${selectedTargetLabel ?? "the selected target"}.`;
+  }
+  return `Ready to stress ${targetType} ${selectedTargetLabel ?? "target"} with ${delayIncreasePct}% delay, ${defectIncreasePct}% defect, and ${costVarianceIncreasePct}% cost variance pressure.`;
+}
+
 function buildScenarioHeadline(data: {
   scenario: {
     scenarioType: string;
     supplierName?: string | null;
+    country?: string | null;
     severity?: string | null;
     targetType?: string | null;
     targetValue?: string | null;
@@ -2482,6 +2750,20 @@ function buildScenarioHeadline(data: {
     const supplier = data.scenario.supplierName ?? "selected supplier";
     const severity = data.scenario.severity ?? "scenario";
     return `${severity[0].toUpperCase()}${severity.slice(1)} disruption on ${supplier} changes high-risk suppliers by ${formatDelta(
+      data.deltas.highRiskSuppliers,
+      0,
+    )} and overall risk by ${formatDelta(data.deltas.avgOverallRisk, 1)}.`;
+  }
+
+  if (data.scenario.scenarioType === "country_disruption") {
+    return `${capitalize(data.scenario.severity ?? "Scenario")} country disruption in ${data.scenario.country ?? data.scenario.targetValue ?? "the selected country"} changes high-risk suppliers by ${formatDelta(
+      data.deltas.highRiskSuppliers,
+      0,
+    )} and overall risk by ${formatDelta(data.deltas.avgOverallRisk, 1)}.`;
+  }
+
+  if (data.scenario.scenarioType === "commodity_shock") {
+    return `${capitalize(data.scenario.severity ?? "Scenario")} commodity shock for ${data.scenario.targetValue ?? "the selected commodity"} changes high-risk suppliers by ${formatDelta(
       data.deltas.highRiskSuppliers,
       0,
     )} and overall risk by ${formatDelta(data.deltas.avgOverallRisk, 1)}.`;

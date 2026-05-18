@@ -1,92 +1,104 @@
 {
-  "hash": "2a7194df",
-  "browserHash": "3f24dd40",
+  "hash": "cb579e7c",
+  "browserHash": "be31f83c",
   "optimized": {
     "react": {
       "src": "../../node_modules/react/index.js",
       "file": "react.js",
-      "fileHash": "b826c406",
+      "fileHash": "0f6feb39",
       "needsInterop": true
     },
     "react-dom": {
       "src": "../../node_modules/react-dom/index.js",
       "file": "react-dom.js",
-      "fileHash": "e2ab61d9",
+      "fileHash": "60be6297",
       "needsInterop": true
     },
     "react/jsx-dev-runtime": {
       "src": "../../node_modules/react/jsx-dev-runtime.js",
       "file": "react_jsx-dev-runtime.js",
-      "fileHash": "5137829d",
+      "fileHash": "f6b9d804",
       "needsInterop": true
     },
     "react/jsx-runtime": {
       "src": "../../node_modules/react/jsx-runtime.js",
       "file": "react_jsx-runtime.js",
-      "fileHash": "a94f2311",
+      "fileHash": "f8accabe",
       "needsInterop": true
     },
     "@tanstack/react-query": {
       "src": "../../node_modules/@tanstack/react-query/build/modern/index.js",
       "file": "@tanstack_react-query.js",
-      "fileHash": "c9e68426",
+      "fileHash": "290d2401",
       "needsInterop": false
     },
-    "plotly.js-basic-dist-min": {
-      "src": "../../node_modules/plotly.js-basic-dist-min/plotly-basic.min.js",
-      "file": "plotly__js-basic-dist-min.js",
-      "fileHash": "9e5106e9",
+    "echarts/charts": {
+      "src": "../../node_modules/echarts/charts.js",
+      "file": "echarts_charts.js",
+      "fileHash": "6ecd95de",
+      "needsInterop": false
+    },
+    "echarts/components": {
+      "src": "../../node_modules/echarts/components.js",
+      "file": "echarts_components.js",
+      "fileHash": "1a9ef64b",
+      "needsInterop": false
+    },
+    "echarts/core": {
+      "src": "../../node_modules/echarts/core.js",
+      "file": "echarts_core.js",
+      "fileHash": "00f82b65",
+      "needsInterop": false
+    },
+    "echarts/renderers": {
+      "src": "../../node_modules/echarts/renderers.js",
+      "file": "echarts_renderers.js",
+      "fileHash": "60306e5d",
+      "needsInterop": false
+    },
+    "maplibre-gl": {
+      "src": "../../node_modules/maplibre-gl/dist/maplibre-gl.js",
+      "file": "maplibre-gl.js",
+      "fileHash": "af3367d6",
       "needsInterop": true
     },
     "react-dom/client": {
       "src": "../../node_modules/react-dom/client.js",
       "file": "react-dom_client.js",
-      "fileHash": "9765ef20",
-      "needsInterop": true
-    },
-    "react-plotly.js/factory": {
-      "src": "../../node_modules/react-plotly.js/factory.js",
-      "file": "react-plotly__js_factory.js",
-      "fileHash": "0905046f",
+      "fileHash": "b421c89b",
       "needsInterop": true
     },
     "react-router-dom": {
       "src": "../../node_modules/react-router-dom/dist/index.js",
       "file": "react-router-dom.js",
-      "fileHash": "ae4a4e4c",
-      "needsInterop": false
-    },
-    "react-simple-maps": {
-      "src": "../../node_modules/react-simple-maps/dist/index.es.js",
-      "file": "react-simple-maps.js",
-      "fileHash": "30dc5eb0",
-      "needsInterop": false
-    },
-    "recharts": {
-      "src": "../../node_modules/recharts/es6/index.js",
-      "file": "recharts.js",
-      "fileHash": "bf9787b7",
+      "fileHash": "c5d47ecd",
       "needsInterop": false
     }
   },
   "chunks": {
-    "chunk-SFMRM745": {
-      "file": "chunk-SFMRM745.js"
+    "chunk-DWI44AE7": {
+      "file": "chunk-DWI44AE7.js"
     },
-    "chunk-WDFG6VQ3": {
-      "file": "chunk-WDFG6VQ3.js"
+    "chunk-U5ZAPKHE": {
+      "file": "chunk-U5ZAPKHE.js"
     },
-    "chunk-F4QD3RXN": {
-      "file": "chunk-F4QD3RXN.js"
+    "chunk-LNWGNN6H": {
+      "file": "chunk-LNWGNN6H.js"
     },
-    "chunk-5QIHIOCS": {
-      "file": "chunk-5QIHIOCS.js"
+    "chunk-TGQDHHFE": {
+      "file": "chunk-TGQDHHFE.js"
     },
-    "chunk-VKIUPR73": {
-      "file": "chunk-VKIUPR73.js"
+    "chunk-IBGTYWFQ": {
+      "file": "chunk-IBGTYWFQ.js"
     },
-    "chunk-QY3AG7D4": {
-      "file": "chunk-QY3AG7D4.js"
+    "chunk-H7ERFXDA": {
+      "file": "chunk-H7ERFXDA.js"
+    },
+    "chunk-OADXXNBQ": {
+      "file": "chunk-OADXXNBQ.js"
+    },
+    "chunk-WS6WXAIR": {
+      "file": "chunk-WS6WXAIR.js"
     }
   }
 }

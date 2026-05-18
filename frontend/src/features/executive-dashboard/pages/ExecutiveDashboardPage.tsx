@@ -2,14 +2,9 @@ import { ApiError } from "../../../api/client";
 import { PlotlyChart } from "../../../components/common/PlotlyChart";
 import { KpiCard } from "../../overview-dashboard/components/KpiCard";
 import { useExecutiveDashboard } from "../hooks/useExecutiveDashboard";
-import {
-  ComposableMap,
-  Geographies,
-  Geography,
-  Marker,
-  Sphere,
-} from "react-simple-maps";
-import worldAtlas from "world-atlas/countries-110m.json";
+import { useEffect, useMemo, useRef, useState } from "react";
+import maplibregl, { type GeoJSONSource, type Map as MapLibreMap } from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 export function ExecutiveDashboardPage() {
   const executiveQuery = useExecutiveDashboard();
@@ -125,18 +120,18 @@ export function ExecutiveDashboardPage() {
           </div>
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[0.8fr_1fr_1.1fr]">
-          <div className="visual-card p-6">
-            <div className="visual-header">
+        <section className="grid items-stretch gap-6 xl:grid-cols-[0.8fr_1fr_1.1fr]">
+          <div className="visual-card p-5">
+            <div className="visual-header visual-header-compact min-h-[50px]">
               <h2 className="visual-title">Certification Status</h2>
               <p className="visual-description">
                 Compliance readiness across valid, expiring-soon, and expired certificates.
               </p>
             </div>
             {executive ? (
-              <div className="space-y-5">
+              <div className="space-y-4">
                 <PlotlyChart
-                  className="h-[240px]"
+                  className="mx-auto h-[285px] max-w-[340px]"
                   data={[
                     {
                       type: "pie",
@@ -194,8 +189,8 @@ export function ExecutiveDashboardPage() {
             )}
           </div>
 
-          <div className="visual-card p-6">
-            <div className="visual-header">
+          <div className="visual-card p-5">
+            <div className="visual-header visual-header-compact min-h-[50px]">
             <h2 className="visual-title">Commodity Exposure</h2>
             <p className="visual-description">
               Supplier concentration across the most represented commodity groups.
@@ -204,8 +199,8 @@ export function ExecutiveDashboardPage() {
             <CommodityExposureChart items={executive?.attention.commodityExposure ?? []} />
           </div>
 
-          <div className="visual-card p-6">
-            <div className="visual-header">
+          <div className="visual-card p-5">
+            <div className="visual-header visual-header-compact min-h-[50px]">
             <h2 className="visual-title">Country Exposure</h2>
             <p className="visual-description">
               Top supplier concentration countries across the current network.
@@ -222,21 +217,26 @@ export function ExecutiveDashboardPage() {
             Executive watchlist of suppliers that merit deeper follow-up in Due Diligence.
           </p>
           </div>
-          <div className="mt-5 grid gap-4 xl:grid-cols-5">
+          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             {(executive?.attention.suppliersRequiringReview ?? []).map((supplier) => (
-              <div key={supplier.supplierId} className="visual-card-soft rounded-[1.75rem] p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold leading-6 text-[var(--text)]">
+              <div
+                key={supplier.supplierId}
+                className="visual-card-soft flex min-h-[178px] flex-col rounded-[1rem] p-4"
+              >
+                <div className="grid grid-cols-[1fr_auto] items-start gap-3">
+                  <div className="min-w-0">
+                    <p className="min-h-[48px] text-sm font-semibold leading-6 text-[var(--text)]">
                       {supplier.supplierName}
                     </p>
-                    <p className="mt-1 text-xs text-[var(--muted)]">{supplier.reason}</p>
                   </div>
-                  <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-secondary)]">
+                  <span className="mt-0.5 rounded-full bg-[var(--surface-2)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-secondary)]">
                     {supplier.riskLevel}
                   </span>
                 </div>
-                <div className="mt-5 flex items-end justify-between gap-4">
+                <p className="mt-2 min-h-[40px] text-xs leading-5 text-[var(--muted)]">
+                  {supplier.reason}
+                </p>
+                <div className="mt-auto pt-4">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
                       Overall Risk
@@ -273,15 +273,15 @@ function RiskDonutCard({
   const total = mix ? mix.high + mix.medium + mix.low : 0;
 
   return (
-    <div className="visual-card p-6">
-      <div className="visual-header">
+    <div className="visual-card p-5">
+      <div className="visual-header mb-3 min-h-[64px]">
         <h2 className="visual-title">{title}</h2>
         <p className="visual-description">{description}</p>
       </div>
       {mix ? (
         <>
           <PlotlyChart
-            className="h-[220px]"
+            className="mx-auto h-[210px] max-w-[300px]"
             data={[
               {
                 type: "pie",
@@ -355,9 +355,9 @@ function CountryExposureBarChart({
   const colors = buildGradientColors(topItems.length, "#d7eadb", "#5b8f66");
 
   return items.length ? (
-    <div className="mt-5">
+    <div className="mt-4">
       <PlotlyChart
-        className="h-[320px]"
+        className="h-[390px]"
         data={[
           {
             type: "bar",
@@ -379,7 +379,7 @@ function CountryExposureBarChart({
           },
         ]}
         layout={{
-          margin: { l: 80, r: 30, t: 10, b: 24 },
+          margin: { l: 78, r: 30, t: 0, b: 24 },
           paper_bgcolor: "rgba(0,0,0,0)",
           plot_bgcolor: "rgba(0,0,0,0)",
           xaxis: {
@@ -412,9 +412,9 @@ function CommodityExposureChart({
   const colors = buildGradientColors(topItems.length, "#416b4a", "#dcecdf");
 
   return items.length ? (
-    <div className="mt-5">
+    <div className="mt-4">
       <PlotlyChart
-        className="h-[320px]"
+        className="h-[390px]"
         data={[
           {
             type: "bar",
@@ -434,7 +434,7 @@ function CommodityExposureChart({
           },
         ]}
         layout={{
-          margin: { l: 28, r: 20, t: 10, b: 70 },
+          margin: { l: 28, r: 20, t: 0, b: 44 },
           paper_bgcolor: "rgba(0,0,0,0)",
           plot_bgcolor: "rgba(0,0,0,0)",
           xaxis: {
@@ -495,7 +495,308 @@ function GeographyMap({
     avgEsgRisk: number;
   }>;
 }) {
-  const positioned = items
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<MapLibreMap | null>(null);
+  const popupRef = useRef<maplibregl.Popup | null>(null);
+  const [mapFailed, setMapFailed] = useState(false);
+  const positioned = useMemo(() => buildPositionedCountries(items), [items]);
+  const geojson = useMemo(
+    () => ({
+      type: "FeatureCollection" as const,
+      features: positioned.map((item) => ({
+        type: "Feature" as const,
+        geometry: {
+          type: "Point" as const,
+          coordinates: [item.longitude, item.latitude],
+        },
+        properties: {
+          country: item.country,
+          supplierCount: item.supplierCount,
+          riskLevel: item.riskLevel,
+          avgOverallRisk: item.avgOverallRisk,
+          avgOperationalRisk: item.avgOperationalRisk,
+          avgEsgRisk: item.avgEsgRisk,
+        },
+      })),
+    }),
+    [positioned],
+  );
+
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current || mapFailed) return;
+
+    try {
+      const map = new maplibregl.Map({
+        container: containerRef.current,
+        style: {
+          version: 8,
+          sources: {
+            basemap: {
+              type: "raster",
+              tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+              tileSize: 256,
+              attribution: "OpenStreetMap",
+            },
+          },
+          layers: [
+            {
+              id: "basemap",
+              type: "raster",
+              source: "basemap",
+              paint: {
+                "raster-opacity": 0.76,
+                "raster-saturation": -0.58,
+                "raster-contrast": -0.08,
+              },
+            },
+          ],
+        },
+        center: [35, 18],
+        zoom: 1.25,
+        minZoom: 1,
+        maxZoom: 4,
+        attributionControl: false,
+      });
+
+      map.on("error", () => {
+        setMapFailed(true);
+      });
+
+      map.addControl(
+        new maplibregl.NavigationControl({
+          visualizePitch: false,
+          showCompass: false,
+        }),
+        "top-right",
+      );
+
+      map.on("load", () => {
+      map.addSource("supplier-countries", {
+        type: "geojson",
+        data: geojson,
+      });
+
+      map.addLayer({
+        id: "supplier-country-halo",
+        type: "circle",
+        source: "supplier-countries",
+        paint: {
+          "circle-radius": ["+", 10, ["*", ["get", "supplierCount"], 0.55]],
+          "circle-color": "#ffffff",
+          "circle-opacity": 0.86,
+          "circle-blur": 0.05,
+        },
+      });
+
+      map.addLayer({
+        id: "supplier-country-bubbles",
+        type: "circle",
+        source: "supplier-countries",
+        paint: {
+          "circle-radius": ["+", 7, ["*", ["get", "supplierCount"], 0.48]],
+          "circle-color": [
+            "match",
+            ["get", "riskLevel"],
+            "At Risk",
+            "#ef4444",
+            "Watch",
+            "#f59e0b",
+            "#166534",
+          ],
+          "circle-opacity": 0.9,
+          "circle-stroke-color": "#ffffff",
+          "circle-stroke-width": 2,
+        },
+      });
+
+      map.addLayer({
+        id: "supplier-country-labels",
+        type: "symbol",
+        source: "supplier-countries",
+        layout: {
+          "text-field": [
+            "format",
+            ["get", "country"],
+            { "font-scale": 1 },
+            "\n",
+            {},
+            ["to-string", ["get", "supplierCount"]],
+            { "font-scale": 0.9 },
+          ],
+          "text-size": 12,
+          "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+          "text-allow-overlap": true,
+          "text-offset": [0, 2],
+          "text-anchor": "top",
+        },
+        paint: {
+          "text-color": "#243126",
+          "text-halo-color": "rgba(255,255,255,0.95)",
+          "text-halo-width": 1.6,
+        },
+      });
+
+      if (positioned.length > 0) {
+        const bounds = positioned.reduce(
+          (currentBounds, item) =>
+            currentBounds.extend([item.longitude, item.latitude] as [number, number]),
+          new maplibregl.LngLatBounds(
+            [positioned[0].longitude, positioned[0].latitude],
+            [positioned[0].longitude, positioned[0].latitude],
+          ),
+        );
+        map.fitBounds(bounds, {
+          padding: { top: 72, bottom: 72, left: 88, right: 88 },
+          maxZoom: 2.25,
+          duration: 0,
+        });
+      }
+
+      map.on("mouseenter", "supplier-country-bubbles", () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", "supplier-country-bubbles", () => {
+        map.getCanvas().style.cursor = "";
+        popupRef.current?.remove();
+      });
+      map.on("mousemove", "supplier-country-bubbles", (event) => {
+        const feature = event.features?.[0];
+        if (!feature) return;
+        const coordinates = (feature.geometry as GeoJSON.Point).coordinates as [number, number];
+        const properties = feature.properties as Record<string, string | number>;
+
+        popupRef.current?.remove();
+        popupRef.current = new maplibregl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+          className: "map-popup",
+          offset: 14,
+        })
+          .setLngLat(coordinates)
+          .setHTML(
+            `<div class="map-popup-card">
+              <div class="map-popup-title">${properties.country}</div>
+              <div class="map-popup-row"><span>Suppliers</span><strong>${properties.supplierCount}</strong></div>
+              <div class="map-popup-row"><span>Risk</span><strong>${properties.riskLevel}</strong></div>
+              <div class="map-popup-row"><span>Avg Overall</span><strong>${formatPopupNumber(properties.avgOverallRisk)}</strong></div>
+              <div class="map-popup-row"><span>Operational</span><strong>${formatPopupNumber(properties.avgOperationalRisk)}</strong></div>
+              <div class="map-popup-row"><span>ESG</span><strong>${formatPopupNumber(properties.avgEsgRisk)}</strong></div>
+            </div>`,
+          )
+          .addTo(map);
+      });
+      });
+
+      mapRef.current = map;
+    } catch {
+      setMapFailed(true);
+    }
+
+    return () => {
+      popupRef.current?.remove();
+      mapRef.current?.remove();
+      mapRef.current = null;
+    };
+  }, [geojson, mapFailed, positioned]);
+
+  useEffect(() => {
+    const source = mapRef.current?.getSource("supplier-countries") as GeoJSONSource | undefined;
+    source?.setData(geojson);
+  }, [geojson]);
+
+  return (
+      <div
+        className="relative h-[560px] overflow-hidden rounded-[1.25rem] border"
+        style={{
+          borderColor: "var(--border)",
+          background: "linear-gradient(180deg, #eef5f0 0%, #e5eee8 100%)",
+        }}
+      >
+        {mapFailed ? (
+          <FallbackGeoMap items={positioned} />
+        ) : (
+          <div ref={containerRef} className="absolute inset-0" />
+        )}
+        <MapRiskLegend />
+    </div>
+  );
+}
+
+function MapRiskLegend() {
+  return (
+    <div className="absolute bottom-4 left-4 flex flex-wrap items-center gap-3 rounded-lg border border-white/70 bg-white/90 px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] shadow-sm backdrop-blur">
+      <span className="flex items-center gap-1.5">
+        <span className="h-2.5 w-2.5 rounded-full bg-[#166534]" />
+        Stable
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="h-2.5 w-2.5 rounded-full bg-[#f59e0b]" />
+        Watch
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="h-2.5 w-2.5 rounded-full bg-[#ef4444]" />
+        At Risk
+      </span>
+    </div>
+  );
+}
+
+function formatPopupNumber(value: string | number) {
+  const numberValue = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numberValue) ? numberValue.toFixed(1) : "-";
+}
+
+function FallbackGeoMap({
+  items,
+}: {
+  items: Array<{
+    country: string;
+    supplierCount: number;
+    riskLevel: "Stable" | "Watch" | "At Risk";
+    longitude: number;
+    latitude: number;
+  }>;
+}) {
+  return (
+    <div className="absolute inset-0 overflow-hidden bg-[linear-gradient(180deg,#eef5f0_0%,#e5eee8_100%)]">
+      <div className="absolute inset-8 rounded-[1rem] border border-[rgba(17,22,18,0.08)] bg-white/35" />
+      {items.map((item) => {
+        const x = ((item.longitude + 180) / 360) * 100;
+        const y = ((90 - item.latitude) / 180) * 100;
+        const size = Math.min(44, 22 + item.supplierCount * 0.8);
+        return (
+          <div
+            key={item.country}
+            className="absolute grid place-items-center rounded-full border-2 border-white text-xs font-bold text-white shadow-lg"
+            style={{
+              left: `${x}%`,
+              top: `${y}%`,
+              width: size,
+              height: size,
+              transform: "translate(-50%, -50%)",
+              background: item.riskLevel === "At Risk" ? "#ef4444" : item.riskLevel === "Watch" ? "#f59e0b" : "#166534",
+            }}
+            title={`${item.country}: ${item.supplierCount} suppliers`}
+          >
+            {item.supplierCount}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function buildPositionedCountries(
+  items: Array<{
+    country: string;
+    supplierCount: number;
+    riskLevel: "Stable" | "Watch" | "At Risk";
+    avgOverallRisk: number;
+    avgOperationalRisk: number;
+    avgEsgRisk: number;
+  }>,
+) {
+  return items
     .map((item) => {
       const position = countryMapPositions[item.country.toLowerCase()];
       if (!position) {
@@ -513,71 +814,6 @@ function GeographyMap({
       longitude: number;
       latitude: number;
     }>;
-
-  return (
-      <div
-        className="relative h-[560px] overflow-hidden rounded-[1.75rem] border"
-        style={{
-          borderColor: "var(--border)",
-          background: "linear-gradient(180deg, #f2f7f3 0%, #e7f0ea 100%)",
-        }}
-      >
-        <div className="absolute inset-0">
-          <ComposableMap
-            projection="geoEqualEarth"
-            projectionConfig={{ scale: 205 }}
-            width={1000}
-            height={520}
-            style={{ width: "100%", height: "100%" }}
-        >
-          <Sphere fill="#edf7f1" stroke="#c7d9cc" strokeWidth={0.8} />
-          <Geographies geography={worldAtlas}>
-            {({ geographies }: { geographies: any[] }) =>
-              geographies.map((geo: any) => (
-                <Geography
-                  key={geo.rsmKey}
-                  geography={geo}
-                  fill="#bfd5c4"
-                  stroke="#87a18d"
-                  strokeWidth={0.7}
-                  style={{
-                    default: { outline: "none" },
-                    hover: { outline: "none", fill: "#b0ccb7" },
-                    pressed: { outline: "none" },
-                  }}
-                />
-              ))
-            }
-          </Geographies>
-          {positioned.map((item) => {
-            const radius = Math.min(17, 6 + item.supplierCount * 0.65);
-            return (
-              <Marker key={item.country} coordinates={[item.longitude, item.latitude]}>
-                <g>
-                  <title>{`Country Name: ${item.country}\nCount of Suppliers: ${item.supplierCount}`}</title>
-                  <circle r={radius + 3} fill="#ffffff" opacity={0.92} />
-                  <circle r={radius} fill="#f5f8f5" stroke="#6f8475" strokeWidth={1.4} />
-                  <text
-                    textAnchor="middle"
-                    y={4}
-                    style={{
-                      fontFamily: "Outfit, system-ui, sans-serif",
-                      fill: "#314337",
-                      fontSize: `${Math.max(8, radius * 0.8)}px`,
-                      fontWeight: 700,
-                      pointerEvents: "none",
-                    }}
-                  >
-                    {item.supplierCount}
-                  </text>
-                </g>
-              </Marker>
-            );
-          })}
-        </ComposableMap>
-      </div>
-    </div>
-  );
 }
 
 const countryMapPositions: Record<
