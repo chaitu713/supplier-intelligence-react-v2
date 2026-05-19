@@ -151,7 +151,7 @@ export function ExecutiveDashboardPage() {
             {executive ? (
               <div className="space-y-4">
                 <PlotlyChart
-                  className="mx-auto h-[285px] max-w-[340px]"
+                  className="h-[285px]"
                   data={[
                     {
                       type: "pie",
@@ -316,7 +316,7 @@ function RiskDonutCard({
       {mix ? (
         <>
           <PlotlyChart
-            className="mx-auto h-[210px] max-w-[300px]"
+            className="h-[210px]"
             data={[
               {
                 type: "pie",

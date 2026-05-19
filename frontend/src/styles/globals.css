@@ -255,6 +255,7 @@ a {
 /* ——— Chart Frames ——— */
 
 .plotly-frame {
+  width: 100%;
   min-width: 0;
 }
 

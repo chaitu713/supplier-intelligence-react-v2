@@ -119,9 +119,9 @@ function toEChartsOption(
       ? undefined
       : {
           top: normalizeMargin(layout.margin?.t, layout.legend ? 44 : 18, 0),
-          right: normalizeMargin(layout.margin?.r, 24),
+          right: normalizeChartGridMargin(layout.margin?.r, 24, hasHorizontalBar),
           bottom: normalizeMargin(layout.margin?.b, 42),
-          left: normalizeMargin(layout.margin?.l, hasHorizontalBar ? 120 : 48),
+          left: normalizeChartGridMargin(layout.margin?.l, hasHorizontalBar ? 16 : 24, hasHorizontalBar),
           containLabel: true,
         },
     xAxis: hasPie
@@ -405,4 +405,9 @@ function zipXY(xValues: any[], yValues: any[]) {
 
 function normalizeMargin(value: unknown, fallback: number, min = 12) {
   return typeof value === "number" ? Math.max(min, value) : fallback;
+}
+
+function normalizeChartGridMargin(value: unknown, fallback: number, isHorizontalBar: boolean) {
+  const margin = normalizeMargin(value, fallback);
+  return isHorizontalBar ? Math.min(margin, 24) : margin;
 }
