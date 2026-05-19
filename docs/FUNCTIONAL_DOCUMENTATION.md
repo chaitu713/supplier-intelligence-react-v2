@@ -40,7 +40,8 @@ flowchart LR
     B --> H
     D --> I["Supplier Advisor AI"]
     B --> I
-    J["ESG Monitoring page"] --> K["Currently blank, future ML monitoring scope"]
+    E --> J["ESG monitoring snapshot"]
+    F --> K["ESG monitoring queue and analysis"]
 ```
 
 ## 4. Current Navigation
@@ -53,7 +54,6 @@ The application currently exposes these main user-facing pages:
 | Simulator | `/simulator` | Implemented |
 | Analytics | `/analytics` | Implemented |
 | Supplier Engagement | `/supplier-engagement` | Implemented |
-| ESG Monitoring | `/esg-monitoring` | Page intentionally blank |
 | Due Diligence Agent | `/due-diligence-agent` | Implemented |
 | Supplier Advisor AI | `/advisor-ai` | Implemented |
 
@@ -63,6 +63,7 @@ Redirects are also configured:
 - `/onboarding` goes to Supplier Engagement.
 - `/overview-dashboard` goes to Executive Dashboard.
 - `/risk-monitoring` goes to Analytics.
+- `/esg-monitoring` redirects to the ESG section inside Analytics.
 - `/due-diligence` goes to Due Diligence Agent.
 
 ## 5. Feature 1: Executive Dashboard
@@ -479,31 +480,55 @@ Important data groups:
 | Traceability | Sites, lots, events, gaps, decisions, score history |
 | Monitoring seed data | Monitoring alerts, observations, rules, actions, and external ESG signals |
 
-## 17. Currently Blank ESG Monitoring Page
+## 17. ESG Monitoring Integrated Into Dashboard and Analytics
 
-The ESG Monitoring frontend page is currently blank by design. The route exists, but the page renders no content.
+### What It Does
 
-Important distinction:
+ESG Monitoring is no longer a standalone page. The application now places ESG monitoring where users already make decisions:
 
-- The backend still has ESG monitoring service logic and an overview API.
-- The frontend page has been cleared and now displays nothing.
+- Executive Dashboard shows a leadership-level ESG monitoring snapshot.
+- Analytics shows the detailed ESG monitoring queue, open alerts, indicator breakdowns, and ML anomaly context.
 
-This means the application has a place reserved for future ML Continuous ESG Monitoring, but the visible user experience is not currently implemented.
+The old `/esg-monitoring` route redirects users to the ESG section inside Analytics.
 
-## 18. Future Scope: ML Continuous ESG Monitoring
+### Why It Matters
 
-This section explains what can be implemented in the blank ESG Monitoring page from a functional business perspective.
+ESG monitoring is not a separate user journey by itself. Executives need a concise ESG attention snapshot, while analysts need the deeper investigation queue. Splitting the functionality across Executive Dashboard and Analytics keeps the experience useful instead of creating another page to maintain.
 
-### 18.1 Monitoring Command Center
+### Current Functional Scope
 
-Functional idea:
+- Executive Dashboard ESG snapshot:
+  - Open ESG alert count.
+  - Deteriorating supplier count.
+  - Average ESG health.
+  - Supplier to review first.
+  - Highest open ESG alert.
+  - Link into Analytics ESG analysis.
+- Analytics ESG monitoring:
+  - Supplier monitoring queue.
+  - Monitoring priority by ESG risk, alerts, status, and ML anomaly score.
+  - Open alert summary.
+  - ESG indicator breakdown.
+  - ML review context and flagged suppliers.
 
-A central ESG monitoring cockpit showing the current health of the supplier network.
+### Current Data Sources
 
-Possible user view:
+Both Executive Dashboard and Analytics use the existing ESG Monitoring overview API. The backend combines internal supplier data with ESG, commodity, risk, alert, and model-ready feature calculations.
+
+The current implementation is an internal-data monitoring layer. Public API ingestion is not yet live, but the service is designed so public ESG feeds can be added into the monitoring engine later.
+
+## 18. Continuous ESG Monitoring Capability
+
+This section explains the implemented monitoring capability and the extension path for public ESG feeds.
+
+### 18.1 Executive Monitoring Snapshot
+
+The Executive Dashboard snapshot shows the current ESG health of the supplier network.
+
+Current user view:
 
 - Total suppliers monitored.
-- Suppliers with new ESG alerts.
+- Suppliers with open ESG alerts.
 - Suppliers deteriorating over time.
 - Suppliers with missing evidence.
 - Average ESG health score.
@@ -514,8 +539,6 @@ Example:
 "12 suppliers have deteriorated in the last 30 days. 5 of them are linked to palm oil and 3 have expired labor evidence."
 
 ### 18.2 Supplier ESG Health Score
-
-Functional idea:
 
 Each supplier gets an ESG health score that summarizes environmental, social, and governance condition.
 
@@ -532,8 +555,6 @@ Users can quickly understand which suppliers are stable and which need attention
 
 ### 18.3 ML Anomaly Detection
 
-Functional idea:
-
 The system detects unusual supplier behavior or risk changes.
 
 Examples:
@@ -549,8 +570,6 @@ Instead of waiting for quarterly reviews, users can catch early warning signs.
 
 ### 18.4 Trend Monitoring
 
-Functional idea:
-
 Show whether a supplier is improving, stable, or deteriorating.
 
 Example:
@@ -564,8 +583,6 @@ Supplier A has:
 The system labels the supplier as "Environmental deterioration."
 
 ### 18.5 Alert Stream
-
-Functional idea:
 
 A live-style list of ESG alerts.
 
@@ -587,11 +604,9 @@ Users should be able to filter alerts by:
 - Supplier.
 - Status.
 
-### 18.6 ESG Indicator Heatmap
+### 18.6 ESG Indicator View
 
-Functional idea:
-
-A heatmap that shows which ESG indicators are creating the most risk.
+Analytics shows which ESG indicators are creating the most risk.
 
 Example indicators:
 
@@ -607,11 +622,9 @@ Business use:
 
 Helps teams see whether risk is mostly environmental, social, or governance driven.
 
-### 18.7 Supplier Watchlist
+### 18.7 Supplier Monitoring Queue
 
-Functional idea:
-
-A ranked list of suppliers that need ESG monitoring.
+A ranked Analytics table shows which suppliers need ESG monitoring.
 
 Ranking can consider:
 
@@ -630,9 +643,7 @@ Teams know who to review first.
 
 ### 18.8 Evidence Refresh Monitoring
 
-Functional idea:
-
-Track whether supplier evidence is current or stale.
+Evidence freshness is a recommended extension to the current ESG Monitoring surface. It should track whether supplier evidence is current or stale.
 
 Examples:
 
@@ -647,9 +658,7 @@ Prevents compliance teams from relying on outdated evidence.
 
 ### 18.9 Monitoring Actions
 
-Functional idea:
-
-Convert alerts into follow-up actions.
+Monitoring actions are a recommended extension that should convert alerts into follow-up actions.
 
 Examples:
 
@@ -669,9 +678,7 @@ Each action can have:
 
 ### 18.10 Monthly ESG Snapshot
 
-Functional idea:
-
-Store a monthly snapshot of each supplier's ESG state.
+A monthly snapshot is a recommended extension that stores each supplier's ESG state over time.
 
 Business use:
 
@@ -682,8 +689,6 @@ This allows users to compare:
 - Supplier before and after corrective actions.
 
 ### 18.11 External ESG Signal Integration
-
-Functional idea:
 
 Bring in external information about supplier countries, commodities, or companies.
 
@@ -698,6 +703,18 @@ Examples:
 Business use:
 
 The system becomes more continuous and less dependent only on internal CSV data.
+
+Potential public API categories:
+
+| API Category | Example Signal | Supplier Linkage |
+| --- | --- | --- |
+| Climate and disaster feeds | Flood, drought, heat, wildfire exposure | Country, region, site, commodity |
+| Deforestation and land-use feeds | Forest loss, protected-area pressure, land-use alerts | Commodity, country, supplier site |
+| News and event feeds | Labor, sanctions, protest, corruption, environmental incidents | Supplier name, country, commodity |
+| Macro ESG data | Country governance, water stress, human rights indicators | Supplier country |
+| Air, water, and pollution feeds | Pollution or environmental quality deterioration | Site location or region |
+
+The application should combine these public signals with supplier data using transparent matching rules. A signal should not automatically create a final decision; it should create monitoring context, risk score movement, or a review action.
 
 ### 18.12 ESG Monitoring Workflow Diagram
 
@@ -714,18 +731,17 @@ flowchart TB
     I --> J["Due diligence or supplier follow-up"]
 ```
 
-## 19. Recommended Future ESG Monitoring Screens
+## 19. ESG Monitoring Screen Areas
 
 | Screen Area | Functional Purpose |
 | --- | --- |
-| Network Summary | Show total ESG health, alerts, deteriorating suppliers, and open actions |
-| Supplier Watchlist | Rank suppliers by monitoring priority |
-| Alert Stream | Show new and open ESG alerts |
-| Indicator Heatmap | Show high-risk ESG attributes |
-| Supplier Detail Panel | Explain one supplier's ESG risk and trend |
-| Evidence Refresh Panel | Show stale, missing, or expired evidence |
-| Action Tracker | Manage monitoring follow-ups |
-| Trend Timeline | Show how ESG posture changed over time |
+| Executive Dashboard ESG Snapshot | Show open alerts, deteriorating suppliers, average ESG health, first supplier to review, and highest alert |
+| Analytics ESG Monitoring Queue | Rank suppliers by ESG risk, open alerts, ML anomaly score, and status |
+| Analytics Alert Summary | Show active ESG alerts and recommended next steps |
+| Analytics ESG Indicator Breakdown | Show high-risk ESG attributes by environmental, social, and governance category |
+| Future Evidence Refresh Panel | Show stale, missing, or expired evidence |
+| Future Action Tracker | Manage monitoring follow-ups |
+| Future Trend Timeline | Show how ESG posture changed over time |
 
 ## 20. End-to-End Example Journey
 
@@ -738,7 +754,7 @@ Example: A responsible sourcing analyst starts their day.
 5. Opens Supplier Engagement to review supplier evidence.
 6. Runs Due Diligence Agent for the riskiest supplier.
 7. Asks Supplier Advisor AI to explain the decision.
-8. In the future, opens ESG Monitoring to see whether the supplier is deteriorating continuously.
+8. Opens Analytics ESG analysis to see whether the supplier is deteriorating continuously.
 
 ## 21. Summary
 
@@ -751,7 +767,8 @@ Ozone AI 4.0 currently implements a broad supplier intelligence workflow:
 - Audit and CAPA management.
 - Traceability and evidence review.
 - Due diligence investigation.
+- Continuous ESG monitoring inside Executive Dashboard and Analytics.
 - AI-powered advisory support.
 - AI review and guardrails.
 
-The ESG Monitoring page is blank now, but the application already has data and backend foundations that can support a future ML Continuous ESG Monitoring command center.
+ESG Monitoring is implemented as embedded dashboard and analytics functionality rather than a standalone page. Public ESG API feeds remain the next natural extension for fresher, external risk signals.

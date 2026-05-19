@@ -2,14 +2,17 @@ import { ApiError } from "../../../api/client";
 import { PlotlyChart } from "../../../components/common/PlotlyChart";
 import { KpiCard } from "../../overview-dashboard/components/KpiCard";
 import { useExecutiveDashboard } from "../hooks/useExecutiveDashboard";
+import { useEsgMonitoringOverview } from "../../esg-monitoring/hooks/useEsgMonitoring";
 import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl, { type GeoJSONSource, type Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 export function ExecutiveDashboardPage() {
   const executiveQuery = useExecutiveDashboard();
+  const esgMonitoringQuery = useEsgMonitoringOverview();
   const errorMessage = getErrorMessage(executiveQuery.error);
   const executive = executiveQuery.data;
+  const esgMonitoring = esgMonitoringQuery.data;
   const certificationTotal = executive
     ? executive.certificationHealth.valid +
       executive.certificationHealth.expiringSoon +
@@ -89,6 +92,15 @@ export function ExecutiveDashboardPage() {
             accentClassName="bg-violet-500"
           />
         </section>
+
+        <ExecutiveEsgMonitoringPanel
+          isLoading={esgMonitoringQuery.isLoading}
+          openAlerts={esgMonitoring?.kpis.openEsgAlerts}
+          deterioratingSuppliers={esgMonitoring?.kpis.deterioratingSuppliers}
+          averageHealth={esgMonitoring?.kpis.averageEsgHealth}
+          topSupplier={esgMonitoring?.watchlist?.[0]}
+          topAlert={esgMonitoring?.alerts?.[0]}
+        />
 
         <section className="grid gap-6">
           <div className="grid gap-6 xl:grid-cols-3">
@@ -312,6 +324,119 @@ function RiskDonutCard({
       ) : (
         <div className="h-[220px] animate-pulse rounded-3xl bg-slate-100" />
       )}
+    </div>
+  );
+}
+
+function ExecutiveEsgMonitoringPanel({
+  isLoading,
+  openAlerts,
+  deterioratingSuppliers,
+  averageHealth,
+  topSupplier,
+  topAlert,
+}: {
+  isLoading: boolean;
+  openAlerts: number | undefined;
+  deterioratingSuppliers: number | undefined;
+  averageHealth: number | undefined;
+  topSupplier:
+    | {
+        supplierName: string;
+        country: string | null;
+        status: string;
+        primaryConcern: string;
+        recommendedAction: string;
+      }
+    | undefined;
+  topAlert:
+    | {
+        supplierName: string;
+        severity: string;
+        indicator: string;
+        recommendedAction: string;
+      }
+    | undefined;
+}) {
+  return (
+    <section className="visual-card p-5">
+      <div className="mb-5 flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="eyebrow">ESG Monitoring</p>
+          <h2 className="mt-2 text-xl font-semibold text-[var(--text)]">
+            ESG signals requiring leadership attention
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+            Snapshot of open ESG alerts, deteriorating suppliers, and the highest-priority supplier follow-up.
+          </p>
+        </div>
+        <a className="tag tag-primary" href="/analytics#analytics-esg">
+          View ESG analysis
+        </a>
+      </div>
+
+      {isLoading ? (
+        <div className="h-36 animate-pulse rounded-2xl bg-slate-100" />
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-[0.8fr_1.1fr_1.1fr]">
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+            <ExecutiveEsgMetric label="Open alerts" value={openAlerts ?? 0} tone="risk" />
+            <ExecutiveEsgMetric label="Deteriorating" value={deterioratingSuppliers ?? 0} tone="warning" />
+            <ExecutiveEsgMetric label="Avg health" value={averageHealth?.toFixed(2) ?? "-"} />
+          </div>
+          <div className="rounded-2xl border border-[var(--border)] bg-white px-4 py-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+              Supplier to review first
+            </p>
+            <p className="mt-2 text-lg font-semibold text-[var(--text)]">
+              {topSupplier?.supplierName ?? "No supplier flagged"}
+            </p>
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              {topSupplier ? `${topSupplier.country ?? "Unknown country"} | ${topSupplier.status}` : "Queue is clear"}
+            </p>
+            <p className="mt-3 text-sm leading-5 text-[var(--text-secondary)]">
+              {topSupplier?.primaryConcern ?? "No priority ESG concern available."}
+            </p>
+            <p className="mt-3 rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm font-semibold text-[var(--text)]">
+              {topSupplier?.recommendedAction ?? "Continue routine monitoring."}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-[var(--border)] bg-white px-4 py-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+              Highest open alert
+            </p>
+            <p className="mt-2 text-lg font-semibold text-[var(--text)]">
+              {topAlert?.supplierName ?? "No open alert"}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {topAlert ? <span className="tag border-rose-200 bg-rose-50 text-rose-700">{topAlert.severity}</span> : null}
+              {topAlert ? <span className="tag border-amber-200 bg-amber-50 text-amber-700">{topAlert.indicator}</span> : null}
+            </div>
+            <p className="mt-3 rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm font-semibold text-[var(--text)]">
+              {topAlert?.recommendedAction ?? "No alert action pending."}
+            </p>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ExecutiveEsgMetric({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: number | string;
+  tone?: "default" | "risk" | "warning";
+}) {
+  const color =
+    tone === "risk" ? "text-rose-700" : tone === "warning" ? "text-amber-700" : "text-[var(--text)]";
+  return (
+    <div className="rounded-2xl border border-[var(--border)] bg-white px-4 py-3">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">{label}</p>
+      <p className={`mt-1 text-2xl font-semibold ${color}`}>{value}</p>
     </div>
   );
 }

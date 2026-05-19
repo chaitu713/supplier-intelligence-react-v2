@@ -126,7 +126,6 @@ Frontend routes:
 | `/simulator` | `SimulatorPage` |
 | `/analytics` | `AnalyticsPage` |
 | `/supplier-engagement` | `SupplierEngagementPage` |
-| `/esg-monitoring` | `EsgMonitoringPage` |
 | `/due-diligence-agent` | `DueDiligencePage` |
 | `/advisor-ai` | `SupplierAdvisorAIPage` |
 
@@ -138,6 +137,7 @@ Redirect routes:
 | `/onboarding` | `/supplier-engagement` |
 | `/overview-dashboard` | `/executive-dashboard` |
 | `/risk-monitoring` | `/analytics` |
+| `/esg-monitoring` | `/analytics#analytics-esg` |
 | `/due-diligence` | `/due-diligence-agent` |
 
 ## 6. Backend API Architecture
@@ -319,7 +319,9 @@ Current technical status:
 
 - Backend service exists.
 - Frontend API contract exists.
-- Frontend page is currently blank and does not render the monitoring UI.
+- Frontend page has been removed.
+- Executive Dashboard and Analytics consume the ESG Monitoring overview API.
+- Current endpoint is an on-demand overview snapshot.
 
 ## 7. Data Model Overview
 
@@ -400,7 +402,7 @@ sequenceDiagram
 | Due Diligence | Supplier investigation UI | Risk service | Risk driver and evidence gap generation |
 | Advisor AI | Chat page and overlay | Advisor router/service | AI context, guardrails, session messages |
 | AI Review | Queue page component | AI review router | Human review of AI items |
-| ESG Monitoring | Route exists, page blank | ESG monitoring service exists | Monitoring seed data and calculated overview |
+| ESG Monitoring | Embedded in Executive Dashboard and Analytics | ESG monitoring router/service | Internal supplier ESG data, calculated overview, alerts, and ML anomaly scoring |
 
 ## 11. AI Architecture
 
@@ -429,33 +431,32 @@ AI is advisory. It should not create final procurement, legal, compliance, or au
 
 ### Frontend
 
-File:
+Files:
 
-- `frontend/src/pages/EsgMonitoringPage.tsx`
+- `frontend/src/api/esgMonitoring.ts`
+- `frontend/src/features/esg-monitoring/hooks/useEsgMonitoring.ts`
+- `frontend/src/features/executive-dashboard/pages/ExecutiveDashboardPage.tsx`
+- `frontend/src/pages/AnalyticsPage.tsx`
 
 Current implementation:
 
-```tsx
-export function EsgMonitoringPage() {
-  return null;
-}
-```
-
-This means:
-
-- Route exists.
-- Navigation can open the page.
-- No UI content is rendered.
+- There is no standalone `EsgMonitoringPage`.
+- `/esg-monitoring` redirects to the ESG section inside Analytics.
+- Executive Dashboard calls the ESG Monitoring overview API to render a leadership snapshot.
+- Analytics calls the ESG Monitoring overview API to render the supplier monitoring queue, alert summary, and ML monitoring context.
+- Numeric values shown to users are rounded to two decimals where decimals are displayed.
 
 ### Frontend API Contract
 
-File:
-
-- `frontend/src/api/esgMonitoring.ts`
-
-It defines types and a function for:
+The frontend contract defines TypeScript interfaces for:
 
 - `GET /api/v1/esg-monitoring/overview`
+- `EsgMonitoringKpi`
+- `EsgIndicatorSummary`
+- `EsgWatchlistSupplier`
+- `EsgAlertItem`
+- `EsgHealthTrend`
+- `EsgMlInsights`
 
 ### Backend
 
@@ -474,46 +475,29 @@ The backend has logic for:
 - Alert items.
 - ML-style anomaly insights.
 
-The UI was intentionally removed, but the backend foundation still exists.
+The current backend returns an on-demand overview snapshot. It does not yet run scheduled public API ingestion jobs.
 
-## 13. Future ESG Monitoring Technical Implementation Plan
+## 13. ESG Monitoring Technical Design
 
-This section maps proposed ML Continuous ESG Monitoring features to technical implementation work.
+This section maps the embedded ML Continuous ESG Monitoring views and the public API extension path.
 
-### 13.1 Monitoring Command Center
+### 13.1 Embedded Monitoring Surfaces
 
-Functional goal:
+Implemented technical behavior:
 
-Show a central ESG monitoring dashboard.
-
-Technical implementation:
-
-- Rebuild `EsgMonitoringPage.tsx` using React and React Query.
-- Call `useEsgMonitoringOverview`.
-- Render KPI cards, watchlist, alert stream, and trend charts.
-- Use existing backend endpoint first.
-- Add new endpoints later if interaction grows.
-
-Possible components:
-
-- `MonitoringKpiStrip`
-- `SupplierWatchlistTable`
-- `EsgAlertStream`
-- `EsgTrendPanel`
-- `IndicatorHeatmap`
+- Executive Dashboard calls `useEsgMonitoringOverview` and renders open alerts, deteriorating suppliers, average ESG health, the first supplier to review, and the highest open alert.
+- Analytics calls `useEsgMonitoringOverview` and renders the ESG Monitoring Queue inside the ESG section.
+- The old route remains as a redirect for compatibility, but the navigation no longer exposes ESG Monitoring as a standalone page.
 
 ### 13.2 Supplier ESG Health Score
-
-Functional goal:
-
-Give each supplier a simple ESG health score.
 
 Technical implementation:
 
 - Combine environmental, social, and governance risk fields.
 - Normalize scores to 0 to 100.
 - Invert risk where needed so higher health means better condition.
-- Store monthly score snapshots in a future table.
+- Return `esgHealthScore` for watchlist suppliers and `averageEsgHealth` for the KPI strip.
+- Store monthly score snapshots in a future table when historical monitoring is added.
 
 Example formula:
 
@@ -522,32 +506,18 @@ ESG health = 100 - weighted ESG risk
 weighted ESG risk = environmental * 0.4 + social * 0.35 + governance * 0.25
 ```
 
-Future data store:
+Recommended future data store:
 
 - `supplier_esg_monthly_snapshots`
 
-Current prototype option:
-
-- `data/monitoring_observations_v2.csv`
-
 ### 13.3 ML Anomaly Detection
 
-Functional goal:
+Technical implementation:
 
-Identify suppliers whose ESG behavior looks unusual.
-
-Technical implementation options:
-
-Option 1, rule-plus-score prototype:
-
-- Use Pandas to calculate changes and thresholds.
-- Flag suppliers above a risk threshold.
-- Flag sudden month-over-month increases.
-
-Option 2, unsupervised ML:
-
-- Use scikit-learn IsolationForest or LocalOutlierFactor.
+- Use scikit-learn IsolationForest when model dependencies and sufficient rows are available.
+- Use deterministic fallback scoring when ML fitting is not possible.
 - Input features can include ESG risk, alerts, certification gaps, audit non-compliance, evidence age, country risk, commodity risk, and transaction dependency.
+- Return `averageAnomalyScore`, `flaggedSuppliers`, top model signals, and flagged supplier details.
 
 Example features:
 
@@ -568,15 +538,13 @@ Output:
 - `ml_anomaly_score`
 - `ml_signal_label`
 - `top_anomaly_drivers`
+- `ml_confidence`
 
 ### 13.4 Trend Monitoring
 
-Functional goal:
-
-Show whether suppliers are improving, stable, or deteriorating.
-
 Technical implementation:
 
+- Current overview returns aggregate `healthTrends`.
 - Persist monthly snapshots.
 - Calculate rolling averages.
 - Compare latest score vs previous month or quarter.
@@ -594,15 +562,13 @@ Technical endpoints:
 - `GET /api/v1/esg-monitoring/trends`
 - `GET /api/v1/esg-monitoring/suppliers/{supplier_id}/history`
 
+These are recommended future endpoints. The current UI uses `GET /overview`.
+
 ### 13.5 Alert Stream and Alert Lifecycle
-
-Functional goal:
-
-Show ESG alerts and allow users to manage them.
 
 Technical implementation:
 
-- Use `monitoring_alerts_v2.csv` for prototype alert records.
+- Current overview returns open ESG alert items.
 - Add alert status update endpoint.
 - Add alert assignment, due date, and notes.
 
@@ -627,13 +593,9 @@ Suggested fields:
 
 ### 13.6 Monitoring Actions
 
-Functional goal:
-
-Turn alerts into business follow-up actions.
-
 Technical implementation:
 
-- Use `monitoring_actions_v2.csv` as prototype storage.
+- Current overview returns recommended actions attached to alerts and watchlist suppliers.
 - Add create/update endpoints.
 - Link actions to alerts and suppliers.
 
@@ -645,9 +607,7 @@ Suggested endpoints:
 
 ### 13.7 Evidence Refresh Monitoring
 
-Functional goal:
-
-Track stale or missing supplier evidence.
+Evidence refresh is a recommended extension. It should track stale or missing supplier evidence.
 
 Technical implementation:
 
@@ -666,9 +626,7 @@ Possible endpoint:
 
 ### 13.8 External ESG Signal Ingestion
 
-Functional goal:
-
-Include ESG signals from outside the internal data files.
+Public API and external ESG ingestion is a recommended extension. It should include ESG signals from outside the internal data files.
 
 Technical implementation:
 
@@ -683,6 +641,8 @@ Production:
 - External APIs or file drops.
 - Deduplication and entity matching.
 - Signal severity classification.
+- Source freshness and confidence scoring.
+- Supplier linkage by supplier name, country, commodity, region, and site location where available.
 
 Possible components:
 
@@ -690,6 +650,39 @@ Possible components:
 - Supplier/entity matching service.
 - Alert generation service.
 - Signal audit log.
+
+Recommended public API categories:
+
+| Category | Example Technical Source Type | Matching Key |
+| --- | --- | --- |
+| Climate and disaster | Public hazard or disaster feeds | Supplier country, region, site |
+| Deforestation and land use | Forest-loss or protected-area feeds | Commodity, country, coordinates |
+| News and incidents | Public news/event APIs | Supplier name, country, commodity |
+| Macro ESG indicators | Public country ESG datasets | Country |
+| Pollution and environment | Air/water/environmental quality feeds | Region or site coordinates |
+
+Suggested normalized table:
+
+```text
+external_esg_signals
+- signal_id
+- source_name
+- source_url
+- source_category
+- observed_at
+- ingested_at
+- country
+- region
+- commodity
+- supplier_name_match
+- latitude
+- longitude
+- severity
+- confidence
+- signal_title
+- signal_summary
+- raw_payload_ref
+```
 
 ### 13.9 Monthly Snapshot Builder
 
@@ -726,9 +719,9 @@ supplier_esg_monitoring_snapshots
 
 ```mermaid
 flowchart TB
-    A["Supplier CSVs"] --> D["Feature builder"]
-    B["ESG CSVs"] --> D
-    C["Audit, alert, certification, evidence CSVs"] --> D
+    A["Supplier tables"] --> D["Feature builder"]
+    B["ESG tables"] --> D
+    C["Audit, alert, certification, evidence tables"] --> D
     E["External ESG signals"] --> D
     D --> F["Feature table"]
     F --> G["Rules and ML scoring"]
@@ -824,20 +817,20 @@ Implemented:
 - Auditing.
 - Traceability.
 - Due Diligence Agent.
+- ESG Monitoring embedded in Executive Dashboard and Analytics.
+- Backend ESG monitoring API.
+- ESG monitoring schemas.
+- ESG monitoring service logic.
 - Supplier Advisor AI.
 - AI review backend and page component.
 - FastAPI backend with routers and service layer.
 - PostgreSQL-backed persistence.
 - AI guardrails and validation.
 
-Blank by design:
+Available for future ESG Monitoring expansion:
 
-- ESG Monitoring frontend page.
-
-Available for future ESG Monitoring:
-
-- Backend ESG monitoring API.
-- ESG monitoring schemas.
-- ESG monitoring service logic.
-- Monitoring seed CSV data.
-- External ESG signal CSV data.
+- Scheduled external public API ingestion.
+- ESG signal event store.
+- Monthly supplier ESG snapshots.
+- Alert lifecycle update APIs.
+- Monitoring action workflow APIs.

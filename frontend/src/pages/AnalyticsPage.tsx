@@ -8,6 +8,11 @@ import type {
   HistogramBin,
   SupplierRankingsResponse,
 } from "../api/analytics";
+import type {
+  EsgAlertItem,
+  EsgMlInsights,
+  EsgWatchlistSupplier,
+} from "../api/esgMonitoring";
 import { PlotlyChart } from "../components/common/PlotlyChart";
 import { useCommodityAnalysis } from "../features/analytics/hooks/useCommodityAnalysis";
 import { useCountryAnalysis } from "../features/analytics/hooks/useCountryAnalysis";
@@ -15,6 +20,7 @@ import { useEsgPillarAnalysis } from "../features/analytics/hooks/useEsgPillarAn
 import { useRiskDistributions } from "../features/analytics/hooks/useRiskDistributions";
 import { useSupplierRankings } from "../features/analytics/hooks/useSupplierRankings";
 import { useTrendAnalysis } from "../features/analytics/hooks/useTrendAnalysis";
+import { useEsgMonitoringOverview } from "../features/esg-monitoring/hooks/useEsgMonitoring";
 import type { SupplierRankingItem } from "../api/analytics";
 
 export function AnalyticsPage() {
@@ -25,6 +31,7 @@ export function AnalyticsPage() {
   const commodityAnalysisQuery = useCommodityAnalysis(filters);
   const supplierRankingsQuery = useSupplierRankings(8, filters);
   const esgPillarQuery = useEsgPillarAnalysis(filters);
+  const esgMonitoringQuery = useEsgMonitoringOverview();
   const trendAnalysisQuery = useTrendAnalysis(filters);
   const errorMessage = getErrorMessage(
     distributionsQuery.error ??
@@ -32,6 +39,7 @@ export function AnalyticsPage() {
       commodityAnalysisQuery.error ??
       supplierRankingsQuery.error ??
       esgPillarQuery.error ??
+      esgMonitoringQuery.error ??
       trendAnalysisQuery.error,
   );
   const distributions = distributionsQuery.data;
@@ -39,6 +47,7 @@ export function AnalyticsPage() {
   const commodityAnalysis = commodityAnalysisQuery.data;
   const supplierRankings = supplierRankingsQuery.data;
   const esgPillars = esgPillarQuery.data;
+  const esgMonitoring = esgMonitoringQuery.data;
   const trendAnalysis = trendAnalysisQuery.data;
   const activeFilterEntries = Object.entries(filters).filter(([, value]) => Boolean(value));
   const clearFilters = () => setFilters({});
@@ -419,6 +428,13 @@ export function AnalyticsPage() {
             title={buildEsgFindingTitle(esgPillars?.byCountry ?? [])}
             detail="Use the ESG pillar split to identify whether exposure is environmental, social, or governance-led."
             action="Pair ESG pillar hotspots with supplier rankings before choosing remediation actions."
+          />
+
+          <EsgMonitoringAnalyticsPanel
+            suppliers={esgMonitoring?.watchlist ?? []}
+            alerts={esgMonitoring?.alerts ?? []}
+            mlInsights={esgMonitoring?.mlInsights}
+            isLoading={esgMonitoringQuery.isLoading}
           />
 
           <TrendMovementPanel
@@ -1557,6 +1573,166 @@ function SupplierRankingChart({
       )}
     </section>
   );
+}
+
+function EsgMonitoringAnalyticsPanel({
+  suppliers,
+  alerts,
+  mlInsights,
+  isLoading,
+}: {
+  suppliers: EsgWatchlistSupplier[];
+  alerts: EsgAlertItem[];
+  mlInsights: EsgMlInsights | undefined;
+  isLoading: boolean;
+}) {
+  const alertCountBySupplier = new Map<number, number>();
+  alerts.forEach((alert) => {
+    alertCountBySupplier.set(alert.supplierId, (alertCountBySupplier.get(alert.supplierId) ?? 0) + 1);
+  });
+  const mlFlagged = new Set(mlInsights?.flaggedSupplierDetails.map((item) => item.supplierId) ?? []);
+  const rows = [...suppliers].sort(
+    (a, b) => b.esgRiskScore + b.mlAnomalyScore - (a.esgRiskScore + a.mlAnomalyScore),
+  );
+
+  return (
+    <section className="mt-8 rounded-[1.75rem] border border-[var(--border)] bg-white/80 p-5">
+      <div className="mb-5 flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h3 className="visual-title">ESG Monitoring Queue</h3>
+          <p className="visual-description">
+            Action-oriented queue using open alerts, ESG risk, ML anomaly score, and supplier exposure.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <TrendMetricPill label="Open Alerts" value={String(alerts.length)} />
+          <TrendMetricPill label="ML Flagged" value={String(mlInsights?.flaggedSuppliers ?? 0)} />
+          <TrendMetricPill
+            label="Avg Anomaly"
+            value={mlInsights ? mlInsights.averageAnomalyScore.toFixed(2) : "-"}
+          />
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="h-56 animate-pulse rounded-3xl bg-slate-100" />
+      ) : rows.length === 0 ? (
+        <div className="empty-state px-6 py-16 text-center text-sm">
+          No ESG monitoring suppliers available for the current data set.
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Supplier</th>
+                <th>Monitoring Priority</th>
+                <th>Signals</th>
+                <th>Primary Gap</th>
+                <th>Recommended Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((supplier) => {
+                const alertCount = alertCountBySupplier.get(supplier.supplierId) ?? 0;
+                const mlFlag = mlFlagged.has(supplier.supplierId);
+                return (
+                  <tr key={supplier.supplierId}>
+                    <td className="min-w-[15rem]">
+                      <p className="font-semibold text-[var(--text)]">{supplier.supplierName}</p>
+                      <p className="mt-1 text-xs text-[var(--muted)]">
+                        {supplier.country ?? "Unknown country"} | {supplier.tier ?? "No tier"}
+                      </p>
+                    </td>
+                    <td>
+                      <EsgMonitorPriorityBadge
+                        value={getEsgMonitoringPriority(supplier, alertCount, mlFlag)}
+                      />
+                    </td>
+                    <td className="min-w-[16rem]">
+                      <div className="flex flex-wrap gap-2">
+                        <EsgSignalChip label={`ESG ${supplier.esgRiskScore.toFixed(2)}`} tone="risk" />
+                        <EsgSignalChip label={`ML ${supplier.mlAnomalyScore.toFixed(2)}`} tone="warning" />
+                        <EsgSignalChip label={`${alertCount} alerts`} tone={alertCount ? "risk" : "default"} />
+                        {mlFlag ? <EsgSignalChip label="ML flagged" tone="warning" /> : null}
+                      </div>
+                    </td>
+                    <td className="min-w-[13rem]">{supplier.primaryConcern}</td>
+                    <td className="min-w-[17rem] font-semibold text-[var(--text)]">
+                      {supplier.recommendedAction}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {alerts.length ? (
+        <div className="mt-5 grid gap-3 lg:grid-cols-3">
+          {alerts.slice(0, 3).map((alert) => (
+            <div key={alert.id} className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-rose-950">{alert.supplierName}</p>
+                  <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-rose-700">
+                    {alert.indicator}
+                  </p>
+                </div>
+                <span className="tag border-rose-200 bg-white text-rose-700">{alert.severity}</span>
+              </div>
+              <p className="mt-3 text-sm font-semibold leading-5 text-rose-950">
+                {alert.recommendedAction}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function EsgSignalChip({
+  label,
+  tone = "default",
+}: {
+  label: string;
+  tone?: "default" | "risk" | "warning";
+}) {
+  const className =
+    tone === "risk"
+      ? "tag border-rose-200 bg-rose-50 text-rose-700"
+      : tone === "warning"
+        ? "tag border-amber-200 bg-amber-50 text-amber-700"
+        : "tag border-[var(--border)] bg-white text-[var(--text-secondary)]";
+  return <span className={className}>{label}</span>;
+}
+
+function EsgMonitorPriorityBadge({ value }: { value: string }) {
+  const className =
+    value === "Urgent review"
+      ? "tag border-rose-200 bg-rose-50 text-rose-700"
+      : value === "Watch closely"
+        ? "tag border-amber-200 bg-amber-50 text-amber-700"
+        : "tag tag-primary";
+  return <span className={className}>{value}</span>;
+}
+
+function getEsgMonitoringPriority(
+  supplier: EsgWatchlistSupplier,
+  alertCount: number,
+  mlFlagged: boolean,
+) {
+  const priorityScore =
+    supplier.esgRiskScore + supplier.mlAnomalyScore + alertCount * 0.15 + (mlFlagged ? 0.25 : 0);
+  if (priorityScore >= 1.65 || supplier.status.toLowerCase().includes("critical")) {
+    return "Urgent review";
+  }
+  if (priorityScore >= 1.15 || supplier.status.toLowerCase().includes("watch")) {
+    return "Watch closely";
+  }
+  return "Monitor";
 }
 
 function EsgPillarByCountryChart({
