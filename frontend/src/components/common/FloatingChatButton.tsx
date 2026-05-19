@@ -9,12 +9,13 @@ export function FloatingChatButton({ isOpen, onClick }: FloatingChatButtonProps)
       type="button"
       onClick={onClick}
       aria-label={isOpen ? "Close Supplier Advisor AI" : "Open Supplier Advisor AI"}
-      className="fixed bottom-6 right-6 z-50 inline-flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2"
+      className="fixed bottom-6 right-6 z-50 inline-flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-95"
       style={{
-        background: "var(--primary)",
+        background: "linear-gradient(135deg, #1a7a3e 0%, #166534 100%)",
         color: "white",
-        boxShadow:
-          "0 18px 40px -18px color-mix(in srgb, var(--primary) 55%, transparent)",
+        boxShadow: isOpen
+          ? "0 8px 24px -4px rgba(22, 101, 52, 0.4)"
+          : "0 12px 28px -8px rgba(22, 101, 52, 0.45), 0 4px 12px -2px rgba(22, 101, 52, 0.2)",
       }}
     >
       {isOpen ? (
@@ -25,6 +26,7 @@ export function FloatingChatButton({ isOpen, onClick }: FloatingChatButtonProps)
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           aria-hidden="true"
+          style={{ transition: "transform 0.2s ease" }}
         >
           <path
             d="M6 6l12 12M18 6L6 18"

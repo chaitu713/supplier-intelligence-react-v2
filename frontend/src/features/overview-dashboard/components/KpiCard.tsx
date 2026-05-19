@@ -15,14 +15,20 @@ export function KpiCard({
 
   return (
     <div
-      className="visual-card interactive-card relative flex min-h-[142px] flex-col overflow-hidden p-4"
+      className="visual-card interactive-card group relative flex min-h-[152px] flex-col overflow-hidden p-4"
       style={{
-        background: `linear-gradient(180deg, rgba(255,255,255,0.99) 0%, ${tone.wash} 100%)`,
+        background: `linear-gradient(180deg, rgba(255,255,255,0.995) 0%, ${tone.wash} 100%)`,
       }}
     >
+      {/* Decorative background accent */}
+      <div
+        className="pointer-events-none absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-[0.05] blur-2xl transition-opacity duration-500 group-hover:opacity-[0.1]"
+        style={{ background: tone.color }}
+      />
+
       <div className="flex h-8 items-start justify-between gap-4">
         <div
-          className="grid h-7 w-7 place-items-center rounded-lg border"
+          className="grid h-8 w-8 place-items-center rounded-[10px] border shadow-sm"
           style={{
             borderColor: tone.border,
             background: tone.iconBg,
@@ -33,12 +39,24 @@ export function KpiCard({
           <MetricIcon kind={tone.icon} />
         </div>
       </div>
-      <p className="mt-4 min-h-[34px] text-[10.5px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+      <p className="mt-4 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
         {label}
       </p>
       <p className="mt-1 text-[1.9rem] font-semibold leading-none tracking-tight text-[var(--text)]">
         {value}
       </p>
+      <p className="mt-2 line-clamp-1 text-xs leading-5 text-[var(--muted)]">
+        {subtitle}
+      </p>
+
+      {/* Accent bottom line */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-[2px]"
+        style={{
+          background: `linear-gradient(90deg, transparent, ${tone.line}, transparent)`,
+          opacity: 0.4,
+        }}
+      />
     </div>
   );
 }

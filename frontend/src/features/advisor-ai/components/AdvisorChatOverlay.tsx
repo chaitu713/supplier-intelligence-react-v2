@@ -141,8 +141,18 @@ export function AdvisorChatOverlay({ isOpen, onClose }: AdvisorChatOverlayProps)
                 <div className="text-sm font-semibold text-[var(--text)]">
                   Supplier Advisor
                 </div>
-                <div className="mt-0.5 text-xs text-[var(--muted)]">
-                  {sessionId ? "Session active" : "Starting session..."}
+                <div className="mt-0.5 flex items-center gap-1.5 text-xs text-[var(--muted)]">
+                  {sessionId ? (
+                    <>
+                      <span
+                        className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500"
+                        style={{ animation: "live-dot 2s ease-in-out infinite" }}
+                      />
+                      Session active
+                    </>
+                  ) : (
+                    "Starting session..."
+                  )}
                   {sendMessageMutation.isPending ? " • Generating" : ""}
                 </div>
               </div>
@@ -256,6 +266,25 @@ export function AdvisorChatOverlay({ isOpen, onClose }: AdvisorChatOverlayProps)
                     message={message}
                   />
                 ))}
+                {sendMessageMutation.isPending && (
+                  <div className="flex items-start gap-3 py-2">
+                    <div
+                      className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border shadow-sm"
+                      style={{
+                        borderColor: "var(--primary-muted)",
+                        background: "var(--primary-soft)",
+                        color: "var(--primary)",
+                      }}
+                    >
+                      <AdvisorCompassIcon className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="flex items-center gap-1 rounded-2xl border border-[var(--border)] bg-white/80 px-4 py-2.5">
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--muted)]" style={{ animation: "typing-bounce 1s ease-in-out infinite" }} />
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--muted)]" style={{ animation: "typing-bounce 1s ease-in-out 0.15s infinite" }} />
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--muted)]" style={{ animation: "typing-bounce 1s ease-in-out 0.3s infinite" }} />
+                    </div>
+                  </div>
+                )}
                 <div ref={scrollAnchorRef} />
               </div>
             )}

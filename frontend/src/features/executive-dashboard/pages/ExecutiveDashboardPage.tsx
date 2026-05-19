@@ -22,16 +22,24 @@ export function ExecutiveDashboardPage() {
   return (
     <div className="page-shell">
       <div className="flex w-full flex-col gap-8">
-        <section className="page-header overflow-hidden px-8 py-8">
+        <section className="page-header overflow-hidden px-8 py-8 animate-fade-in">
           <div
-            className="rounded-[2rem] border px-6 py-6 sm:px-8"
+            className="relative rounded-[2rem] border px-6 py-6 sm:px-8"
             style={{
               borderColor: "var(--primary-muted)",
               background:
                 "radial-gradient(circle at top left, rgba(111, 214, 145, 0.24), transparent 36%), linear-gradient(135deg, #f8fcf7 0%, #eef7f0 45%, #f7fbf8 100%)",
             }}
           >
-            <div className="flex flex-col gap-6">
+            {/* Decorative SVG pattern */}
+            <svg className="pointer-events-none absolute right-6 top-6 h-32 w-32 text-[var(--primary)] opacity-[0.04]" viewBox="0 0 128 128" fill="none">
+              <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="1.5" />
+              <circle cx="64" cy="64" r="40" stroke="currentColor" strokeWidth="1" />
+              <circle cx="64" cy="64" r="24" stroke="currentColor" strokeWidth="0.8" />
+              <line x1="64" y1="4" x2="64" y2="124" stroke="currentColor" strokeWidth="0.6" />
+              <line x1="4" y1="64" x2="124" y2="64" stroke="currentColor" strokeWidth="0.6" />
+            </svg>
+            <div className="relative flex flex-col gap-6">
               <div className="max-w-3xl">
                 <p className="eyebrow text-sm">Executive Dashboard</p>
                 <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text)] sm:text-4xl">
@@ -52,7 +60,7 @@ export function ExecutiveDashboardPage() {
           </div>
         ) : null}
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6 animate-slide-up">
           <KpiCard
             label="Total Suppliers"
             value={executive ? executive.kpis.totalSuppliers.toLocaleString() : "-"}
@@ -102,7 +110,7 @@ export function ExecutiveDashboardPage() {
           topAlert={esgMonitoring?.alerts?.[0]}
         />
 
-        <section className="grid gap-6">
+        <section className="grid gap-6 animate-slide-up-delay-1">
           <div className="grid gap-6 xl:grid-cols-3">
             <RiskDonutCard
               title="Operational Risk"
@@ -222,7 +230,7 @@ export function ExecutiveDashboardPage() {
           </div>
         </section>
 
-        <section className="visual-card p-6">
+        <section className="visual-card p-6 animate-slide-up-delay-2">
           <div className="visual-header">
           <h2 className="visual-title">Suppliers under Review</h2>
           <p className="visual-description">
@@ -230,10 +238,17 @@ export function ExecutiveDashboardPage() {
           </p>
           </div>
           <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-            {(executive?.attention.suppliersRequiringReview ?? []).map((supplier) => (
+            {(executive?.attention.suppliersRequiringReview ?? []).map((supplier) => {
+              const riskColor =
+                supplier.riskLevel === "High"
+                  ? { bg: "rgba(239, 68, 68, 0.1)", border: "rgba(239, 68, 68, 0.22)", text: "#dc2626" }
+                  : supplier.riskLevel === "Medium"
+                    ? { bg: "rgba(245, 158, 11, 0.1)", border: "rgba(245, 158, 11, 0.22)", text: "#b45309" }
+                    : { bg: "rgba(22, 101, 52, 0.08)", border: "rgba(22, 101, 52, 0.18)", text: "#166534" };
+              return (
               <div
                 key={supplier.supplierId}
-                className="visual-card-soft flex min-h-[178px] flex-col rounded-[1rem] p-4"
+                className="group visual-card-soft flex min-h-[178px] flex-col rounded-[1rem] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-sm)]"
               >
                 <div className="grid grid-cols-[1fr_auto] items-start gap-3">
                   <div className="min-w-0">
@@ -241,7 +256,14 @@ export function ExecutiveDashboardPage() {
                       {supplier.supplierName}
                     </p>
                   </div>
-                  <span className="mt-0.5 rounded-full bg-[var(--surface-2)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-secondary)]">
+                  <span
+                    className="mt-0.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                    style={{
+                      background: riskColor.bg,
+                      border: `1px solid ${riskColor.border}`,
+                      color: riskColor.text,
+                    }}
+                  >
                     {supplier.riskLevel}
                   </span>
                 </div>
@@ -259,7 +281,8 @@ export function ExecutiveDashboardPage() {
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       </div>
@@ -359,7 +382,7 @@ function ExecutiveEsgMonitoringPanel({
     | undefined;
 }) {
   return (
-    <section className="visual-card p-5">
+    <section className="visual-card p-5 animate-slide-up-delay-1">
       <div className="mb-5 flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="eyebrow">ESG Monitoring</p>
@@ -434,7 +457,13 @@ function ExecutiveEsgMetric({
   const color =
     tone === "risk" ? "text-rose-700" : tone === "warning" ? "text-amber-700" : "text-[var(--text)]";
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-white px-4 py-3">
+    <div
+      className="rounded-2xl border px-4 py-3 transition-all duration-200 hover:-translate-y-0.5"
+      style={{
+        borderColor: tone === "risk" ? "rgba(239, 68, 68, 0.14)" : tone === "warning" ? "rgba(245, 158, 11, 0.14)" : "var(--border)",
+        background: tone === "risk" ? "linear-gradient(180deg, #fff 0%, rgba(254,242,242,0.4) 100%)" : tone === "warning" ? "linear-gradient(180deg, #fff 0%, rgba(255,251,235,0.4) 100%)" : "linear-gradient(180deg, #fff 0%, rgba(240,253,244,0.3) 100%)",
+      }}
+    >
       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">{label}</p>
       <p className={`mt-1 text-2xl font-semibold ${color}`}>{value}</p>
     </div>

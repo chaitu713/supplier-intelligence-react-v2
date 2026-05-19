@@ -1,0 +1,104 @@
+{
+  "hash": "cb579e7c",
+  "browserHash": "be31f83c",
+  "optimized": {
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "803f8104",
+      "needsInterop": true
+    },
+    "react-dom": {
+      "src": "../../node_modules/react-dom/index.js",
+      "file": "react-dom.js",
+      "fileHash": "c8369cc1",
+      "needsInterop": true
+    },
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "b35a437e",
+      "needsInterop": true
+    },
+    "react/jsx-runtime": {
+      "src": "../../node_modules/react/jsx-runtime.js",
+      "file": "react_jsx-runtime.js",
+      "fileHash": "b5731af6",
+      "needsInterop": true
+    },
+    "@tanstack/react-query": {
+      "src": "../../node_modules/@tanstack/react-query/build/modern/index.js",
+      "file": "@tanstack_react-query.js",
+      "fileHash": "6eeb07a7",
+      "needsInterop": false
+    },
+    "echarts/charts": {
+      "src": "../../node_modules/echarts/charts.js",
+      "file": "echarts_charts.js",
+      "fileHash": "e8bec16f",
+      "needsInterop": false
+    },
+    "echarts/components": {
+      "src": "../../node_modules/echarts/components.js",
+      "file": "echarts_components.js",
+      "fileHash": "0753f016",
+      "needsInterop": false
+    },
+    "echarts/core": {
+      "src": "../../node_modules/echarts/core.js",
+      "file": "echarts_core.js",
+      "fileHash": "c675bf2e",
+      "needsInterop": false
+    },
+    "echarts/renderers": {
+      "src": "../../node_modules/echarts/renderers.js",
+      "file": "echarts_renderers.js",
+      "fileHash": "f6764356",
+      "needsInterop": false
+    },
+    "maplibre-gl": {
+      "src": "../../node_modules/maplibre-gl/dist/maplibre-gl.js",
+      "file": "maplibre-gl.js",
+      "fileHash": "ed475eeb",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "45a89c5c",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.js",
+      "file": "react-router-dom.js",
+      "fileHash": "4a73f124",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-DWI44AE7": {
+      "file": "chunk-DWI44AE7.js"
+    },
+    "chunk-IBGTYWFQ": {
+      "file": "chunk-IBGTYWFQ.js"
+    },
+    "chunk-TGQDHHFE": {
+      "file": "chunk-TGQDHHFE.js"
+    },
+    "chunk-H7ERFXDA": {
+      "file": "chunk-H7ERFXDA.js"
+    },
+    "chunk-U5ZAPKHE": {
+      "file": "chunk-U5ZAPKHE.js"
+    },
+    "chunk-LNWGNN6H": {
+      "file": "chunk-LNWGNN6H.js"
+    },
+    "chunk-OADXXNBQ": {
+      "file": "chunk-OADXXNBQ.js"
+    },
+    "chunk-WS6WXAIR": {
+      "file": "chunk-WS6WXAIR.js"
+    }
+  }
+}

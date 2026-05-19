@@ -341,23 +341,32 @@ export function SimulatorPage() {
   return (
     <div className="page-shell">
       <div className="flex w-full flex-col gap-8">
-        <header className="page-header overflow-hidden px-8 py-8">
+        <header className="page-header overflow-hidden px-8 py-8 animate-fade-in">
           <div
-            className="rounded-[2rem] border px-6 py-6 sm:px-8"
+            className="relative rounded-[2rem] border px-6 py-6 sm:px-8"
             style={{
               borderColor: "var(--primary-muted)",
               background:
                 "radial-gradient(circle at top left, rgba(111, 214, 145, 0.18), transparent 36%), linear-gradient(135deg, #f8fcf7 0%, #f1f7f2 45%, #f9fcfa 100%)",
             }}
           >
-            <p className="eyebrow text-sm">Simulator</p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text)] sm:text-4xl">
-              Scenario planning for supplier, country, commodity, and operational disruption
-            </h1>
-            <p className="mt-4 max-w-3xl text-sm leading-6 text-[var(--text-secondary)] sm:text-base">
-              Run what-if simulations against the supplier network and compare before
-              versus after outcomes across risk posture, band movement, and impacted suppliers.
-            </p>
+            {/* Decorative pattern */}
+            <svg className="pointer-events-none absolute right-6 top-6 h-28 w-28 text-[var(--primary)] opacity-[0.04]" viewBox="0 0 112 112" fill="none">
+              <path d="M56 8v96M8 56h96" stroke="currentColor" strokeWidth="0.8" />
+              <circle cx="56" cy="56" r="44" stroke="currentColor" strokeWidth="1" />
+              <circle cx="56" cy="56" r="28" stroke="currentColor" strokeWidth="0.8" />
+              <path d="M56 56L84 28M56 56L28 84" stroke="currentColor" strokeWidth="0.6" />
+            </svg>
+            <div className="relative">
+              <p className="eyebrow text-sm">Simulator</p>
+              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text)] sm:text-4xl">
+                Scenario planning for supplier, country, commodity, and operational disruption
+              </h1>
+              <p className="mt-4 max-w-3xl text-sm leading-6 text-[var(--text-secondary)] sm:text-base">
+                Run what-if simulations against the supplier network and compare before
+                versus after outcomes across risk posture, band movement, and impacted suppliers.
+              </p>
+            </div>
           </div>
         </header>
 
@@ -367,7 +376,7 @@ export function SimulatorPage() {
           </div>
         ) : null}
 
-        <section className="visual-card p-8">
+        <section className="visual-card p-8 animate-slide-up">
           <div className="visual-header">
             <h2 className="visual-title">Scenario Builder</h2>
             <p className="visual-description">
@@ -921,7 +930,16 @@ export function SimulatorPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
                   Ready Check
                 </p>
-                <p className="mt-1 text-sm font-semibold text-[var(--text)]">
+                <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-[var(--text)]">
+                  <span
+                    className="inline-block h-2 w-2 rounded-full"
+                    style={{
+                      background: currentScenarioReady ? "#16a34a" : "#f59e0b",
+                      boxShadow: currentScenarioReady
+                        ? "0 0 0 3px rgba(22, 163, 74, 0.16)"
+                        : "0 0 0 3px rgba(245, 158, 11, 0.16)",
+                    }}
+                  />
                   {currentScenarioReady ? currentScenarioPreview : currentMissingInput}
                 </p>
               </div>
@@ -1463,22 +1481,51 @@ function WorkflowSteps({ activeStep }: { activeStep: number }) {
         return (
           <div
             key={step}
-            className="flex items-center gap-3 rounded-[1rem] border px-4 py-3"
+            className="flex items-center gap-3 rounded-[1rem] border px-4 py-3 transition-all duration-200"
             style={{
-              borderColor: isActive || isComplete ? "rgba(22, 101, 52, 0.28)" : "var(--border)",
-              background: isActive || isComplete ? "rgba(240, 253, 244, 0.82)" : "rgba(255,255,255,0.68)",
+              borderColor: isComplete
+                ? "rgba(22, 163, 74, 0.28)"
+                : isActive
+                  ? "rgba(22, 101, 52, 0.28)"
+                  : "var(--border)",
+              background: isComplete
+                ? "rgba(240, 253, 244, 0.9)"
+                : isActive
+                  ? "rgba(240, 253, 244, 0.72)"
+                  : "rgba(255,255,255,0.68)",
+              boxShadow: isActive
+                ? "0 2px 8px rgba(22, 101, 52, 0.06)"
+                : "none",
             }}
           >
             <span
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-semibold"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-semibold transition-all duration-200"
               style={{
-                background: isActive || isComplete ? "var(--primary)" : "var(--surface-2)",
+                background: isComplete
+                  ? "#16a34a"
+                  : isActive
+                    ? "var(--primary)"
+                    : "var(--surface-2)",
                 color: isActive || isComplete ? "#fff" : "var(--muted)",
               }}
             >
-              {stepNumber}
+              {isComplete ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12l5 5L20 7" />
+                </svg>
+              ) : (
+                stepNumber
+              )}
             </span>
-            <span className="text-sm font-semibold text-[var(--text)]">{step}</span>
+            <div className="min-w-0">
+              <span className="text-sm font-semibold text-[var(--text)]">{step}</span>
+              {isActive && (
+                <span
+                  className="ml-2 inline-block h-1.5 w-1.5 rounded-full bg-[var(--primary)]"
+                  style={{ animation: "live-dot 1.5s ease-in-out infinite" }}
+                />
+              )}
+            </div>
           </div>
         );
       })}
@@ -1553,7 +1600,12 @@ function DecisionSummary({ data }: { data: SimulatorScenarioResponse }) {
 
 function SimulatorInfoTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="metric-pill">
+    <div
+      className="metric-pill relative overflow-hidden pl-5"
+      style={{
+        borderLeft: "3px solid color-mix(in srgb, var(--primary) 35%, transparent)",
+      }}
+    >
       <p className="metric-pill-label">{label}</p>
       <p className="metric-pill-value">{value}</p>
     </div>
@@ -1568,7 +1620,12 @@ function SeverityDetailCard({
   detail: string;
 }) {
   return (
-    <div className="metric-pill">
+    <div
+      className="metric-pill relative overflow-hidden pl-5"
+      style={{
+        borderLeft: "3px solid color-mix(in srgb, var(--primary) 25%, transparent)",
+      }}
+    >
       <p className="metric-pill-label">{label}</p>
       <p className="metric-pill-detail">{detail}</p>
     </div>

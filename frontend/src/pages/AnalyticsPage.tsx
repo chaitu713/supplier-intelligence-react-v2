@@ -83,24 +83,34 @@ export function AnalyticsPage() {
   return (
     <div className="page-shell">
       <div className="flex w-full flex-col gap-8">
-        <header className="page-header overflow-hidden px-8 py-8">
+        <header className="page-header overflow-hidden px-8 py-8 animate-fade-in">
           <div
-            className="rounded-[2rem] border px-6 py-6 sm:px-8"
+            className="relative rounded-[2rem] border px-6 py-6 sm:px-8"
             style={{
               borderColor: "var(--primary-muted)",
               background:
                 "radial-gradient(circle at top left, rgba(111, 214, 145, 0.18), transparent 36%), linear-gradient(135deg, #f8fcf7 0%, #f1f7f2 45%, #f9fcfa 100%)",
             }}
           >
-            <p className="eyebrow text-sm">Analytics</p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text)] sm:text-4xl">
-              Detailed risk distributions and analytical breakdowns
-            </h1>
-            <p className="mt-4 max-w-3xl text-sm leading-6 text-[var(--text-secondary)] sm:text-base">
-              This workspace goes deeper than the Executive Dashboard and explains how
-              supplier risk is distributed across the network. Phase 1 starts with
-              detailed overall, operational, ESG, and trend analysis across the network.
-            </p>
+            {/* Decorative grid pattern */}
+            <svg className="pointer-events-none absolute right-6 top-6 h-28 w-28 text-[var(--primary)] opacity-[0.04]" viewBox="0 0 112 112" fill="none">
+              <rect x="8" y="8" width="96" height="96" rx="8" stroke="currentColor" strokeWidth="1" />
+              <line x1="36" y1="8" x2="36" y2="104" stroke="currentColor" strokeWidth="0.6" />
+              <line x1="64" y1="8" x2="64" y2="104" stroke="currentColor" strokeWidth="0.6" />
+              <line x1="8" y1="36" x2="104" y2="36" stroke="currentColor" strokeWidth="0.6" />
+              <line x1="8" y1="64" x2="104" y2="64" stroke="currentColor" strokeWidth="0.6" />
+            </svg>
+            <div className="relative">
+              <p className="eyebrow text-sm">Analytics</p>
+              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text)] sm:text-4xl">
+                Detailed risk distributions and analytical breakdowns
+              </h1>
+              <p className="mt-4 max-w-3xl text-sm leading-6 text-[var(--text-secondary)] sm:text-base">
+                This workspace goes deeper than the Executive Dashboard and explains how
+                supplier risk is distributed across the network. Phase 1 starts with
+                detailed overall, operational, ESG, and trend analysis across the network.
+              </p>
+            </div>
           </div>
         </header>
 
@@ -110,7 +120,7 @@ export function AnalyticsPage() {
           </div>
         ) : null}
 
-        <section className="surface-card sticky top-[calc(var(--nav-h)+0.75rem)] z-30 px-6 py-4">
+        <section className="surface-card sticky top-[calc(var(--nav-h)+0.75rem)] z-30 px-6 py-4 animate-slide-up">
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
               <div>
@@ -632,11 +642,11 @@ function InsightCard({
   detail: string;
 }) {
   return (
-    <div className="rounded-[1.35rem] border border-[var(--border)] bg-white/80 px-4 py-4">
+    <div className="group rounded-[1.35rem] border border-[var(--border)] bg-white/80 px-4 py-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(22,101,52,0.12)] hover:shadow-[0_4px_12px_rgba(22,101,52,0.06)]">
       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
         {label}
       </p>
-      <p className="mt-2 truncate text-xl font-semibold text-[var(--text)]" title={value}>
+      <p className="mt-2 truncate text-xl font-semibold text-[var(--text)] transition-colors duration-200 group-hover:text-[var(--primary)]" title={value}>
         {value}
       </p>
       <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--text-secondary)]">
@@ -648,23 +658,31 @@ function InsightCard({
 
 function AnalyticsSectionNav() {
   const links = [
-    { label: "Overview", href: "#analytics-overview" },
-    { label: "Country", href: "#analytics-country" },
-    { label: "Commodity", href: "#analytics-commodity" },
-    { label: "Suppliers", href: "#analytics-suppliers" },
-    { label: "ESG", href: "#analytics-esg" },
-    { label: "Trends", href: "#analytics-trends" },
+    { label: "Overview", href: "#analytics-overview", icon: "◈" },
+    { label: "Country", href: "#analytics-country", icon: "◉" },
+    { label: "Commodity", href: "#analytics-commodity", icon: "◆" },
+    { label: "Suppliers", href: "#analytics-suppliers", icon: "◎" },
+    { label: "ESG", href: "#analytics-esg", icon: "◇" },
+    { label: "Trends", href: "#analytics-trends", icon: "◌" },
   ];
 
   return (
-    <nav className="sticky top-[calc(var(--nav-h)+8.25rem)] z-20 rounded-[1.1rem] border border-[var(--border)] bg-white/92 px-3 py-3 shadow-[var(--shadow-sm)] backdrop-blur">
-      <div className="flex gap-2 overflow-x-auto">
+    <nav
+      className="sticky top-[calc(var(--nav-h)+8.25rem)] z-20 rounded-[1.1rem] border px-3 py-2.5 backdrop-blur-xl"
+      style={{
+        borderColor: "var(--border)",
+        background: "rgba(255, 255, 255, 0.88)",
+        boxShadow: "var(--shadow-sm), 0 0 0 1px rgba(255,255,255,0.6) inset",
+      }}
+    >
+      <div className="flex gap-1.5 overflow-x-auto">
         {links.map((link) => (
           <a
             key={link.href}
             href={link.href}
-            className="rounded-lg px-3 py-2 text-sm font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+            className="flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-all duration-150 hover:bg-[var(--primary-soft)] hover:text-[var(--primary)]"
           >
+            <span className="text-[10px] opacity-50">{link.icon}</span>
             {link.label}
           </a>
         ))}
@@ -737,7 +755,13 @@ function KeyFindingPanel({
   action: string;
 }) {
   return (
-    <div className="mt-6 rounded-[1.5rem] border border-[rgba(22,101,52,0.14)] bg-[rgba(240,253,244,0.62)] px-5 py-4">
+    <div
+      className="mt-6 rounded-[1.5rem] border bg-[rgba(240,253,244,0.62)] px-5 py-4"
+      style={{
+        borderColor: "rgba(22,101,52,0.14)",
+        borderLeft: "4px solid rgba(22, 101, 52, 0.35)",
+      }}
+    >
       <div className="grid gap-4 xl:grid-cols-[1fr_0.7fr] xl:items-center">
         <div>
           <p className="eyebrow">{eyebrow}</p>

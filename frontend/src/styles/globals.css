@@ -23,9 +23,10 @@
   --border: rgba(17, 22, 18, 0.08);
   --border-strong: rgba(17, 22, 18, 0.15);
   --shadow-xs: 0 1px 2px rgba(17, 22, 18, 0.04);
-  --shadow-sm: 0 1px 3px rgba(17, 22, 18, 0.07), 0 1px 2px rgba(17, 22, 18, 0.035);
-  --shadow: 0 8px 24px rgba(17, 22, 18, 0.08), 0 1px 4px rgba(17, 22, 18, 0.045);
-  --shadow-lg: 0 16px 48px rgba(17, 22, 18, 0.12), 0 5px 16px rgba(17, 22, 18, 0.07);
+  --shadow-sm: 0 1px 3px rgba(17, 22, 18, 0.06), 0 1px 2px rgba(17, 22, 18, 0.03);
+  --shadow: 0 4px 12px rgba(17, 22, 18, 0.06), 0 1px 4px rgba(17, 22, 18, 0.04);
+  --shadow-lg: 0 12px 36px rgba(17, 22, 18, 0.10), 0 4px 12px rgba(17, 22, 18, 0.06);
+  --shadow-xl: 0 20px 48px rgba(17, 22, 18, 0.12), 0 8px 20px rgba(17, 22, 18, 0.07);
   --error: #dc2626;
   --error-soft: #fef2f2;
   --warning: #d97706;
@@ -40,6 +41,9 @@
   --r-xl: 20px;
   --r-2xl: 24px;
   --nav-h: 58px;
+  --transition-fast: 0.14s cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-smooth: 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-spring: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 html,
@@ -82,7 +86,7 @@ h6 {
   font-family: "Outfit", system-ui, sans-serif;
   font-weight: 600;
   line-height: 1.22;
-  letter-spacing: -0.022em;
+  letter-spacing: -0.025em;
 }
 
 p {
@@ -107,8 +111,8 @@ a {
 }
 
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -116,19 +120,22 @@ a {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
+  background: rgba(17, 22, 18, 0.12);
   border-radius: 999px;
+  transition: background 0.2s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--muted);
+  background: rgba(17, 22, 18, 0.24);
 }
 
 :focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent);
   outline-offset: 2px;
   border-radius: var(--r-sm);
 }
+
+/* ——— Layout ——— */
 
 .page-wrap {
   width: 100%;
@@ -149,18 +156,35 @@ a {
 .page-header {
   border: 1px solid var(--border);
   border-radius: var(--r-xl);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), var(--surface));
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(248, 252, 248, 0.92) 100%);
   box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
 }
+
+.page-header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 0% 0%, rgba(22, 101, 52, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 100% 100%, rgba(22, 101, 52, 0.02) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* ——— Card Surfaces ——— */
 
 .surface-card {
   border: 1px solid var(--border);
   border-radius: var(--r-xl);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow:
+    var(--shadow-sm),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
   transition:
-    border-color 0.16s ease,
-    box-shadow 0.16s ease;
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .surface-soft {
@@ -173,27 +197,36 @@ a {
   border: 1px solid var(--border);
   border-radius: var(--r-xl);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.985) 0%, rgba(248, 250, 248, 0.95) 100%);
-  box-shadow: var(--shadow-sm);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(248, 250, 248, 0.96) 100%);
+  box-shadow:
+    var(--shadow-sm),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
   transition:
-    border-color 0.16s ease,
-    box-shadow 0.16s ease,
-    transform 0.16s ease;
+    border-color var(--transition-fast),
+    box-shadow var(--transition-smooth),
+    transform var(--transition-spring);
 }
 
 .visual-card-soft {
-  border: 1px solid rgba(17, 22, 18, 0.07);
+  border: 1px solid rgba(17, 22, 18, 0.06);
   border-radius: var(--r-lg);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(243, 247, 244, 0.88) 100%);
-  box-shadow: 0 1px 3px rgba(17, 22, 18, 0.05);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(243, 247, 244, 0.9) 100%);
+  box-shadow:
+    0 1px 3px rgba(17, 22, 18, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .interactive-card:hover {
-  border-color: rgba(17, 22, 18, 0.14);
-  box-shadow: var(--shadow);
-  transform: translateY(-1px);
+  border-color: rgba(22, 101, 52, 0.14);
+  box-shadow:
+    0 8px 24px rgba(17, 22, 18, 0.07),
+    0 2px 8px rgba(22, 101, 52, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
 }
+
+/* ——— Visual Headers ——— */
 
 .visual-header {
   display: flex;
@@ -219,6 +252,8 @@ a {
   color: var(--muted);
 }
 
+/* ——— Chart Frames ——— */
+
 .plotly-frame {
   min-width: 0;
 }
@@ -229,12 +264,16 @@ a {
   min-width: 0;
 }
 
+/* ——— Metric Pills ——— */
+
 .metric-pill {
   min-width: 132px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
+  border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: 1.35rem;
-  background: rgba(255, 255, 255, 0.82);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 248, 0.85) 100%);
   padding: 0.75rem 1rem;
+  box-shadow: 0 1px 2px rgba(17, 22, 18, 0.03);
 }
 
 .metric-pill-label {
@@ -258,11 +297,15 @@ a {
   color: var(--text-secondary);
 }
 
+/* ——— Surface Subtle ——— */
+
 .surface-subtle {
   border: 1px solid var(--border);
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.78);
 }
+
+/* ——— Eyebrow Labels ——— */
 
 .eyebrow {
   font-size: 11px;
@@ -280,6 +323,8 @@ a {
   color: var(--muted);
 }
 
+/* ——— Tags ——— */
+
 .tag {
   display: inline-flex;
   align-items: center;
@@ -290,6 +335,10 @@ a {
   padding: 2px 9px;
   font-size: 11px;
   font-weight: 500;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .tag-primary {
@@ -310,6 +359,8 @@ a {
   color: var(--text-secondary);
 }
 
+/* ——— Buttons ——— */
+
 .btn-primary {
   display: inline-flex;
   min-height: 44px;
@@ -318,23 +369,35 @@ a {
   gap: 6px;
   border: none;
   border-radius: var(--r);
-  background: var(--primary);
+  background: linear-gradient(180deg, #1a7a3e 0%, var(--primary) 100%);
   color: #fff;
-  padding: 0 18px;
+  padding: 0 20px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
   transition:
-    background 0.13s,
-    transform 0.11s,
-    box-shadow 0.13s;
+    background var(--transition-fast),
+    transform var(--transition-spring),
+    box-shadow var(--transition-smooth);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  background: linear-gradient(180deg, #1d8a44 0%, var(--primary-hover) 100%);
+  transform: translateY(-1px) scale(1.01);
+  box-shadow:
+    0 6px 20px rgba(22, 101, 52, 0.22),
+    0 2px 6px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0) scale(0.99);
+  box-shadow:
+    0 1px 4px rgba(22, 101, 52, 0.18),
+    inset 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 .btn-primary:disabled {
@@ -360,23 +423,32 @@ a {
   cursor: pointer;
   box-shadow: var(--shadow-xs);
   transition:
-    background 0.13s ease,
-    border-color 0.13s ease,
-    color 0.13s ease,
-    box-shadow 0.13s ease;
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    box-shadow var(--transition-smooth),
+    transform var(--transition-spring);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  border-color: var(--border-strong);
+  border-color: rgba(17, 22, 18, 0.18);
   background: var(--surface-2);
   color: var(--text);
   box-shadow: var(--shadow-sm);
+  transform: translateY(-0.5px);
+}
+
+.btn-secondary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: var(--shadow-xs);
 }
 
 .btn-secondary:disabled {
   cursor: not-allowed;
   opacity: 0.48;
 }
+
+/* ——— Input Fields ——— */
 
 .input-field,
 .textarea-field,
@@ -388,9 +460,9 @@ a {
   color: var(--text);
   outline: none;
   transition:
-    border-color 0.13s,
-    box-shadow 0.13s,
-    background 0.13s;
+    border-color var(--transition-fast),
+    box-shadow var(--transition-smooth),
+    background var(--transition-fast);
 }
 
 .input-field,
@@ -409,8 +481,12 @@ a {
 .select-field:focus {
   border-color: var(--primary);
   background: var(--surface);
-  box-shadow: 0 0 0 3px var(--primary-dim);
+  box-shadow:
+    0 0 0 3px var(--primary-dim),
+    var(--shadow-sm);
 }
+
+/* ——— Data Tables ——— */
 
 .data-table {
   width: 100%;
@@ -420,7 +496,8 @@ a {
 }
 
 .data-table thead tr {
-  background: var(--surface-2);
+  background:
+    linear-gradient(180deg, var(--surface-2) 0%, rgba(236, 238, 237, 0.8) 100%);
 }
 
 .data-table th {
@@ -444,18 +521,28 @@ a {
 
 .data-table td {
   padding: 13px 16px;
-  border-bottom: 1px solid rgba(17, 22, 18, 0.06);
+  border-bottom: 1px solid rgba(17, 22, 18, 0.05);
   color: var(--text-secondary);
   background: rgba(255, 255, 255, 0.62);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
 }
 
-.data-table tbody tr:hover {
-  background: rgba(240, 253, 244, 0.72);
+.data-table tbody tr {
+  transition: background var(--transition-fast);
+}
+
+.data-table tbody tr:nth-child(even) td {
+  background: rgba(244, 246, 243, 0.45);
 }
 
 .data-table tbody tr:hover td {
   background: rgba(240, 253, 244, 0.72);
+  color: var(--text);
 }
+
+/* ——— Empty States ——— */
 
 .empty-state {
   border: 1px dashed var(--border-strong);
@@ -464,14 +551,18 @@ a {
   color: var(--muted);
 }
 
+/* ——— Loading Skeleton ——— */
+
 .loading-skeleton {
   position: relative;
   overflow: hidden;
   border-radius: var(--r-lg);
-  background: linear-gradient(90deg, #eef2ee 0%, #f8faf8 50%, #eef2ee 100%);
-  background-size: 220% 100%;
-  animation: skeleton-shimmer 1.25s ease-in-out infinite;
+  background: linear-gradient(110deg, #eef2ee 0%, #f5f8f5 40%, #eef2ee 60%, #f5f8f5 100%);
+  background-size: 300% 100%;
+  animation: skeleton-shimmer 1.8s ease-in-out infinite;
 }
+
+/* ——— Status Dots ——— */
 
 .status-dot {
   display: inline-block;
@@ -481,6 +572,8 @@ a {
   background: currentColor;
   box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 16%, transparent);
 }
+
+/* ——— Map Styles ——— */
 
 .maplibregl-map {
   font-family: "Outfit", system-ui, sans-serif;
@@ -532,6 +625,8 @@ a {
   font-weight: 700;
 }
 
+/* ——— Animations ——— */
+
 @keyframes skeleton-shimmer {
   0% {
     background-position: 100% 0;
@@ -540,6 +635,93 @@ a {
     background-position: -100% 0;
   }
 }
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes live-dot {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 0.7;
+  }
+}
+
+@keyframes typing-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes accent-line-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+    background-size: 100% 100%;
+  }
+  50% {
+    opacity: 0.85;
+    background-size: 200% 100%;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out both;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-slide-up-delay-1 {
+  animation: slide-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.06s both;
+}
+
+.animate-slide-up-delay-2 {
+  animation: slide-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+
+.animate-slide-up-delay-3 {
+  animation: slide-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.18s both;
+}
+
+/* ——— Navigation Links ——— */
 
 .nav-link {
   position: relative;
@@ -588,10 +770,14 @@ a {
   background: var(--primary);
 }
 
+/* ——— Mono Font ——— */
+
 .mono {
   font-family: "DM Mono", monospace;
   letter-spacing: -0.01em;
 }
+
+/* ——— Responsive ——— */
 
 @media (min-width: 640px) {
   .page-wrap {

@@ -131,6 +131,7 @@ function toEChartsOption(
           data: hasHorizontalBar ? undefined : categoryAxisValues,
           source: layout.xaxis,
           rotate: layout.xaxis?.tickangle,
+          showSplitLine: false,
         }),
     yAxis: hasPie
       ? undefined
