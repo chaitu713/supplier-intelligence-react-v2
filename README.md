@@ -10,6 +10,73 @@ For a more exhaustive plain-English functional and technical walkthrough, includ
 
 - `docs/Ozone_AI_4_Functional_Technical_Guide.md`
 
+## How To Understand This Application
+
+Use this reading path when you are new to the project and want to understand the complete functionality without getting lost in implementation details too early.
+
+1. Start with this README from the top through `Application Navigation`.
+   - Goal: understand what Ozone AI 4.0 is, which business workflows it supports, the tech stack, persistence model, and the main frontend routes.
+
+2. Read `docs/Ozone_AI_4_Functional_Technical_Guide.md`.
+   - Goal: get the complete plain-English walkthrough of the product, domain terms, user workflows, and demo flow.
+   - Focus especially on how Executive Dashboard, Analytics, Supplier Engagement, ESG Monitoring, Due Diligence, Advisor AI, and AI Review connect.
+
+3. Read `docs/FUNCTIONAL_DOCUMENTATION.md`.
+   - Goal: understand each module from the user and business point of view.
+   - Use this to answer "what does this screen do?" before looking at code.
+
+4. Read `docs/TECHNICAL_DOCUMENTATION.md`.
+   - Goal: understand the frontend/backend architecture, API flow, service layer, data flow, and important implementation files.
+   - After this, map the docs back to `frontend/src/App.tsx`, `backend/app/main.py`, `backend/app/routers/`, and `backend/app/services/`.
+
+5. Read the AI-specific documents only after the core app flow is clear.
+   - `docs/GUARDRAILS_IMPLEMENTATION.md`: AI guardrails, review workflow, RBAC, and protected AI actions.
+   - `docs/RAG_VECTOR_SEARCH.md`: Advisor AI retrieval, knowledge indexing, and vector/keyword search behavior.
+
+6. Read the environment and deployment documents last.
+   - `docs/POSTGRES_ENVIRONMENT_MIGRATION.md`: PostgreSQL setup and environment-to-environment database movement.
+   - `docs/AZURE_OFFICE_ENVIRONMENT_MIGRATION.md`: Azure/office environment configuration and migration checks.
+
+7. Run the application locally and verify the workflow in the UI.
+   - Use the `Local Development` section to start backend and frontend.
+   - Use the `Quick Setup Verification` section at the bottom of this README if you only need the commands.
+
+8. Walk through the product in this order in the browser.
+   - Executive Dashboard: understand leadership-level supplier risk.
+   - Analytics: understand filters, scoring, ranking, and exposure analysis.
+   - Supplier Engagement > Onboarding: understand supplier creation, evidence upload, extraction, and checklist logic.
+   - Supplier Engagement > Auditing: understand audit queue, evidence, CAPA, and audit decision logic.
+   - Supplier Engagement > Traceability: understand sites, lots, events, evidence, gaps, and trace decisions.
+   - ESG Monitoring: understand continuous monitoring signals, anomaly scoring, alerts, and actions.
+   - Due Diligence Agent: understand supplier investigation and escalation.
+   - Supplier Advisor AI: understand conversational supplier intelligence and retrieved evidence.
+
+9. After using the UI, inspect the matching code paths.
+   - Frontend routes: `frontend/src/App.tsx`
+   - Main pages: `frontend/src/pages/` and `frontend/src/features/`
+   - Backend app registration: `backend/app/main.py`
+   - API routers: `backend/app/routers/`
+   - Business logic: `backend/app/services/`
+   - Schemas: `backend/app/schemas/`
+   - AI policy and validation: `backend/app/ai/`
+
+10. Finish by checking current limitations and verification notes near the bottom of this README.
+    - Goal: understand what is implemented, what is prototype-level, and what still needs hardening before production.
+
+Estimated time for someone with zero functional/domain knowledge:
+
+- Basic demo-level understanding: 1.5 to 2 focused days.
+- End-to-end product understanding: 3 to 5 focused days.
+- Implementation-level confidence for debugging and feature work: 5 to 7 focused days.
+
+Suggested day-by-day plan:
+
+1. Day 1: Read this README and `docs/Ozone_AI_4_Functional_Technical_Guide.md` to understand the product purpose, modules, and demo flow.
+2. Day 2: Read `docs/FUNCTIONAL_DOCUMENTATION.md` and walk through the UI workflows.
+3. Day 3: Read `docs/TECHNICAL_DOCUMENTATION.md` and map frontend pages to backend routers and services.
+4. Day 4: Read `docs/GUARDRAILS_IMPLEMENTATION.md`, `docs/RAG_VECTOR_SEARCH.md`, and PostgreSQL/environment notes.
+5. Day 5: Run the app, practice the full workflow, and trace one or two frontend actions to backend API calls and service code.
+
 ## Current Product Scope
 
 The application supports these major workflows:
