@@ -1416,13 +1416,49 @@ Current document extraction use cases:
 
 ## Local Development
 
-Backend:
+Backend setup for a new environment:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+Copy-Item .env.example .env
+```
+
+Update `.env` with the target PostgreSQL, storage, Document Intelligence, and AI provider values before starting the backend.
+
+Backend run command:
 
 ```bash
 uvicorn backend.app.main:app --reload
 ```
 
-Frontend:
+If you open a new terminal later, activate the virtual environment again before running the backend:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+uvicorn backend.app.main:app --reload
+```
+
+The recommended local and deployment working directory is the project root. The helper scripts in `scripts/` also switch to the project root before running the backend.
+
+If your terminal is already inside the `backend` folder, use this import path instead:
+
+```powershell
+cd backend
+..\.venv\Scripts\Activate.ps1
+uvicorn app.main:app --reload
+```
+
+Frontend setup for a new environment:
+
+```bash
+cd frontend
+npm install
+```
+
+Frontend run command:
 
 ```bash
 cd frontend
@@ -1608,3 +1644,34 @@ Important current-state clarifications:
 - ESG Monitoring is now a Phase 1 visual ML monitoring command center. The old snapshot dashboard should not be described as the current frontend experience.
 - The ESG Monitoring backend endpoint is available at `GET /api/v1/esg-monitoring/overview`.
 - Operational Onboarding, Auditing, Traceability, Simulator, Analytics, Due Diligence, and Advisor AI routes are wired into the frontend navigation.
+
+## Quick Setup Verification
+
+Use these commands at the end of setup to verify both services in a new environment.
+
+Backend from the project root:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+Copy-Item .env.example .env
+uvicorn backend.app.main:app --reload
+```
+
+Backend if your terminal is inside the `backend` folder:
+
+```powershell
+cd backend
+..\.venv\Scripts\Activate.ps1
+uvicorn app.main:app --reload
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
