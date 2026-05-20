@@ -292,6 +292,142 @@ Technical pattern:
 4. Backend builds grounded response using available context and AI guardrails.
 5. Response is returned to frontend chat UI.
 
+RAG behavior:
+
+1. `AdvisorService` builds the deterministic Supplier 360 context from risk, analytics, ESG, traceability, audit, certification, and due diligence data where available.
+2. If `RAG_ENABLED=true`, it calls `vector_search_service.search(...)` with the user's question.
+3. Retrieved records are added to the prompt as `retrievedEvidence`.
+4. The LLM is instructed to use the retrieved evidence only when it is relevant and to cite source titles.
+5. The returned message includes a `sources` array so the frontend can display where the answer was grounded.
+
+Example response fields:
+
+```json
+{
+  "source": "llm",
+  "provider": "gemini",
+  "model": "gemini-3.1-flash-lite-preview",
+  "trace_id": "ai_1234567890abcdef",
+  "sources": [
+    {
+      "title": "Traceability Gap: 17 for supplier 1001",
+      "sourceType": "traceability_gap",
+      "sourceId": "17",
+      "score": 0.82,
+      "scoreType": "lexical"
+    }
+  ]
+}
+```
+
+If RAG search fails for an infrastructure reason, Advisor AI continues with deterministic context. If the search query violates guardrails, the request is blocked instead of falling back silently.
+
+### Knowledge / RAG APIs
+
+Base route: `/api/v1/knowledge`
+
+Endpoints:
+
+- `POST /rebuild`
+- `POST /search`
+
+Technical pattern:
+
+1. `POST /rebuild` calls `VectorSearchService.rebuild_index(...)`.
+2. The service creates or upgrades the `knowledge_chunks` table.
+3. It builds chunks from supported supplier intelligence tables.
+4. Each chunk is sanitized before it is stored or embedded.
+5. If embeddings are configured, the sanitized chunk text is embedded and stored in `embedding_json`.
+6. `POST /search` validates the query through prompt guardrails before retrieval or embedding.
+7. Search filters by `sourceType` and `supplierId` when those fields are supplied.
+8. Results are ranked by lexical score by default, or by cosine similarity when query and chunk embeddings are available.
+
+Supported indexed source types:
+
+| Source Type | Backing Data | Example User Question |
+| --- | --- | --- |
+| `supplier` | Supplier profile plus risk enrichment | "Why is Supplier 1001 high risk?" |
+| `audit` | Audit records | "Show audit blockers for the palm oil supplier." |
+| `certification` | Supplier certification records | "Which certifications are expired or weak?" |
+| `audit_capa` | CAPA actions | "What CAPA items are still open?" |
+| `audit_evidence` | Audit evidence records | "What evidence supports this audit issue?" |
+| `supplier_evidence` | Onboarding/certification evidence | "What uploaded evidence exists for this supplier?" |
+| `traceability_gap` | Traceability gap actions | "Which traceability gaps block EUDR readiness?" |
+| `traceability_decision` | Traceability decisions | "What was the latest trace decision?" |
+| `due_diligence_case` | Due diligence cases | "Why was this supplier escalated?" |
+| `monitoring_alert` | ESG monitoring alerts | "Which ESG alerts are open?" |
+| `external_esg_signal` | External ESG signals | "What external signals affected ESG risk?" |
+
+Example rebuild request:
+
+```json
+{
+  "limit": 500
+}
+```
+
+Example rebuild response:
+
+```json
+{
+  "indexedChunks": 250,
+  "embeddedChunks": 0,
+  "embeddingProvider": "none",
+  "embeddingModel": "text-embedding-3-small"
+}
+```
+
+Example direct search request:
+
+```json
+{
+  "query": "open CAPA traceability gaps for Indonesia suppliers",
+  "topK": 5,
+  "sourceType": "traceability_gap",
+  "supplierId": 1001
+}
+```
+
+Example direct search response:
+
+```json
+{
+  "query": "open CAPA traceability gaps for Indonesia suppliers",
+  "results": [
+    {
+      "chunkId": "traceability_gap_abc123",
+      "sourceType": "traceability_gap",
+      "sourceId": "17",
+      "title": "Traceability Gap: 17 for supplier 1001",
+      "text": "Gap Action Id: 17\nSupplier Id: 1001\nStatus: open",
+      "metadata": {
+        "supplier_id": 1001,
+        "table": "traceability_gap_actions"
+      },
+      "score": 0.75,
+      "scoreType": "lexical"
+    }
+  ]
+}
+```
+
+Role requirements:
+
+| Endpoint | Required Role | Why |
+| --- | --- | --- |
+| `POST /api/v1/knowledge/rebuild` | `model_admin` | Rebuilding controls what evidence enters AI retrieval. |
+| `POST /api/v1/knowledge/search` | `ai_user` | Search exposes AI-grounding evidence to authorized AI users. |
+
+Configuration:
+
+| Variable | Meaning | Example |
+| --- | --- | --- |
+| `RAG_ENABLED` | Enables Advisor AI retrieval | `true` |
+| `RAG_TOP_K` | Number of chunks Advisor AI retrieves | `5` |
+| `RAG_EMBEDDING_PROVIDER` | `none`, `openai`, or `azure_openai` | `none` |
+| `RAG_EMBEDDING_MODEL` | OpenAI embedding model name | `text-embedding-3-small` |
+| `AZURE_OPENAI_EMBEDDING_DEPLOYMENT` | Azure OpenAI embedding deployment | `text-embedding-3-small-prod` |
+
 ### AI Review APIs
 
 Base route: `/api/v1/ai-review`
@@ -323,11 +459,48 @@ Current technical status:
 - Executive Dashboard and Analytics consume the ESG Monitoring overview API.
 - Current endpoint is an on-demand overview snapshot.
 
+### Observability APIs
+
+Base route: `/api/v1/observability`
+
+Endpoints:
+
+- `GET /ai-events`
+- `GET /ai-events/stream`
+
+Technical pattern:
+
+1. AI gateway, guardrail, and knowledge-search code can call `emit_ai_event(...)`.
+2. Events are stored in an in-memory deque with a maximum of 200 recent events.
+3. `GET /ai-events?limit=50` returns recent events for reviewers or model administrators.
+4. `GET /ai-events/stream` returns Server-Sent Events for live monitoring.
+5. The stream emits a `connected` message first and heartbeat messages when no AI event arrives for 25 seconds.
+
+Example event:
+
+```json
+{
+  "event": "ai.guardrail_block",
+  "timestamp": "2026-05-20T10:30:00+00:00",
+  "feature": "knowledge_search",
+  "reason": "prompt_injection",
+  "layer": "input",
+  "trace_id": "ai_1234567890abcdef"
+}
+```
+
+Role requirements:
+
+| Endpoint | Required Role | Why |
+| --- | --- | --- |
+| `GET /api/v1/observability/ai-events` | `reviewer` or `model_admin` | Reviewers need recent AI events; admins need operational visibility. |
+| `GET /api/v1/observability/ai-events/stream` | `reviewer` | Live streams are intended for active AI review workflows. |
+
 ## 7. Data Model Overview
 
 Important PostgreSQL tables:
 
-| File | Technical Role |
+| Table | Technical Role |
 | --- | --- |
 | `suppliers` | Main supplier master table |
 | `transactions` | Transaction history and volume |
@@ -347,6 +520,9 @@ Important PostgreSQL tables:
 | `traceability_*` | Traceability sites, lots, events, gaps, decisions, score history |
 | `monitoring_*` | Seed data for future monitoring |
 | `external_esg_signals` | External ESG signal examples |
+| `knowledge_chunks` | RAG index chunks used by Knowledge Search and Advisor AI |
+| `ai_audit_events` | Persistent AI audit events, provider usage, guardrail outcomes, and trace ids |
+| `ai_review_queue` | Human review workflow records for AI outputs that require approval or rejection |
 
 ## 8. Data Flow Example: Executive Dashboard
 
@@ -367,6 +543,173 @@ sequenceDiagram
     API-->>Frontend: JSON
     Frontend-->>User: KPI cards, charts, supplier attention list
 ```
+
+## 8A. Backend Calculation Reference
+
+This section maps the main visible numbers in the application to the backend services that calculate them. It answers "where did this number come from?" for reviewers, developers, and demo presenters.
+
+### Risk Score Calculation
+
+Implemented in `backend/app/services/risk_service.py`.
+
+The backend builds a supplier risk frame by joining supplier master data with transaction, audit, alert, certification, commodity, country, and ESG metrics. Most raw values are converted to a 0-100 relative risk score using percentile ranking:
+
+```text
+relative risk score = percentile rank across suppliers * 100
+```
+
+If a metric is better when higher, such as verified certification ratio or wage maturity, the score is inverted:
+
+```text
+relative risk score = 100 - percentile rank
+```
+
+Operational risk is a weighted score across delivery, defect, cost, dependency, criticality, audit, alert, certification, commodity, and country risk. ESG risk is:
+
+```text
+ESG risk = 0.40 * environmental risk + 0.35 * social risk + 0.25 * governance risk
+```
+
+Overall risk combines operational and ESG risk with pressure adjustments:
+
+```text
+dual pressure = ((operational risk + ESG risk) / 2) * 0.05
+imbalance pressure = (abs(operational risk - ESG risk) / 100) * max(operational risk, ESG risk) * 0.30
+
+overall risk = 0.58 * operational risk + 0.37 * ESG risk + dual pressure + imbalance pressure
+```
+
+Risk levels:
+
+| Score Range | Risk Level |
+| --- | --- |
+| `>= 60` | High |
+| `>= 40 and < 60` | Medium |
+| `< 40` | Low |
+
+Example:
+
+```text
+Operational risk = 70
+ESG risk = 55
+Dual pressure = 3.13
+Imbalance pressure = 3.15
+Overall risk = 67.23
+Risk level = High
+```
+
+### Executive Dashboard And Analytics Calculations
+
+Implemented in `backend/app/services/analytics_service.py`.
+
+| Visible Value | Backend Calculation |
+| --- | --- |
+| Total suppliers | Count supplier master rows |
+| High-risk suppliers | Count suppliers where `overall_risk_level == "High"` |
+| Average overall/operational/ESG risk | Mean of the matching score column |
+| Risk mix | Count High, Medium, and Low risk levels |
+| Expiring soon certifications | Expiry date from `2026-04-28` through `2026-06-26` |
+| Expired certifications | Expiry date on or before `2026-04-27` |
+| Geographic exposure | Group by country; count suppliers and average risk |
+| Commodity exposure | Join supplier-commodity map; group by commodity; count unique suppliers |
+| Country analysis | Group filtered risk frame by country and average risk columns |
+| Commodity analysis | Group supplier-commodity/risk join by commodity and average risk/volume |
+| Supplier rankings | Sort by overall, operational, ESG, or lowest risk |
+| Risk distributions | Build score histograms with `pd.cut` |
+| Trend analysis | Group transactions and certification dates by month |
+
+Health bands:
+
+| Average Risk | Label |
+| --- | --- |
+| `>= 60` | At Risk |
+| `>= 40 and < 60` | Watch |
+| `< 40` | Stable |
+
+### Simulator Calculations
+
+Implemented in `backend/app/services/simulator_service.py`.
+
+The simulator starts with the same risk frame used by Analytics and Due Diligence. A scenario adds risk to affected suppliers and then recomputes overall risk.
+
+```text
+new operational risk = min(100, old operational risk + scenario operational impact)
+new ESG risk = min(100, old ESG risk + scenario ESG impact)
+new overall risk = 0.58 * new operational risk + 0.37 * new ESG risk + dual pressure + imbalance pressure
+delta = after value - before value
+```
+
+The response includes before summary, after summary, deltas, risk band movement, and affected suppliers sorted by largest overall-risk increase.
+
+### Due Diligence Calculations
+
+Implemented in `backend/app/services/risk_service.py`.
+
+The Due Diligence Agent uses the supplier risk frame plus certification, commodity, audit, CAPA, traceability gap, and traceability decision signals.
+
+| Condition | Decision |
+| --- | --- |
+| Overall risk `>= 75` | Block / Suspend |
+| Overall risk `>= 65`, any open CAPA, or more than one open trace gap | Escalate |
+| Overall risk `>= 55`, expired certification, or any open trace gap | Enhanced Monitoring |
+| Pending certification | Clear with Conditions |
+| No major blocker | Clear |
+
+Risk drivers shown to the user include operational risk, ESG risk, high-risk commodities, open CAPA count, and open trace gap count.
+
+### Traceability Score Calculation
+
+Implemented in `backend/app/services/traceability_service.py`.
+
+Traceability starts at 100 and subtracts penalties:
+
+```text
+- 5 for each high-risk commodity
+- 8 for each certification gap
+- 10 for each event missing evidence
+- 6 for each lot with gap/missing/partial evidence
+- 8 for each missing geolocation or polygon evidence item
+- severity penalty for each open gap action
+- 12 if no lots exist
+- 10 if no sites exist
+```
+
+Gap severity penalties are Critical 18, High 12, Medium 7, and Low/unknown 4.
+
+Score labels are Strong for `>= 80`, Moderate for `>= 60`, Gap for `>= 40`, and High Risk below 40.
+
+### ESG Monitoring Calculations
+
+Implemented in `backend/app/services/esg_monitoring_service.py`.
+
+Important formulas:
+
+```text
+BWS risk = 0.70 * water risk + 0.30 * country risk
+HRR risk = 0.42 * labor risk + 0.24 * child risk + 0.18 * hours risk + 0.16 * inverted wage score
+Land-use risk = 0.34 * land risk + 0.34 * deforestation risk + 0.32 * commodity land pressure
+ESG health score = 100 - ESG risk score
+```
+
+ML anomaly scoring uses `IsolationForest(contamination=0.18, random_state=42)`. Raw anomaly scores are normalized to 0-100:
+
+```text
+normalized anomaly score = ((raw score - min raw score) / (max raw score - min raw score)) * 100
+```
+
+Anomaly labels are `Anomalous ESG deterioration pattern` at 75 or higher, `Elevated ESG anomaly watch` at 55 or higher, and `No ML anomaly detected` below 55.
+
+### RAG Search Score Calculation
+
+Implemented in `backend/app/services/vector_search_service.py`.
+
+Lexical search tokenizes query and chunk text, removes common stop words, and scores overlap:
+
+```text
+lexical score = matched query terms / unique query terms
+```
+
+If the exact query phrase appears in the title or text, the backend adds a `0.15` phrase bonus. Vector mode uses cosine similarity between query and chunk embeddings. The response field `scoreType` shows whether ranking used `lexical` or `vector`.
 
 ## 9. Data Flow Example: Onboarding
 
@@ -401,7 +744,9 @@ sequenceDiagram
 | Traceability | Workspace UI | Traceability router/service | Sites, lots, events, evidence, score calculations |
 | Due Diligence | Supplier investigation UI | Risk service | Risk driver and evidence gap generation |
 | Advisor AI | Chat page and overlay | Advisor router/service | AI context, guardrails, session messages |
+| Knowledge Search / RAG | Advisor grounding and direct API search | Knowledge router/vector search service | `knowledge_chunks`, supplier evidence, audit, traceability, due diligence, monitoring records |
 | AI Review | Queue page component | AI review router | Human review of AI items |
+| AI Observability | Backend API and SSE stream | Observability router/live flow service | In-memory recent AI events plus persistent audit log where available |
 | ESG Monitoring | Embedded in Executive Dashboard and Analytics | ESG monitoring router/service | Internal supplier ESG data, calculated overview, alerts, and ML anomaly scoring |
 
 ## 11. AI Architecture
@@ -421,6 +766,10 @@ Important files:
 | `backend/app/ai/guardrails.py` | Blocks unsafe or unsupported AI requests |
 | `backend/app/ai/prompt_registry.py` | Stores prompt policy and feature prompt definitions |
 | `backend/app/ai/output_validation.py` | Validates AI-generated structured outputs |
+| `backend/app/services/vector_search_service.py` | Builds and searches the RAG knowledge index |
+| `backend/app/routers/knowledge.py` | Exposes knowledge rebuild and search APIs |
+| `backend/app/observability/live_flow.py` | Keeps recent AI events and streams them over SSE |
+| `backend/app/services/ai_audit_log.py` | Persists AI audit events for review and traceability |
 | `data/ai_audit_events.jsonl` | Stores AI audit trail examples |
 
 Important design principle:

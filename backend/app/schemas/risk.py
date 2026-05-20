@@ -75,5 +75,9 @@ class DueDiligenceResponse(BaseModel):
     connectedSignals: dict = {}
     issues: list[str]
     aiSummary: str
+    ai_source: str | None = None
+    ai_provider: str | None = None
+    ai_model: str | None = None
+    ai_trace_id: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

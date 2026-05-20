@@ -23,6 +23,7 @@ class AdvisorMessage(BaseModel):
     provider: str | None = None
     model: str | None = None
     trace_id: str | None = None
+    sources: list[dict] | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

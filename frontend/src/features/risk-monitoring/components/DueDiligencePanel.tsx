@@ -306,13 +306,34 @@ function DueDiligenceResult({ result }: { result: DueDiligenceResponse }) {
         </div>
       </section>
 
-      <section id="dd-checklist" className="grid scroll-mt-28 gap-6 xl:grid-cols-2">
-        <div className="visual-card p-6">
+      <section className="visual-card p-6">
+        <div className="visual-header">
+          <h3 className="visual-title">Risk Drivers</h3>
+          <p className="visual-description">Signals most responsible for the current decision.</p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {(result.riskDrivers || []).map((driver) => (
+            <div key={driver.label} className="rounded-2xl border border-[var(--border)] bg-white px-4 py-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="font-semibold text-[var(--text)]">{driver.label}</p>
+                  <p className="mt-1 text-xs leading-5 text-[var(--muted)]">{driver.status}</p>
+                </div>
+                <span className="shrink-0 text-lg font-semibold text-[var(--primary)]">
+                  {driver.value.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section id="dd-checklist" className="visual-card scroll-mt-28 p-6">
           <div className="visual-header">
             <h3 className="visual-title">Investigation Checklist</h3>
             <p className="visual-description">Evidence and review checks required for the case.</p>
           </div>
-          <div className="grid gap-3">
+          <div className="grid gap-3 lg:grid-cols-2">
             {(result.investigationChecklist || []).map((item) => {
               const context = buildChecklistContext(item, evidenceItems);
               return (
@@ -348,25 +369,6 @@ function DueDiligenceResult({ result }: { result: DueDiligenceResponse }) {
               );
             })}
           </div>
-        </div>
-
-        <div className="visual-card p-6">
-          <div className="visual-header">
-            <h3 className="visual-title">Risk Drivers</h3>
-            <p className="visual-description">Signals most responsible for the current decision.</p>
-          </div>
-          <div className="grid gap-3">
-            {(result.riskDrivers || []).map((driver) => (
-              <div key={driver.label} className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-white px-4 py-3">
-                <div>
-                  <p className="font-semibold text-[var(--text)]">{driver.label}</p>
-                  <p className="text-xs text-[var(--muted)]">{driver.status}</p>
-                </div>
-                <span className="text-lg font-semibold text-[var(--primary)]">{driver.value.toFixed(2)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
       </section>
 
       <section id="dd-evidence" className="visual-card scroll-mt-28 p-6">

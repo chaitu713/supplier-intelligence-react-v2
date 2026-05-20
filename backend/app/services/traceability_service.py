@@ -14,6 +14,7 @@ from ..ai.guardrails import GuardrailViolation
 from ..ai.output_validation import validate_trace_decision
 from ..ai.prompt_registry import get_prompt_policy_block
 from .ai_gateway import AiGatewayError, AiTextRequest, generate_ai_text
+from .ai_review_queue import add_review_item
 from .blob_storage import blob_storage_service
 from .onboarding_service import onboarding_service
 from .database import csv_table_name, install_pandas_database_bridge, table_exists
@@ -78,11 +79,30 @@ Trace package:
             )
             parsed = json.loads(self._extract_json_block(response.text.strip()))
             if not isinstance(parsed, dict):
+                add_review_item(
+                    feature="traceability",
+                    reason="invalid_ai_output",
+                    prompt_hash=response.prompt_hash,
+                    trace_id=response.trace_id,
+                    payload={"supplier_id": supplier_id, "fallback_decision": fallback["decision"]},
+                )
                 return fallback
             decision = self._validate_trace_decision(parsed, fallback)
             decision["source"] = "llm"
             decision["provider"] = response.provider
             decision["model"] = response.model
+            if decision.get("decision") != parsed.get("decision"):
+                add_review_item(
+                    feature="traceability",
+                    reason="output_validation_adjusted_decision",
+                    prompt_hash=response.prompt_hash,
+                    trace_id=response.trace_id,
+                    payload={
+                        "supplier_id": supplier_id,
+                        "model_decision": parsed.get("decision"),
+                        "validated_decision": decision.get("decision"),
+                    },
+                )
             self._persist_trace_decision(supplier_id, decision)
             return decision
         except (GuardrailViolation, AiGatewayError, json.JSONDecodeError, ValueError):

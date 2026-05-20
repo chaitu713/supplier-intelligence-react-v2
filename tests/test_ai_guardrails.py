@@ -22,6 +22,7 @@ from backend.app.core.config import get_settings
 from backend.app.security.auth import User, get_current_user
 from backend.app.security.rbac import require_role
 from backend.app.routers.ai_review import review_ai_item, ReviewDecisionRequest
+from backend.app.schemas.risk import DueDiligenceResponse
 
 
 def test_valid_supplier_prompt_passes_guardrails():
@@ -324,3 +325,29 @@ def test_due_diligence_summary_validation_requires_review_context():
         )
         == "Supplier risk remains high and requires human review."
     )
+
+
+def test_due_diligence_response_preserves_ai_provenance():
+    response = DueDiligenceResponse(
+        supplier="Acme Supply",
+        supplierId=1,
+        opRisk="High",
+        opRiskScore=80.0,
+        esgRisk="Medium",
+        esgRiskScore=55.0,
+        overall="High",
+        overallRiskScore=72.0,
+        issues=[],
+        aiSummary="Supplier risk requires review.",
+        ai_source="llm",
+        ai_provider="gemini",
+        ai_model="gemini-test",
+        ai_trace_id="ai_test",
+    )
+
+    payload = response.model_dump()
+
+    assert payload["ai_source"] == "llm"
+    assert payload["ai_provider"] == "gemini"
+    assert payload["ai_model"] == "gemini-test"
+    assert payload["ai_trace_id"] == "ai_test"

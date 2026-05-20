@@ -99,6 +99,52 @@ def migrate_guardrails_schema() -> None:
         'CREATE INDEX IF NOT EXISTS "idx_ai_review_queue_trace_id" ON "ai_review_queue" ("trace_id")'
     )
 
+    execute(
+        """
+        CREATE TABLE IF NOT EXISTS knowledge_chunks (
+            chunk_id TEXT PRIMARY KEY,
+            source_type TEXT,
+            source_id TEXT,
+            title TEXT,
+            chunk_text TEXT,
+            metadata TEXT,
+            embedding_provider TEXT,
+            embedding_model TEXT,
+            embedding_json TEXT,
+            content_hash TEXT,
+            is_sanitized INTEGER,
+            safety_notes TEXT,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    _add_missing_columns(
+        "knowledge_chunks",
+        {
+            "source_type": "TEXT",
+            "source_id": "TEXT",
+            "title": "TEXT",
+            "chunk_text": "TEXT",
+            "metadata": "TEXT",
+            "embedding_provider": "TEXT",
+            "embedding_model": "TEXT",
+            "embedding_json": "TEXT",
+            "content_hash": "TEXT",
+            "is_sanitized": "INTEGER",
+            "safety_notes": "TEXT",
+            "updated_at": "TEXT",
+        },
+    )
+    execute(
+        'CREATE INDEX IF NOT EXISTS "idx_knowledge_chunks_source_type" ON "knowledge_chunks" ("source_type")'
+    )
+    execute(
+        'CREATE INDEX IF NOT EXISTS "idx_knowledge_chunks_source_id" ON "knowledge_chunks" ("source_id")'
+    )
+    execute(
+        'CREATE INDEX IF NOT EXISTS "idx_knowledge_chunks_content_hash" ON "knowledge_chunks" ("content_hash")'
+    )
+
     print("Guardrails schema migration complete.")
 
 

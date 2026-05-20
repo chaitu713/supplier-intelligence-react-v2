@@ -24,6 +24,11 @@ class Settings:
     database_url: str | None = None
     blob_connection_string: str | None = None
     blob_container_name: str = "supplier-documents"
+    rag_enabled: bool = True
+    rag_top_k: int = 5
+    rag_embedding_provider: str = "none"
+    rag_embedding_model: str = "text-embedding-3-small"
+    azure_openai_embedding_deployment: str | None = None
 
     @property
     def project_root(self) -> Path:
@@ -106,4 +111,9 @@ def get_settings() -> Settings:
         database_url=os.getenv("DATABASE_URL") or None,
         blob_connection_string=os.getenv("BLOB_CONNECTION_STRING") or None,
         blob_container_name=os.getenv("BLOB_CONTAINER_NAME", "supplier-documents"),
+        rag_enabled=os.getenv("RAG_ENABLED", "true").lower() == "true",
+        rag_top_k=int(os.getenv("RAG_TOP_K", "5")),
+        rag_embedding_provider=os.getenv("RAG_EMBEDDING_PROVIDER", "none").strip().lower(),
+        rag_embedding_model=os.getenv("RAG_EMBEDDING_MODEL", "text-embedding-3-small"),
+        azure_openai_embedding_deployment=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT") or None,
     )

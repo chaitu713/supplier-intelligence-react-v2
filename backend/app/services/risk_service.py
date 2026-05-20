@@ -11,6 +11,7 @@ from ..ai.prompt_registry import get_prompt_policy_block
 from ..core.exceptions import AppError
 from ..core.logging import get_logger
 from .ai_gateway import AiGatewayError, AiTextRequest, generate_ai_text
+from .ai_review_queue import add_review_item
 from .dataset_service import DatasetService
 
 logger = get_logger(__name__)
@@ -235,11 +236,29 @@ Grounding context:
                     context=context,
                 )
             )
-            fallback["ai_summary"] = validate_due_diligence_summary(response.text, fallback["ai_summary"])
+            original_summary = fallback["ai_summary"]
+            validated_summary = validate_due_diligence_summary(response.text, original_summary)
+            fallback["ai_summary"] = validated_summary
             fallback["ai_trace_id"] = response.trace_id
-            fallback["ai_source"] = "llm"
+            fallback["ai_source"] = (
+                "llm_validation_fallback"
+                if validated_summary == original_summary and response.text != original_summary
+                else "llm"
+            )
             fallback["ai_provider"] = response.provider
             fallback["ai_model"] = response.model
+            if fallback["ai_source"] == "llm_validation_fallback":
+                add_review_item(
+                    feature="due_diligence",
+                    reason="output_validation_fallback",
+                    prompt_hash=response.prompt_hash,
+                    trace_id=response.trace_id,
+                    payload={
+                        "supplier_id": int(supplier_row.get("supplier_id")),
+                        "supplier_name": supplier_name,
+                        "fallback_summary": original_summary,
+                    },
+                )
         except GuardrailViolation:
             raise
         except AiGatewayError as exc:

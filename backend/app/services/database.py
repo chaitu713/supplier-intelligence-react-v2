@@ -191,6 +191,23 @@ POSTGRES_TABLES: dict[str, str] = {
             decision TEXT
         )
     """,
+    "knowledge_chunks": """
+        CREATE TABLE IF NOT EXISTS knowledge_chunks (
+            chunk_id TEXT PRIMARY KEY,
+            source_type TEXT,
+            source_id TEXT,
+            title TEXT,
+            chunk_text TEXT,
+            metadata TEXT,
+            embedding_provider TEXT,
+            embedding_model TEXT,
+            embedding_json TEXT,
+            content_hash TEXT,
+            is_sanitized INTEGER,
+            safety_notes TEXT,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """,
 }
 
 _ORIGINAL_READ_CSV = pd.read_csv

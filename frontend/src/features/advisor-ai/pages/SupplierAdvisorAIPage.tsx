@@ -25,7 +25,10 @@ export function SupplierAdvisorAIPage() {
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(
     (location.state as AdvisorLocationState | null)?.initialPrompt ?? null,
   );
-  const initialPromptSentRef = useRef(false);
+  const [draftMessage, setDraftMessage] = useState(
+    (location.state as AdvisorLocationState | null)?.initialPrompt ?? "",
+  );
+  const initialPromptAppliedRef = useRef(false);
 
   const createSessionMutation = useCreateAdvisorSession();
   const sessionQuery = useAdvisorSession(sessionId);
@@ -65,29 +68,21 @@ export function SupplierAdvisorAIPage() {
     if (
       !sessionId ||
       !pendingPrompt ||
-      initialPromptSentRef.current ||
+      initialPromptAppliedRef.current ||
       createSessionMutation.isPending ||
       sendMessageMutation.isPending
     ) {
       return;
     }
 
-    initialPromptSentRef.current = true;
-    void sendMessageMutation
-      .mutateAsync({
-        message: pendingPrompt,
-        lens,
-        simulatorContext: lens === "simulator" ? simulatorContext : null,
-      })
-      .finally(() => setPendingPrompt(null));
+    initialPromptAppliedRef.current = true;
+    setDraftMessage(pendingPrompt);
+    setPendingPrompt(null);
   }, [
     createSessionMutation.isPending,
-    lens,
     pendingPrompt,
-    sendMessageMutation,
     sendMessageMutation.isPending,
     sessionId,
-    simulatorContext,
   ]);
 
   return (
@@ -140,7 +135,7 @@ export function SupplierAdvisorAIPage() {
             <div className="mt-5">
               <PromptSuggestions
                 lens={effectiveLens}
-                onSelect={(prompt) => void handleSend(prompt)}
+                onSelect={(prompt) => setDraftMessage(prompt)}
               />
             </div>
 
@@ -216,11 +211,14 @@ export function SupplierAdvisorAIPage() {
             </section>
 
             <ChatComposer
+              value={draftMessage}
               isLoading={
                 createSessionMutation.isPending ||
                 sessionQuery.isLoading ||
                 sendMessageMutation.isPending
               }
+              submitLabel="Analyze"
+              onChange={setDraftMessage}
               onSubmit={handleSend}
             />
           </div>

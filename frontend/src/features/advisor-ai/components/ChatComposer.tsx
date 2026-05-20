@@ -3,27 +3,41 @@ import { useState } from "react";
 interface ChatComposerProps {
   isLoading: boolean;
   initialValue?: string;
+  value?: string;
+  submitLabel?: string;
   variant?: "page" | "overlay";
+  onChange?: (message: string) => void;
   onSubmit: (message: string) => Promise<void> | void;
 }
 
 export function ChatComposer({
   isLoading,
   initialValue = "",
+  value,
+  submitLabel,
   variant = "page",
+  onChange,
   onSubmit,
 }: ChatComposerProps) {
-  const [value, setValue] = useState(initialValue);
+  const [internalValue, setInternalValue] = useState(initialValue);
+  const currentValue = value ?? internalValue;
+
+  const updateValue = (nextValue: string) => {
+    if (value === undefined) {
+      setInternalValue(nextValue);
+    }
+    onChange?.(nextValue);
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const trimmed = value.trim();
+    const trimmed = currentValue.trim();
     if (!trimmed) {
       return;
     }
 
     await onSubmit(trimmed);
-    setValue("");
+    updateValue("");
   };
 
   return (
@@ -36,8 +50,8 @@ export function ChatComposer({
       }
     >
       <textarea
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
+        value={currentValue}
+        onChange={(event) => updateValue(event.target.value)}
         rows={variant === "overlay" ? 3 : 4}
         placeholder="Ask about your supplier network..."
         className={
@@ -58,14 +72,14 @@ export function ChatComposer({
         )}
         <button
           type="submit"
-          disabled={isLoading || !value.trim()}
+          disabled={isLoading || !currentValue.trim()}
           className={
             variant === "overlay"
               ? "btn-primary inline-flex items-center justify-center gap-2 px-4 text-sm"
               : "btn-primary px-5 text-sm"
           }
         >
-          {isLoading ? "Analyzing..." : "Send"}
+          {isLoading ? "Analyzing..." : submitLabel ?? (variant === "page" ? "Analyze" : "Send")}
         </button>
       </div>
     </form>

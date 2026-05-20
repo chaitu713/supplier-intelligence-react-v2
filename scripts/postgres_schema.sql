@@ -41,6 +41,28 @@ CREATE INDEX IF NOT EXISTS "idx_ai_audit_events_feature_status" ON "ai_audit_eve
 CREATE INDEX IF NOT EXISTS "idx_ai_review_queue_status" ON "ai_review_queue" ("status");
 CREATE INDEX IF NOT EXISTS "idx_ai_review_queue_trace_id" ON "ai_review_queue" ("trace_id");
 
+DROP TABLE IF EXISTS "knowledge_chunks" CASCADE;
+CREATE TABLE "knowledge_chunks" (
+    "chunk_id" TEXT,
+    "source_type" TEXT,
+    "source_id" TEXT,
+    "title" TEXT,
+    "chunk_text" TEXT,
+    "metadata" TEXT,
+    "embedding_provider" TEXT,
+    "embedding_model" TEXT,
+    "embedding_json" TEXT,
+    "content_hash" TEXT,
+    "is_sanitized" BIGINT,
+    "safety_notes" TEXT,
+    "updated_at" TEXT,
+    PRIMARY KEY ("chunk_id")
+);
+
+CREATE INDEX IF NOT EXISTS "idx_knowledge_chunks_source_type" ON "knowledge_chunks" ("source_type");
+CREATE INDEX IF NOT EXISTS "idx_knowledge_chunks_source_id" ON "knowledge_chunks" ("source_id");
+CREATE INDEX IF NOT EXISTS "idx_knowledge_chunks_content_hash" ON "knowledge_chunks" ("content_hash");
+
 DROP TABLE IF EXISTS "alerts" CASCADE;
 CREATE TABLE "alerts" (
     "alert_id" BIGINT,

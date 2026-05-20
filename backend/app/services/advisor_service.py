@@ -16,6 +16,7 @@ from .ai_gateway import AiTextRequest, generate_ai_text
 from ..schemas.advisor import AdvisorLens, AdvisorMessageRequest, AdvisorSimulatorContext
 from .dataset_service import DatasetService
 from .risk_service import RiskService
+from .vector_search_service import vector_search_service
 
 logger = get_logger(__name__)
 
@@ -100,6 +101,7 @@ class AdvisorService:
             "provider": reply.get("provider"),
             "model": reply.get("model"),
             "trace_id": reply.get("trace_id"),
+            "sources": reply.get("sources") or [],
         }
 
         with self._lock:
@@ -119,6 +121,7 @@ class AdvisorService:
         simulator_context: AdvisorSimulatorContext | None,
     ) -> dict[str, Any]:
         context = self._build_advisor_context(lens=lens, simulator_context=simulator_context)
+        context["retrievedEvidence"] = self._retrieve_advisor_evidence(question, context)
         specialized_handler = self._specialized_handlers.get(lens, self._answer_general)
         deterministic_brief = specialized_handler(question, context)
 
@@ -138,6 +141,7 @@ class AdvisorService:
                     "provider": response.provider,
                     "model": response.model,
                     "trace_id": response.trace_id,
+                    "sources": self._advisor_sources(context.get("retrievedEvidence", [])),
                 }
         except GuardrailViolation as exc:
             logger.warning("Advisor prompt blocked by AI guardrails")
@@ -153,6 +157,7 @@ class AdvisorService:
             "provider": None,
             "model": None,
             "trace_id": None,
+            "sources": self._advisor_sources(context.get("retrievedEvidence", [])),
         }
 
     def _build_advisor_prompt(
@@ -184,6 +189,9 @@ Lens instruction:
 Grounding context:
 {self._to_json(context)}
 
+Retrieved evidence:
+{self._to_json(context.get("retrievedEvidence", []))}
+
 Deterministic brief:
 {deterministic_brief or "None provided."}
 
@@ -192,6 +200,7 @@ User question:
 
 Rules:
 - Answer only from the supplied grounding context.
+- Use retrieved evidence when it is relevant, and cite source titles inline in plain English.
 - Use the deterministic brief as your primary answer structure, then refine it into a more natural response.
 - If Supplier 360 context is present, use it to explain audit, certification, traceability, and due diligence blockers.
 - If simulator context is present, use it directly instead of speaking generically.
@@ -200,6 +209,52 @@ Rules:
 - Do not invent entities or metrics not present in the context.
 - If the question asks for unavailable detail, say what is available instead.
 """
+
+    def _retrieve_advisor_evidence(
+        self,
+        question: str,
+        context: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        try:
+            if not self.dataset_service.settings.rag_enabled:
+                return []
+            results = vector_search_service.search(
+                question,
+                top_k=self.dataset_service.settings.rag_top_k,
+            )
+        except GuardrailViolation:
+            raise
+        except Exception as exc:
+            logger.warning("Advisor RAG retrieval unavailable; continuing without retrieved evidence: %s", exc)
+            return []
+
+        evidence = []
+        for item in results:
+            evidence.append(
+                {
+                    "title": item.title,
+                    "sourceType": item.source_type,
+                    "sourceId": item.source_id,
+                    "score": item.score,
+                    "scoreType": item.score_type,
+                    "metadata": item.metadata,
+                    "text": item.text[:1200],
+                }
+            )
+        return evidence
+
+    def _advisor_sources(self, evidence: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return [
+            {
+                "title": item.get("title"),
+                "sourceType": item.get("sourceType"),
+                "sourceId": item.get("sourceId"),
+                "score": item.get("score"),
+                "scoreType": item.get("scoreType"),
+                "metadata": item.get("metadata") or {},
+            }
+            for item in evidence
+        ]
 
     def _to_json(self, payload: Any) -> str:
         import json

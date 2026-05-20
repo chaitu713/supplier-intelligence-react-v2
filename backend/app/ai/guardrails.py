@@ -75,10 +75,32 @@ SUPPLIER_POLICY_PATTERNS = [
 ]
 
 MAX_PROMPT_CHARS = 20000
+SANITIZED_SECRET = "[redacted secret]"
+SANITIZED_UNSAFE_INSTRUCTION = "[removed unsafe instruction]"
 
 
 def prompt_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+
+
+def sanitize_text_for_ai_context(text: str, limit: int = MAX_PROMPT_CHARS) -> tuple[str, list[str]]:
+    """Remove secrets and prompt-injection instructions before text enters RAG context."""
+    sanitized = (text or "")[:limit]
+    notes: list[str] = []
+
+    for pattern in SECRET_PATTERNS:
+        updated = re.sub(pattern, SANITIZED_SECRET, sanitized, flags=re.IGNORECASE)
+        if updated != sanitized and "secret_redacted" not in notes:
+            notes.append("secret_redacted")
+        sanitized = updated
+
+    for pattern in INJECTION_PATTERNS:
+        updated = re.sub(pattern, SANITIZED_UNSAFE_INSTRUCTION, sanitized, flags=re.IGNORECASE)
+        if updated != sanitized and "unsafe_instruction_removed" not in notes:
+            notes.append("unsafe_instruction_removed")
+        sanitized = updated
+
+    return sanitized, notes
 
 
 def enforce_prompt_guardrails(
