@@ -14,6 +14,7 @@ from ..ai.prompt_registry import get_prompt_policy_block
 from ..core.exceptions import AppError
 from .ai_gateway import AiGatewayError, AiTextRequest, generate_ai_text
 from .ai_review_queue import add_review_item
+from .blob_storage import blob_storage_service
 from .onboarding_service import onboarding_service
 from .database import csv_table_name, install_pandas_database_bridge, table_exists
 
@@ -201,6 +202,7 @@ class AuditingService:
         supplier_id = int(audit_match.iloc[0]["supplier_id"])
 
         saved_path = self._save_audit_evidence_file(file_name, file_bytes)
+        blob_result = self._upload_evidence_blob(file_name, file_bytes, audit_id, supplier_id, evidence_type)
         try:
             extracted_text = onboarding_service.extract_text(file_bytes)
         except Exception:
@@ -217,6 +219,9 @@ class AuditingService:
             "evidence_type": evidence_type,
             "file_name": file_name,
             "local_path": str(saved_path),
+            "blob_name": blob_result.blob_name if blob_result else "",
+            "blob_url": blob_result.blob_url if blob_result else "",
+            "storage_provider": "azure_blob" if blob_result else "local",
             "upload_date": date.today().isoformat(),
             "document_status": "Extracted" if extracted_text else "Uploaded",
             "validation_status": validation_status,
@@ -596,6 +601,9 @@ Rules:
                     "linked_entity_type": row.get("linked_entity_type"),
                     "linked_entity_name": row.get("linked_entity_name"),
                     "file_name": row.get("file_name"),
+                    "blob_name": row.get("blob_name"),
+                    "blob_url": row.get("blob_url"),
+                    "storage_provider": row.get("storage_provider"),
                     "upload_date": row.get("upload_date"),
                     "validation_status": row.get("validation_status"),
                     "review_status": row.get("review_status"),
@@ -627,6 +635,9 @@ Rules:
                     "linked_entity_type": "Audit Evidence",
                     "linked_entity_name": row.get("evidence_type"),
                     "file_name": row.get("file_name"),
+                    "blob_name": row.get("blob_name"),
+                    "blob_url": row.get("blob_url"),
+                    "storage_provider": row.get("storage_provider"),
                     "upload_date": row.get("upload_date"),
                     "validation_status": row.get("validation_status"),
                     "review_status": row.get("validation_status"),
@@ -882,6 +893,9 @@ Rules:
             "evidence_type",
             "file_name",
             "local_path",
+            "blob_name",
+            "blob_url",
+            "storage_provider",
             "upload_date",
             "document_status",
             "validation_status",
@@ -915,6 +929,20 @@ Rules:
         path = self.audit_uploads_dir / f"{digest}_{safe_name}"
         path.write_bytes(file_bytes)
         return path
+
+    def _upload_evidence_blob(
+        self,
+        file_name: str,
+        file_bytes: bytes,
+        audit_id: int,
+        supplier_id: int,
+        evidence_type: str,
+    ):
+        prefix = f"auditing/audit-{audit_id}/supplier-{supplier_id}/{evidence_type or 'evidence'}"
+        try:
+            return blob_storage_service.upload_bytes(data=file_bytes, file_name=file_name, prefix=prefix)
+        except Exception:
+            return None
 
     def _validate_audit_evidence(self, evidence_type: str, extracted_text: str) -> tuple[str, str]:
         lowered = extracted_text.lower()

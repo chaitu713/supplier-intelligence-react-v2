@@ -18,6 +18,7 @@ from ..ai.output_validation import validate_onboarding_assistance, validate_onbo
 from ..ai.prompt_registry import get_prompt_policy_block
 from .ai_gateway import AiGatewayError, AiTextRequest, generate_ai_text
 from .ai_review_queue import add_review_item
+from .blob_storage import blob_storage_service
 from .database import csv_table_name, install_pandas_database_bridge, table_exists
 
 install_pandas_database_bridge()
@@ -376,6 +377,9 @@ class OnboardingService:
             "linked_entity_name",
             "file_name",
             "local_path",
+            "blob_name",
+            "blob_url",
+            "storage_provider",
             "upload_date",
             "document_status",
             "extracted_text_preview",
@@ -612,6 +616,14 @@ class OnboardingService:
             raise Exception("Uploaded evidence file is empty")
 
         saved_path = self._save_evidence_file(file_name, file_bytes)
+        parsed_supplier_id = self._parse_int(supplier_id)
+        blob_result = self._upload_evidence_blob(
+            file_name=file_name,
+            file_bytes=file_bytes,
+            supplier_id=parsed_supplier_id,
+            temporary_supplier_key=temporary_supplier_key,
+            evidence_type=evidence_type,
+        )
         try:
             extracted_text = self.extract_text(file_bytes)
         except Exception:
@@ -633,13 +645,16 @@ class OnboardingService:
         evidence_id = self._get_next_id(evidence_df, "evidence_id")
         row = {
             "evidence_id": evidence_id,
-            "supplier_id": self._parse_int(supplier_id),
+            "supplier_id": parsed_supplier_id,
             "temporary_supplier_key": temporary_supplier_key,
             "evidence_type": evidence_type or "Certification",
             "linked_entity_type": linked_entity_type or "Certification",
             "linked_entity_name": linked_entity_name,
             "file_name": file_name,
             "local_path": str(saved_path),
+            "blob_name": blob_result.blob_name if blob_result else "",
+            "blob_url": blob_result.blob_url if blob_result else "",
+            "storage_provider": "azure_blob" if blob_result else "local",
             "upload_date": date.today().isoformat(),
             "document_status": "Extracted" if extracted_text else "Uploaded",
             "extracted_text_preview": extracted_text[:500],
@@ -656,6 +671,25 @@ class OnboardingService:
         evidence_df = pd.concat([evidence_df, pd.DataFrame([row])], ignore_index=True)
         evidence_df.to_csv(self.evidence_path, index=False)
         return row
+
+    def _upload_evidence_blob(
+        self,
+        file_name: str,
+        file_bytes: bytes,
+        supplier_id: int | None,
+        temporary_supplier_key: str | None,
+        evidence_type: str | None,
+    ):
+        supplier_part = (
+            f"supplier-{supplier_id}"
+            if supplier_id is not None
+            else f"temporary-{temporary_supplier_key or 'unknown'}"
+        )
+        prefix = f"onboarding/{supplier_part}/{evidence_type or 'evidence'}"
+        try:
+            return blob_storage_service.upload_bytes(data=file_bytes, file_name=file_name, prefix=prefix)
+        except Exception:
+            return None
 
     def _append_default_row(self, df: pd.DataFrame, supplier_id: int) -> pd.DataFrame:
         new_row: dict[str, object] = {"supplier_id": supplier_id}

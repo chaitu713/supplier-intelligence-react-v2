@@ -65,7 +65,7 @@ Important technologies from `requirements.txt`:
 | OpenAI | AI assistant and generation integration |
 | Google GenAI | Additional AI provider dependency |
 | Azure AI Form Recognizer | Document extraction support |
-| Azure Storage Blob | Future or optional storage integration |
+| Azure Storage Blob | Evidence document storage for onboarding, audit, and traceability uploads |
 | Azure Identity / Azure Core | Azure authentication and SDK support |
 | python-dotenv | Local environment configuration |
 | pytest | Testing support |
@@ -742,7 +742,7 @@ The current CSV approach is fine for prototype work. For production, recommended
 | --- | --- |
 | Supplier master data | Relational database |
 | Transactions | Database or data warehouse |
-| Evidence files | Object storage such as Azure Blob Storage |
+| Evidence files | Azure Blob Storage, with local upload fallback for development |
 | Evidence metadata | Relational database |
 | ESG snapshots | Time-series table or warehouse table |
 | External signals | Event store or normalized signal table |

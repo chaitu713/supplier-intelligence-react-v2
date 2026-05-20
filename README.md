@@ -1032,9 +1032,10 @@ Recommended next backend additions:
 - Monitoring decision endpoint with deterministic fallback.
 - Optional guarded AI summary through `backend/app/services/ai_gateway.py`.
 
-Production Azure services to document for later:
+Production Azure services:
 
-- Azure Blob Storage or Azure Data Lake Storage for raw feeds, evidence files, and historical snapshots.
+- Azure Blob Storage for uploaded onboarding, audit, and traceability evidence documents, with local file storage retained as a development fallback.
+- Azure Data Lake Storage for future raw feeds and historical snapshots if large analytical ingestion is added.
 - Azure Functions for scheduled monitoring jobs, evidence expiry checks, rule evaluation, and alert generation.
 - Azure Event Grid for reacting to app events and file/status changes.
 - Azure Event Hubs if high-volume streaming external ESG events are added.
@@ -1397,7 +1398,8 @@ npm run build
 Persistence:
 
 - Azure PostgreSQL is the persistence layer.
-- Blob storage integration is planned but not yet wired for production evidence storage.
+- Azure Blob Storage is wired for uploaded evidence documents when `BLOB_CONNECTION_STRING` is configured.
+- Uploaded evidence metadata records keep `local_path`, `blob_name`, `blob_url`, and `storage_provider`; local storage remains the fallback when Blob is not configured or upload fails.
 - The application requires `DATABASE_URL` and does not use a local file-backed database fallback.
 
 Continuous monitoring:
@@ -1438,12 +1440,16 @@ Due Diligence and Advisor AI:
 
 ## Recommended Next Enhancements
 
+Environment migration:
+
+- For moving this app to an office Azure environment, use `docs/AZURE_OFFICE_ENVIRONMENT_MIGRATION.md`.
+
 Highest priority:
 
 - Add supplier questionnaire / SAQ workflow.
 - Add reviewer assignment and decision history when moving from demo to production workflow.
 - Create persisted requirement/evidence tables instead of only serialized JSON in `suppliers_v2.csv`.
-- Add Blob Storage for evidence documents.
+- Add private evidence download links backed by short-lived Blob SAS URLs instead of returning raw Blob URLs directly.
 - Continue hardening PostgreSQL schema constraints, indexes, and deployment secrets as the application data model stabilizes.
 - Add production map services for full GIS interaction beyond the current embedded GeoJSON polygon renderer.
 

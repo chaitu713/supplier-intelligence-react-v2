@@ -22,6 +22,8 @@ class Settings:
         "model_admin",
     )
     database_url: str | None = None
+    blob_connection_string: str | None = None
+    blob_container_name: str = "supplier-documents"
 
     @property
     def project_root(self) -> Path:
@@ -102,4 +104,6 @@ def get_settings() -> Settings:
             if role.strip()
         ),
         database_url=os.getenv("DATABASE_URL") or None,
+        blob_connection_string=os.getenv("BLOB_CONNECTION_STRING") or None,
+        blob_container_name=os.getenv("BLOB_CONTAINER_NAME", "supplier-documents"),
     )

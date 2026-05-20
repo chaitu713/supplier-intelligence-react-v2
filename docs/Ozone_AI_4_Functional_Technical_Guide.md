@@ -1377,8 +1377,10 @@ For the demo, CSV and backend rule logic are enough.
 
 For production, the recommended Azure services are:
 
-- Azure Blob Storage or Azure Data Lake Storage
-  - Store evidence files, raw external feeds, snapshots, and source documents.
+- Azure Blob Storage
+  - Store uploaded onboarding, audit, and traceability evidence files.
+- Azure Data Lake Storage
+  - Store future raw external feeds, snapshots, and analytical source documents if large ingestion is added.
 - Azure Functions
   - Run scheduled jobs for rule evaluation, evidence expiry checks, feed ingestion, and alert generation.
 - Azure Event Grid
@@ -1816,7 +1818,7 @@ Production would need:
 
 ### Evidence Storage
 
-Uploaded files are stored locally. Production would need Blob Storage or another object storage service.
+Uploaded onboarding, audit, and traceability evidence files are uploaded to Azure Blob Storage when `BLOB_CONNECTION_STRING` is configured. The backend still writes a local copy and records `local_path`, `blob_name`, `blob_url`, and `storage_provider` in evidence metadata so development environments can fall back to local storage.
 
 ### ESG Monitoring
 

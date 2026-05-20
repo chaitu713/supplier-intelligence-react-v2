@@ -14,6 +14,7 @@ from ..ai.guardrails import GuardrailViolation
 from ..ai.output_validation import validate_trace_decision
 from ..ai.prompt_registry import get_prompt_policy_block
 from .ai_gateway import AiGatewayError, AiTextRequest, generate_ai_text
+from .blob_storage import blob_storage_service
 from .onboarding_service import onboarding_service
 from .database import csv_table_name, install_pandas_database_bridge, table_exists
 
@@ -211,6 +212,7 @@ Trace package:
             raise Exception("A valid supplier_id is required")
 
         saved_path = self._save_trace_evidence_file(file_name, file_bytes)
+        blob_result = self._upload_evidence_blob(file_name, file_bytes, supplier_id_value, evidence_type)
         extracted_text = self._extract_trace_text(file_bytes)
         validation_status, validation_notes = self._validate_trace_evidence(
             evidence_type=evidence_type,
@@ -229,6 +231,9 @@ Trace package:
             "linked_entity_name": linked_entity_name or linked_entity_id,
             "file_name": file_name,
             "local_path": str(saved_path),
+            "blob_name": blob_result.blob_name if blob_result else "",
+            "blob_url": blob_result.blob_url if blob_result else "",
+            "storage_provider": "azure_blob" if blob_result else "local",
             "upload_date": date.today().isoformat(),
             "document_status": "Extracted" if extracted_text else "Uploaded",
             "extracted_text_preview": extracted_text[:500],
@@ -749,6 +754,9 @@ Trace package:
             "linkedEntityName": self._clean(row.get("linked_entity_name")),
             "fileName": self._clean(row.get("file_name")),
             "localPath": self._clean(row.get("local_path")),
+            "blobName": self._clean(row.get("blob_name")),
+            "blobUrl": self._clean(row.get("blob_url")),
+            "storageProvider": self._clean(row.get("storage_provider")) or "local",
             "uploadDate": self._clean(row.get("upload_date")),
             "documentStatus": self._clean(row.get("document_status")),
             "extractedTextPreview": self._clean(row.get("extracted_text_preview")),
@@ -853,6 +861,13 @@ Trace package:
             target.write(file_bytes)
         return target_path
 
+    def _upload_evidence_blob(self, file_name: str, file_bytes: bytes, supplier_id: int, evidence_type: str | None):
+        prefix = f"traceability/supplier-{supplier_id}/{evidence_type or 'evidence'}"
+        try:
+            return blob_storage_service.upload_bytes(data=file_bytes, file_name=file_name, prefix=prefix)
+        except Exception:
+            return None
+
     def _extract_trace_text(self, file_bytes: bytes) -> str:
         try:
             return onboarding_service.extract_text(file_bytes)
@@ -924,6 +939,9 @@ Trace package:
             "linked_entity_name",
             "file_name",
             "local_path",
+            "blob_name",
+            "blob_url",
+            "storage_provider",
             "upload_date",
             "document_status",
             "extracted_text_preview",
