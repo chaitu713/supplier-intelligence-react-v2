@@ -1742,3 +1742,33 @@ cd frontend
 npm install
 npm run dev
 ```
+
+## Files To Exclude When Moving To A New Environment
+
+When copying the app to a new environment, move source code, docs, scripts, `requirements.txt`, `frontend/package.json`, `frontend/package-lock.json`, and `.env.example`. Do not move local secrets, generated dependencies, caches, or machine-specific runtime output.
+
+Safe to exclude:
+
+- `.git/` if you are copying the app manually instead of cloning from Git.
+- `.env` because it contains environment-specific secrets and connection strings.
+- `.venv/`, `venv/`, or any local Python virtual environment.
+- `__pycache__/` folders.
+- `*.pyc` files.
+- `.pytest_cache/` and `pytest-cache-files-*/`.
+- `frontend/node_modules/`.
+- `frontend/dist/`.
+- `frontend/.vite/` and `frontend/.vite-cache/`.
+- `frontend/*.tsbuildinfo`.
+- `.codex-template-analysis/`.
+- Local runtime logs or temporary files if any are created.
+- User-uploaded evidence files under `uploads/onboarding/evidence`, `uploads/auditing/evidence`, and `uploads/traceability/evidence`, unless those uploads are required for the target environment.
+- Local AI runtime queues such as `data/ai_audit_events.jsonl` and `data/ai_review_queue.json`, unless intentionally migrating local review/audit history.
+
+Keep these:
+
+- `backend/`, `frontend/src/`, `frontend/scripts/`, `scripts/`, `docs/`, and `tests/`.
+- `requirements.txt`.
+- `frontend/package.json` and `frontend/package-lock.json`.
+- `.env.example`, then create a new `.env` in the target environment.
+- `data/site_polygons_v2.geojson` and any other intentional seed/reference data.
+- Sample/test PDF folders under `uploads/` if you still want local demo or test files.
